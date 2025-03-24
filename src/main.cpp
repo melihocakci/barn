@@ -1,8 +1,10 @@
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
+#include <steam/steam_api.h>
 
 int main()
 {
+    SteamAPI_Init();
     // Create the main window
     sf::RenderWindow window(sf::VideoMode({ 600, 600 }), "SFML window");
 
