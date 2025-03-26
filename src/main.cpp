@@ -2,48 +2,79 @@
 #include <SFML/Graphics.hpp>
 #include <steam/steam_api.h>
 
+#include <map>
+
+constexpr int SCREEN_WIDTH = 800;
+constexpr int SCREEN_HEIGHT = 600;
+constexpr float BASE_SPEED = SCREEN_HEIGHT / 120;
+
 int main()
 {
-    SteamAPI_Init();
-    // Create the main window
-    sf::RenderWindow window(sf::VideoMode({ 600, 600 }), "SFML window");
+    sf::RenderWindow window(sf::VideoMode({ SCREEN_WIDTH, SCREEN_HEIGHT }), "Teto Pear");
+    window.setFramerateLimit(60);
 
-    // Load a sprite to display
     const sf::Texture texture("res/teto_pear.jpg");
     sf::Sprite sprite(texture);
 
-    // Create a graphical text to display
     const sf::Font font("res/Consolas.ttf");
-    sf::Text text(font, "I'm Tetobating so hard", 50);
+    sf::Text text(font, "I'm Tetobating so hard", SCREEN_HEIGHT / 12);
     text.setFillColor(sf::Color::Black);
 
-    // Load a music to play
     sf::Music music("res/Kasane Teto - Teto territory.mp3");
-
-    // Play the music
     music.play();
 
-    // Start the game loop
+    sf::RectangleShape player{ {SCREEN_WIDTH / 10, SCREEN_HEIGHT / 10} };
+    player.setFillColor(sf::Color::Black);
+
     while (window.isOpen())
     {
-        // Process events
+        static sf::Vector2<int> player_direction = { 0, 0 };
+
         while (const std::optional event = window.pollEvent())
         {
-            // Close window: exit
+            std::map<sf::Keyboard::Scancode, sf::Vector2<int>> direction_vectors = {
+                    { sf::Keyboard::Scancode::Up, {0, -1} },
+                    { sf::Keyboard::Scancode::Down, {0, 1} },
+                    { sf::Keyboard::Scancode::Right, {1, 0} },
+                    { sf::Keyboard::Scancode::Left, {-1, 0} },
+            };
+
             if (event->is<sf::Event::Closed>())
+            {
                 window.close();
+            }
+            else if (const auto* pressed_key = event->getIf<sf::Event::KeyPressed>())
+            {
+                auto search = direction_vectors.find(pressed_key->scancode);
+                if (search != direction_vectors.end()) {
+                    player_direction += search->second;
+                    if (player_direction.x < 0) player_direction.x = -1;
+                    if (player_direction.x > 0) player_direction.x = 1;
+                    if (player_direction.y < 0) player_direction.y = -1;
+                    if (player_direction.y > 0) player_direction.y = 1;
+                }
+            }
+            else if (const auto* pressed_key = event->getIf<sf::Event::KeyReleased>())
+            {
+                auto search = direction_vectors.find(pressed_key->scancode);
+                if (search != direction_vectors.end()) {
+                    player_direction -= search->second;
+                    if (player_direction.x < 0) player_direction.x = -1;
+                    if (player_direction.x > 0) player_direction.x = 1;
+                    if (player_direction.y < 0) player_direction.y = -1;
+                    if (player_direction.y > 0) player_direction.y = 1;
+                }
+            }
         }
 
-        // Clear screen
+        player.setPosition(player.getPosition() + sf::Vector2f{ player_direction.x * BASE_SPEED, player_direction.y * BASE_SPEED });
+
         window.clear();
 
-        // Draw the sprite
         window.draw(sprite);
-
-        // Draw the string
         window.draw(text);
+        window.draw(player);
 
-        // Update the window
         window.display();
     }
 }
