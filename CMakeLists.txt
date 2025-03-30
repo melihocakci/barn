@@ -3,6 +3,8 @@ project(mygame LANGUAGES CXX)
 
 add_subdirectory(lib/SFML)
 
+add_subdirectory(lib/entt)
+
 add_library(steamworks_sdk INTERFACE)
 target_include_directories(steamworks_sdk INTERFACE lib/steamworks_sdk/public)
 if(WIN32)
@@ -13,7 +15,7 @@ endif()
 
 add_executable(mygame src/main.cpp)
 target_compile_features(mygame PRIVATE cxx_std_17)
-target_link_libraries(mygame PRIVATE steamworks_sdk SFML::Graphics SFML::Audio)
+target_link_libraries(mygame PRIVATE steamworks_sdk EnTT::EnTT SFML::Graphics SFML::Audio)
 if(WIN32)
     set_target_properties(mygame PROPERTIES WIN32_EXECUTABLE TRUE)
     target_link_libraries(mygame PRIVATE sfml-main)

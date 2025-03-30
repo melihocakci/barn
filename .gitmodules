@@ -1,3 +1,6 @@
 [submodule "lib/SFML"]
 	path = lib/SFML
 	url = https://github.com/SFML/SFML.git
+[submodule "lib/entt"]
+	path = lib/entt
+	url = git@github.com:skypjack/entt.git
