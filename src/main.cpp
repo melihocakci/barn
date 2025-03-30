@@ -3,107 +3,105 @@
 #include <steam/steam_api.h>
 #include <entt/entt.hpp>
 
-#include <map>
-#include <filesystem>
+#include <unordered_map>
+#include <mutex>
 
 namespace mg {
     constexpr int SCREEN_WIDTH = 800;
     constexpr int SCREEN_HEIGHT = 600;
     constexpr float BASE_SPEED = SCREEN_HEIGHT / 120;
 
-    struct events {
-        bool right_pressed;
-        bool left_pressed;
-        bool up_pressed;
-        bool down_pressed;
-    };
+    const auto up_key = sf::Keyboard::Scancode::Up;
+    const auto down_key = sf::Keyboard::Scancode::Down;
+    const auto left_key = sf::Keyboard::Scancode::Left;
+    const auto right_key = sf::Keyboard::Scancode::Right;
 
-    events get_events(sf::RenderWindow& window);
-
-    struct sprite {
-        sf::Texture txt;
-        sf::Sprite spr;
-
-        sprite(std::string_view sprite_file) : txt{ sprite_file }, spr{ txt } {
-            spr.scale({ 0.2, 0.2 });
-        }
-    };
-
-    enum class movement_type {
+    enum class control {
         player,
     };
+
+    class window_manager {
+    public:
+        window_manager(sf::RenderWindow&& w) : window{ std::move(w) } {
+            window.setFramerateLimit(60);
+        }
+
+        bool key_pressed(const sf::Keyboard::Scancode& scancode) {
+            handle_events();
+            std::lock_guard guard{ keys_lock };
+            auto it = keys.find(scancode);
+            return it != keys.end() ? it->second : false;
+        }
+
+        sf::RenderWindow* operator->() {
+            return &window;
+        }
+    private:
+        void handle_events() {
+            while (const std::optional event = window.pollEvent())
+            {
+                if (event->is<sf::Event::Closed>()) {
+                    exit(0);
+                }
+                else if (const auto* pressed_key = event->getIf<sf::Event::KeyPressed>()) {
+                    std::lock_guard guard{ keys_lock };
+                    keys[pressed_key->scancode] = true;
+                }
+                else if (const auto* released_key = event->getIf<sf::Event::KeyReleased>())
+                {
+                    std::lock_guard guard{ keys_lock };
+                    keys[released_key->scancode] = false;
+                }
+            }
+        }
+
+        sf::RenderWindow window;
+        std::unordered_map<sf::Keyboard::Scancode, bool> keys;
+        std::mutex keys_lock;
+    };
 }
 
-mg::events mg::get_events(sf::RenderWindow& window) {
-    static mg::events events;
-
-    while (const std::optional event = window.pollEvent())
-    {
-        if (event->is<sf::Event::Closed>()) {
-            window.close();
-            exit(0);
-        }
-        else if (const auto* pressed_key = event->getIf<sf::Event::KeyPressed>()) {
-            if (pressed_key->scancode == sf::Keyboard::Scancode::Right) events.right_pressed = true;
-            else if (pressed_key->scancode == sf::Keyboard::Scancode::Left) events.left_pressed = true;
-            else if (pressed_key->scancode == sf::Keyboard::Scancode::Up) events.up_pressed = true;
-            else if (pressed_key->scancode == sf::Keyboard::Scancode::Down) events.down_pressed = true;
-        }
-        else if (const auto* pressed_key = event->getIf<sf::Event::KeyReleased>())
-        {
-            if (pressed_key->scancode == sf::Keyboard::Scancode::Right) events.right_pressed = false;
-            else if (pressed_key->scancode == sf::Keyboard::Scancode::Left) events.left_pressed = false;
-            else if (pressed_key->scancode == sf::Keyboard::Scancode::Up) events.up_pressed = false;
-            else if (pressed_key->scancode == sf::Keyboard::Scancode::Down) events.down_pressed = false;
-        }
-    }
-
-    return events;
-}
-
-int scene1(sf::RenderWindow& window) {
+int scene1(mg::window_manager& window) {
     const sf::Texture bg_texture{ "res/teto_pear.jpg" };
+    const sf::Texture teto_texture{ "res/teto.png" };
+
     const sf::Sprite background{ bg_texture };
 
     sf::Music music{ "res/Kasane Teto - Teto territory.mp3" };
-    music.play();
+    //music.play();
 
     entt::registry registry;
+
     entt::entity player_entity = registry.create();
-    registry.emplace<mg::sprite>(player_entity, "res/teto.png");
-    registry.emplace<mg::movement_type>(player_entity, mg::movement_type::player);
+    registry.emplace<sf::Sprite>(player_entity, teto_texture);
+    registry.emplace<mg::control>(player_entity, mg::control::player);
 
-    while (window.isOpen())
+    while (true)
     {
-        mg::get_events(window);
-
-        window.clear();
-        window.draw(background);
-
-        registry.view<mg::movement_type, mg::sprite>().each(
-            [&window](const mg::movement_type& a, mg::sprite& sprite) {
-                mg::events events = mg::get_events(window);
-
-                if (events.left_pressed) sprite.spr.move(sf::Vector2f{ -mg::BASE_SPEED, 0 });
-                if (events.right_pressed) sprite.spr.move(sf::Vector2f{ mg::BASE_SPEED, 0 });
-                if (events.up_pressed) sprite.spr.move(sf::Vector2f{ 0, -mg::BASE_SPEED });
-                if (events.down_pressed) sprite.spr.move(sf::Vector2f{ 0, mg::BASE_SPEED });
+        registry.view<mg::control, sf::Sprite>().each(
+            [&window](const mg::control& control, sf::Sprite& sprite) {
+                if (window.key_pressed(mg::up_key)) sprite.move(sf::Vector2f{ 0, -mg::BASE_SPEED });
+                if (window.key_pressed(mg::down_key)) sprite.move(sf::Vector2f{ 0, mg::BASE_SPEED });
+                if (window.key_pressed(mg::left_key)) sprite.move(sf::Vector2f{ -mg::BASE_SPEED, 0 });
+                if (window.key_pressed(mg::right_key)) sprite.move(sf::Vector2f{ mg::BASE_SPEED, 0 });
             }
         );
 
-        registry.view<mg::sprite>().each(
-            [&window](const auto& sprite) { window.draw(sprite.spr); }
+        window->clear();
+        window->draw(background);
+
+        registry.view<sf::Sprite>().each(
+            [&window](const sf::Sprite& sprite) { window->draw(sprite); }
         );
 
-        window.display();
+        window->display();
     }
 
     return 0;
 }
 
 int main() {
-    sf::RenderWindow window{ sf::VideoMode{ {mg::SCREEN_WIDTH, mg::SCREEN_HEIGHT } }, "Teto Pear" };
-    window.setFramerateLimit(60);
+    mg::window_manager window_manager{ sf::RenderWindow{ sf::VideoMode{ {mg::SCREEN_WIDTH, mg::SCREEN_HEIGHT } }, "Teto Pear" } };
 
-    if (scene1(window)) return 1;
+    if (scene1(window_manager)) return 1;
 }
