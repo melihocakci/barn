@@ -1,23 +1,16 @@
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
-#include <steam/steam_api.h>
 #include <entt/entt.hpp>
 
 #include <unordered_map>
 #include <mutex>
 
 namespace mg {
-    constexpr int SCREEN_WIDTH = 800;
-    constexpr int SCREEN_HEIGHT = 600;
-    constexpr float BASE_SPEED = SCREEN_HEIGHT / 120;
-
-    const auto up_key = sf::Keyboard::Scancode::Up;
-    const auto down_key = sf::Keyboard::Scancode::Down;
-    const auto left_key = sf::Keyboard::Scancode::Left;
-    const auto right_key = sf::Keyboard::Scancode::Right;
-
-    enum class control {
-        player,
+    struct keyboard_controls {
+        sf::Keyboard::Scan up;
+        sf::Keyboard::Scan down;
+        sf::Keyboard::Scan left;
+        sf::Keyboard::Scan right;
     };
 
     class window_manager {
@@ -26,17 +19,6 @@ namespace mg {
             window.setFramerateLimit(60);
         }
 
-        bool key_pressed(const sf::Keyboard::Scancode& scancode) {
-            handle_events();
-            std::lock_guard guard{ keys_lock };
-            auto it = keys.find(scancode);
-            return it != keys.end() ? it->second : false;
-        }
-
-        sf::RenderWindow* operator->() {
-            return &window;
-        }
-    private:
         void handle_events() {
             while (const std::optional event = window.pollEvent())
             {
@@ -55,6 +37,17 @@ namespace mg {
             }
         }
 
+        bool key_pressed(const sf::Keyboard::Scancode& scancode) {
+            std::lock_guard guard{ keys_lock };
+            auto it = keys.find(scancode);
+            return it != keys.end() ? it->second : false;
+        }
+
+        sf::RenderWindow* operator->() {
+            return &window;
+        }
+
+    private:
         sf::RenderWindow window;
         std::unordered_map<sf::Keyboard::Scancode, bool> keys;
         std::mutex keys_lock;
@@ -63,9 +56,14 @@ namespace mg {
 
 int scene1(mg::window_manager& window) {
     const sf::Texture bg_texture{ "res/teto_pear.jpg" };
-    const sf::Texture teto_texture{ "res/teto.png" };
+    const sf::Texture teto_texture{ "res/miku.png" };
 
-    const sf::Sprite background{ bg_texture };
+    sf::Sprite background{ bg_texture };
+    const auto bg_size = background.getTextureRect().size;
+    const auto wd_size = window->getSize();
+    background.setOrigin({ bg_size.x / 2.f, bg_size.y / 2.f });
+    background.setPosition({ wd_size.x / 2.f, wd_size.y / 2.f });
+    background.setScale({ static_cast<float>(wd_size.x) / bg_size.x, static_cast<float>(wd_size.y) / bg_size.y });
 
     sf::Music music{ "res/Kasane Teto - Teto territory.mp3" };
     //music.play();
@@ -73,17 +71,24 @@ int scene1(mg::window_manager& window) {
     entt::registry registry;
 
     entt::entity player_entity = registry.create();
-    registry.emplace<sf::Sprite>(player_entity, teto_texture);
-    registry.emplace<mg::control>(player_entity, mg::control::player);
+    registry.emplace<sf::Sprite>(player_entity, teto_texture).scale({ 0.05, 0.05 });
+    using scancode = sf::Keyboard::Scancode;
+    registry.emplace<mg::keyboard_controls>(player_entity, scancode::Up, scancode::Down, scancode::Left, scancode::Right);
 
-    while (true)
+    while (window->isOpen())
     {
-        registry.view<mg::control, sf::Sprite>().each(
-            [&window](const mg::control& control, sf::Sprite& sprite) {
-                if (window.key_pressed(mg::up_key)) sprite.move(sf::Vector2f{ 0, -mg::BASE_SPEED });
-                if (window.key_pressed(mg::down_key)) sprite.move(sf::Vector2f{ 0, mg::BASE_SPEED });
-                if (window.key_pressed(mg::left_key)) sprite.move(sf::Vector2f{ -mg::BASE_SPEED, 0 });
-                if (window.key_pressed(mg::right_key)) sprite.move(sf::Vector2f{ mg::BASE_SPEED, 0 });
+        window.handle_events();
+
+        registry.view<mg::keyboard_controls, sf::Sprite>().each(
+            [&window](const mg::keyboard_controls& control, sf::Sprite& sprite) {
+                const sf::Vector2f BASE_SPEED = { window->getSize().y / 120.f, window->getSize().y / 120.f };
+                sf::Vector2f delta{ 0, 0 };
+                if (window.key_pressed(control.up)) delta += sf::Vector2f{ 0, -1 };
+                if (window.key_pressed(control.down)) delta += sf::Vector2f{ 0, 1 };
+                if (window.key_pressed(control.left)) delta += sf::Vector2f{ -1, 0 };
+                if (window.key_pressed(control.right)) delta += sf::Vector2f{ 1, 0 };
+                if (delta.length() > 0)
+                    sprite.move(delta.normalized().componentWiseMul(BASE_SPEED));
             }
         );
 
@@ -101,7 +106,13 @@ int scene1(mg::window_manager& window) {
 }
 
 int main() {
-    mg::window_manager window_manager{ sf::RenderWindow{ sf::VideoMode{ {mg::SCREEN_WIDTH, mg::SCREEN_HEIGHT } }, "Teto Pear" } };
+    mg::window_manager window{
+        sf::RenderWindow{
+            sf::VideoMode::getDesktopMode(),
+            "Teto Pear",
+            sf::State::Fullscreen
+        }
+    };
 
-    if (scene1(window_manager)) return 1;
+    if (scene1(window)) return 1;
 }
