@@ -14,7 +14,7 @@ if(WIN32)
 endif()
 
 add_executable(mygame src/main.cpp)
-target_compile_features(mygame PRIVATE cxx_std_17)
+target_compile_features(mygame PRIVATE cxx_std_23)
 target_link_libraries(mygame PRIVATE steamworks_sdk EnTT::EnTT SFML::Graphics SFML::Audio)
 if(WIN32)
     set_target_properties(mygame PROPERTIES WIN32_EXECUTABLE TRUE)
