@@ -32,19 +32,16 @@ namespace mg {
                     exit(0);
                 }
                 else if (const auto* pressed_key = event->getIf<sf::Event::KeyPressed>()) {
-                    std::lock_guard guard{ keys_lock };
                     keys[pressed_key->scancode] = true;
                 }
                 else if (const auto* released_key = event->getIf<sf::Event::KeyReleased>())
                 {
-                    std::lock_guard guard{ keys_lock };
                     keys[released_key->scancode] = false;
                 }
             }
         }
 
         bool key_pressed(const sf::Keyboard::Scancode& scancode) const {
-            std::lock_guard guard{ keys_lock };
             auto it = keys.find(scancode);
             return it != keys.end() ? it->second : false;
         }
@@ -60,12 +57,11 @@ namespace mg {
     private:
         sf::RenderWindow window;
         std::unordered_map<sf::Keyboard::Scancode, bool> keys;
-        mutable std::mutex keys_lock;
     };
 
     void add_miku(entt::registry& reg) {
         static const sf::Texture texture{ "res/miku.png" };
-        
+
         const entt::entity entity = reg.create();
 
         sf::Sprite& sprite = reg.emplace<sf::Sprite>(entity, texture);
@@ -74,6 +70,7 @@ namespace mg {
 
         sf::CircleShape& hitbox = reg.emplace<sf::CircleShape>(entity, 10);
         hitbox.setFillColor(sf::Color::White);
+        hitbox.setOrigin({ hitbox.getRadius(), hitbox.getRadius() });
 
         using scancode = sf::Keyboard::Scancode;
         reg.emplace<mg::keyboard_control>(entity,
@@ -89,12 +86,14 @@ namespace mg {
 
         const entt::entity entity = reg.create();
         sf::Sprite& sprite = reg.emplace<sf::Sprite>(entity, texture);
+        sprite.setOrigin({ sprite.getTextureRect().size.x / 2.f , sprite.getTextureRect().size.y / 2.f });
         sprite.setPosition(position);
 
         sf::CircleShape& hitbox = reg.emplace<sf::CircleShape>(entity, 10);
+        hitbox.setOrigin({ hitbox.getRadius(), hitbox.getRadius() });
         hitbox.setPosition(position);
 
-        reg.emplace<mg::bullet_control>(entity, 10.f, sf::Vector2f{0, -1});
+        reg.emplace<mg::bullet_control>(entity, 10.f, sf::Vector2f{ 0, -1 });
     }
 }
 
@@ -102,8 +101,8 @@ int scene1(mg::window_manager& window) {
     const sf::Texture bg_texture{ "res/teto_pear.jpg" };
     sf::Sprite background{ bg_texture };
 
-    background.setOrigin({ 
-        background.getTextureRect().size.x / 2.f, 
+    background.setOrigin({
+        background.getTextureRect().size.x / 2.f,
         background.getTextureRect().size.y / 2.f });
     background.setPosition({
             window->getSize().x / 2.f,
@@ -145,7 +144,14 @@ int scene1(mg::window_manager& window) {
         );
 
         registry.view<mg::bullet_control, sf::Sprite, sf::CircleShape>().each(
-            [&window, &registry](const mg::bullet_control& control, sf::Sprite& sprite, sf::CircleShape& hitbox) {
+            [&window, &registry](const entt::entity& entity, const mg::bullet_control& control, sf::Sprite& sprite, sf::CircleShape& hitbox) {
+                const sf::Rect<float> window_rect{ {0, 0}, { static_cast<float>(window->getSize().x), static_cast<float>(window->getSize().y) } };
+                const sf::Rect<float> sprite_rect = sprite.getGlobalBounds();
+                if (!window_rect.findIntersection(sprite_rect)) {
+                    registry.destroy(entity);
+                    return;
+                }
+
                 sf::Vector2f delta = control.direction.normalized().componentWiseMul({ control.speed, control.speed });
                 sprite.move(delta);
                 hitbox.move(delta);
@@ -174,7 +180,7 @@ int main() {
         sf::RenderWindow{
             sf::VideoMode::getDesktopMode(),
             "Teto Pear",
-            sf::State::Fullscreen
+            //sf::State::Fullscreen
         }
     };
 
