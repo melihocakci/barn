@@ -4,11 +4,11 @@
 
 namespace mg {
 	struct keyboard_input {
-		sf::Keyboard::Scan up;
-		sf::Keyboard::Scan down;
-		sf::Keyboard::Scan left;
-		sf::Keyboard::Scan right;
-		sf::Keyboard::Scan fire;
+		sf::Keyboard::Scan up_button;
+		sf::Keyboard::Scan down_button;
+		sf::Keyboard::Scan left_button;
+		sf::Keyboard::Scan right_button;
+		sf::Keyboard::Scan fire_button;
 	};
 
 	struct joystick_input {

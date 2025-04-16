@@ -4,7 +4,7 @@
 #include <SFML/Graphics.hpp>
 
 namespace mg {
-	void add_miku(entt::registry& reg);
+	void add_miku(entt::registry& reg, sf::Vector2f position);
 
-	void add_bullet(entt::registry& reg, const sf::Vector2f position);
+	void add_bullet(entt::registry& reg, sf::Vector2f position);
 }

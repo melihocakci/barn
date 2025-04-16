@@ -40,7 +40,7 @@ int mg::scene1(sf::RenderWindow& window) {
 	music.setVolume(20.f);
 
 	entt::registry registry;
-	add_miku(registry);
+	add_miku(registry, { window.getSize().x / 2.f, window.getSize().y / 2.f });
 
 	while (window.isOpen())
 	{
