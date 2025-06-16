@@ -1,12 +1,40 @@
+#include "scenes.h"
+#include "components.h"
+#include "systems.h"
+#include "characters.h"
+
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 #include <entt/entt.hpp>
 
-#include "scenes.h"
-#include "components.h"
-#include "entity_creators.h"
-#include "systems.h"
-#include "static_elements.h"
+static void add_player(entt::registry& reg, sf::Vector2f position, const mg::character& character) {
+	const entt::entity entity = reg.create();
+
+	sf::Sprite& sprite = reg.emplace<sf::Sprite>(entity, character.sprite);
+	sprite.scale({ 0.05, 0.05 });
+	sprite.setOrigin(sprite.getLocalBounds().getCenter());
+	sprite.setPosition(position);
+
+	sf::CircleShape& hitbox = reg.emplace<sf::CircleShape>(entity, 10);
+	hitbox.setFillColor(sf::Color::Red);
+	hitbox.setOrigin(hitbox.getGeometricCenter());
+	hitbox.setPosition(position);
+
+	reg.emplace<mg::skillset>(entity, character.skillset);
+
+	using scancode = sf::Keyboard::Scancode;
+	reg.emplace<mg::keyboard_input>(entity,
+		scancode::Up,
+		scancode::Down,
+		scancode::Left,
+		scancode::Right,
+		scancode::Z,
+		scancode::X,
+		scancode::C,
+		scancode::V);
+
+	reg.emplace<mg::joystick_input>(entity, 0u, sf::Joystick::Axis::X, sf::Joystick::Axis::Y, 0u, 1u, 2u, 3u);
+}
 
 static void handle_events(sf::RenderWindow& window) {
 	while (const std::optional event = window.pollEvent())
@@ -22,7 +50,7 @@ int mg::main_menu(sf::RenderWindow& window) {
 }
 
 int mg::scene1(sf::RenderWindow& window) {
-	const sf::Texture bg_texture{ "res/teto_pear.jpg" };
+	const sf::Texture bg_texture{ "assets/texture/bliss.jpg" };
 	sf::Sprite background{ bg_texture };
 
 	background.setOrigin({
@@ -35,8 +63,8 @@ int mg::scene1(sf::RenderWindow& window) {
 		static_cast<float>(window.getSize().x) / background.getTextureRect().size.x,
 		static_cast<float>(window.getSize().y) / background.getTextureRect().size.y });
 
-	sf::Music music{ "res/Kasane Teto - Teto territory.mp3" };
-	music.play();
+	sf::Music music{ "assets/audio/Kasane Teto - Teto territory.mp3" };
+	//music.play();
 	music.setLooping(true);
 	music.setVolume(20.f);
 
@@ -60,11 +88,7 @@ int mg::scene1(sf::RenderWindow& window) {
 			window.draw(sprite);
 		}
 
-		for (auto [entity, keyboard, hitbox] : registry.view<const mg::keyboard_input, const sf::CircleShape>().each()) {
-			window.draw(hitbox);
-		}
-
-		for (auto [entity, keyboard, hitbox] : registry.view<const mg::joystick_input, const sf::CircleShape>().each()) {
+		for (auto [entity, skills, hitbox] : registry.view<const mg::skillset, const sf::CircleShape>().each()) {
 			window.draw(hitbox);
 		}
 

@@ -2,17 +2,12 @@
 
 #include "components.h"
 
-namespace mg {
-	extern const skill basic_attack;
+#include <SFML/Graphics.hpp>
 
+namespace mg {
 	struct character {
 		std::string name;
-		const sf::Texture texture;
-		int health;
-		int mana;
-		int attack;
-		int defense;
-		int speed;
+		const sf::Sprite sprite;
 		skillset skillset;
 	};
 
