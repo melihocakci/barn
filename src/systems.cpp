@@ -29,7 +29,7 @@ static void move_within_bounds(sf::Transformable& object, sf::Vector2f delta, co
 }
 
 void mg::handle_keyboard_inputs(const sf::RenderWindow& window, entt::registry& registry) {
-	for (auto [entity, keyboard, sprite, hitbox, skills] : registry.view<const mg::keyboard_input, sf::Sprite, sf::CircleShape, mg::skillset>().each()) {
+	for (auto [entity, keyboard, sprite, hitbox, skills] : registry.view<const mg::keyboard_input, mg::sprite, mg::hitbox, mg::skillset>().each()) {
 		sf::Vector2f delta{ 0, 0 };
 		if (sf::Keyboard::isKeyPressed(keyboard.up))
 			delta += sf::Vector2f{ 0, -1 };
@@ -56,7 +56,7 @@ void mg::handle_keyboard_inputs(const sf::RenderWindow& window, entt::registry& 
 }
 
 void mg::handle_joystick_inputs(const sf::RenderWindow& window, entt::registry& registry) {
-	for (auto [entity, joystick, sprite, hitbox, skills] : registry.view<const mg::joystick_input, sf::Sprite, sf::CircleShape, mg::skillset>().each()) {
+	for (auto [entity, joystick, sprite, hitbox, skills] : registry.view<const mg::joystick_input, mg::sprite, mg::hitbox, mg::skillset>().each()) {
 		const sf::Rect<float> sprite_rect = hitbox.getGlobalBounds();
 
 		sf::Vector2f delta{
@@ -80,7 +80,7 @@ void mg::handle_joystick_inputs(const sf::RenderWindow& window, entt::registry& 
 }
 
 void mg::handle_projectiles(const sf::RenderWindow& window, entt::registry& registry) {
-	for (auto [entity, trajectory, sprite, hitbox] : registry.view<const mg::trajectory, sf::Sprite, sf::CircleShape>().each()) {
+	for (auto [entity, trajectory, sprite, hitbox] : registry.view<const mg::trajectory, mg::sprite, mg::hitbox>().each()) {
 		const sf::Rect<float> window_rect{ {0, 0}, { static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y) } };
 		const sf::Rect<float> sprite_rect = sprite.getGlobalBounds();
 		if (!window_rect.findIntersection(sprite_rect)) {
@@ -91,5 +91,11 @@ void mg::handle_projectiles(const sf::RenderWindow& window, entt::registry& regi
 		sf::Vector2f delta = trajectory.direction.normalized().componentWiseMul({ trajectory.speed, trajectory.speed });
 		sprite.move(delta);
 		hitbox.move(delta);
+	}
+}
+
+void mg::handle_actions(const sf::RenderWindow& window, entt::registry& registry) {
+	for (auto [entity, action] : registry.view<const mg::action>().each()) {
+		action(registry, entity);
 	}
 }

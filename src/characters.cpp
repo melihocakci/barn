@@ -19,14 +19,14 @@ const mg::skill green_onion_attack = {
 	.action = [](entt::registry& reg, entt::entity player_entity) {
 		static const sf::Texture bullet_texture{ "assets/texture/green-onion.png" };
 
-		const auto& player_hitbox = reg.get<sf::CircleShape>(player_entity);
+		const auto& player_hitbox = reg.get<mg::hitbox>(player_entity);
 
 		const entt::entity bullet_entity = reg.create();
-		sf::Sprite& bullet_sprite = reg.emplace<sf::Sprite>(bullet_entity, bullet_texture);
+		mg::sprite& bullet_sprite = reg.emplace<mg::sprite>(bullet_entity, bullet_texture);
 		bullet_sprite.setOrigin(bullet_sprite.getLocalBounds().getCenter());
 		bullet_sprite.setPosition(player_hitbox.getPosition());
 
-		sf::CircleShape& bullet_hitbox = reg.emplace<sf::CircleShape>(bullet_entity, 10);
+		mg::hitbox& bullet_hitbox = reg.emplace<mg::hitbox>(bullet_entity, 10);
 		bullet_hitbox.setOrigin(bullet_hitbox.getGeometricCenter());
 		bullet_hitbox.setPosition(player_hitbox.getPosition());
 
@@ -37,7 +37,7 @@ const mg::skill green_onion_attack = {
 const std::array<mg::character, 1> mg::playable_characters = {
 	mg::character{
 		.name = "Hatsune Miku",
-		.sprite = sf::Sprite{ miku_texture },
+		.sprite = mg::sprite{ miku_texture },
 		.skillset = {
 			green_onion_attack,
 			none,
