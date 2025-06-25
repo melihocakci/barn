@@ -6,10 +6,11 @@
 
 namespace mg {
 	struct character {
-		std::string name;
 		sprite sprite;
+		hitbox hitbox;
+		stats stats;
 		skillset skillset;
 	};
 
-	extern const std::array<character, 1> playable_characters;
+	extern const std::array<character, 1> character_templates;
 }

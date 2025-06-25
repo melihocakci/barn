@@ -4,6 +4,8 @@
 #include <entt/entt.hpp>
 #include <SFML/Graphics.hpp>
 
+#include <variant>
+
 static sf::Rect<float> get_bounds(const sf::RenderWindow& window, float padding) {
 	return { {padding, padding}, { window.getSize().x - 2 * padding, window.getSize().y - 2 * padding } };
 }
@@ -28,54 +30,54 @@ static void move_within_bounds(sf::Transformable& object, sf::Vector2f delta, co
 	object.move(delta);
 }
 
-void mg::handle_keyboard_inputs(const sf::RenderWindow& window, entt::registry& registry) {
-	for (auto [entity, keyboard, sprite, hitbox, skills] : registry.view<const mg::keyboard_input, mg::sprite, mg::hitbox, mg::skillset>().each()) {
-		sf::Vector2f delta{ 0, 0 };
-		if (sf::Keyboard::isKeyPressed(keyboard.up))
-			delta += sf::Vector2f{ 0, -1 };
-		if (sf::Keyboard::isKeyPressed(keyboard.down))
-			delta += sf::Vector2f{ 0, 1 };
-		if (sf::Keyboard::isKeyPressed(keyboard.left))
-			delta += sf::Vector2f{ -1, 0 };
-		if (sf::Keyboard::isKeyPressed(keyboard.right))
-			delta += sf::Vector2f{ 1, 0 };
+void mg::handle_player_input(const sf::RenderWindow& window, entt::registry& registry) {
+	for (auto [entity, player_input, sprite, hitbox, skills] : registry.view<const mg::player_input, mg::sprite, mg::hitbox, mg::skillset>().each()) {
+        std::visit(
+			[&](const auto& input) {
+				sf::Vector2f delta{};
 
-		const auto bounds = get_bounds(window, hitbox.getRadius());
-		move_within_bounds(sprite, delta, bounds);
-		move_within_bounds(hitbox, delta, bounds);
+				using T = std::decay_t<decltype(input)>;
+				if constexpr (std::is_same_v<T, mg::keyboard_input>) {
+					if (sf::Keyboard::isKeyPressed(input.skill_1))
+						skills.skill_1(registry, entity);
+					if (sf::Keyboard::isKeyPressed(input.skill_2))
+						skills.skill_2(registry, entity);
+					if (sf::Keyboard::isKeyPressed(input.skill_3))
+						skills.skill_3(registry, entity);
+					if (sf::Keyboard::isKeyPressed(input.skill_4))
+						skills.skill_4(registry, entity);
 
-		if (sf::Keyboard::isKeyPressed(keyboard.skill_1))
-			skills.skill_1(registry, entity);
-		if (sf::Keyboard::isKeyPressed(keyboard.skill_2))
-			skills.skill_2(registry, entity);
-		if (sf::Keyboard::isKeyPressed(keyboard.skill_3))
-			skills.skill_3(registry, entity);
-		if (sf::Keyboard::isKeyPressed(keyboard.skill_4))
-			skills.skill_4(registry, entity);
-	}
-}
+					if (sf::Keyboard::isKeyPressed(input.up))
+						delta += sf::Vector2f{ 0, -1 };
+					if (sf::Keyboard::isKeyPressed(input.down))
+						delta += sf::Vector2f{ 0, 1 };
+					if (sf::Keyboard::isKeyPressed(input.left))
+						delta += sf::Vector2f{ -1, 0 };
+					if (sf::Keyboard::isKeyPressed(input.right))
+						delta += sf::Vector2f{ 1, 0 };
+				}
+				else if constexpr (std::is_same_v<T, mg::joystick_input>) {
+					if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_1))
+						skills.skill_1(registry, entity);
+					if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_2))
+						skills.skill_2(registry, entity);
+					if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_3))
+						skills.skill_3(registry, entity);
+					if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_4))
+						skills.skill_4(registry, entity);
 
-void mg::handle_joystick_inputs(const sf::RenderWindow& window, entt::registry& registry) {
-	for (auto [entity, joystick, sprite, hitbox, skills] : registry.view<const mg::joystick_input, mg::sprite, mg::hitbox, mg::skillset>().each()) {
-		const sf::Rect<float> sprite_rect = hitbox.getGlobalBounds();
+					delta = {
+						sf::Joystick::getAxisPosition(input.joystick_id, input.horizontal_axis) / 100,
+						sf::Joystick::getAxisPosition(input.joystick_id, input.vertical_axis) / 100
+					};
+				}
 
-		sf::Vector2f delta{
-			sf::Joystick::getAxisPosition(joystick.joystick_id, joystick.horizontal_axis) / 100,
-			sf::Joystick::getAxisPosition(joystick.joystick_id, joystick.vertical_axis) / 100
-		};
-
-		const auto bounds = get_bounds(window, hitbox.getRadius());
-		move_within_bounds(sprite, delta, bounds);
-		move_within_bounds(hitbox, delta, bounds);
-
-		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.skill_1))
-			skills.skill_1(registry, entity);
-		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.skill_2))
-			skills.skill_2(registry, entity);
-		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.skill_3))
-			skills.skill_3(registry, entity);
-		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.skill_4))
-			skills.skill_4(registry, entity);
+				const auto bounds = get_bounds(window, hitbox.getRadius());
+				move_within_bounds(hitbox, delta, bounds);
+				sprite.setPosition(hitbox.getPosition());
+			},
+            player_input
+		);
 	}
 }
 

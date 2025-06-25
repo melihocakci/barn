@@ -3,7 +3,7 @@
 
 static const sf::Texture pearto_texture{ "assets/texture/pearto.png" };
 
-const std::array<mg::enemy, 1> mg::set_enemies = {
+const std::array<mg::enemy, 1> mg::enemy_templates = {
 	mg::enemy{
 		.sprite = mg::sprite{ pearto_texture },
 		.hitbox = mg::hitbox{ 20.f },

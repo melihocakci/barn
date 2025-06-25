@@ -34,10 +34,14 @@ const mg::skill green_onion_attack = {
 	},
 };
 
-const std::array<mg::character, 1> mg::playable_characters = {
+const std::array<mg::character, 1> mg::character_templates = {
 	mg::character{
-		.name = "Hatsune Miku",
 		.sprite = mg::sprite{ miku_texture },
+		.hitbox = mg::hitbox{ 20.f },
+		.stats = {
+			.health = 100,
+			.speed = 10.f,
+		},
 		.skillset = {
 			green_onion_attack,
 			none,
@@ -46,3 +50,5 @@ const std::array<mg::character, 1> mg::playable_characters = {
 		}
 	}
 };
+
+auto something = [](entt::registry& reg, entt::entity player_entity) {};
