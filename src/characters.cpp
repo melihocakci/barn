@@ -6,20 +6,25 @@
 
 #include <array>
 
-static const sf::Texture miku_texture{ "assets/texture/miku.png" };
-
 const mg::skill none = {
 	.cooldown_time{},
 	.action = [](entt::registry& reg, entt::entity player_entity) {
 	},
 };
 
-const mg::skill green_onion_attack = {
+///
+/// Hatsune Miku
+///
+
+static const sf::Texture miku_texture{ "assets/texture/miku.png" };
+
+static const mg::skill green_onion_attack 
+{
 	.cooldown_time{ 250 },
 	.action = [](entt::registry& reg, entt::entity player_entity) {
 		static const sf::Texture bullet_texture{ "assets/texture/green-onion.png" };
 
-		const auto& player_hitbox = reg.get<mg::hitbox>(player_entity);
+		auto [player_hitbox, player_stats] = reg.get<mg::hitbox, mg::stats>(player_entity);
 
 		const entt::entity bullet_entity = reg.create();
 		mg::sprite& bullet_sprite = reg.emplace<mg::sprite>(bullet_entity, bullet_texture);
@@ -30,25 +35,32 @@ const mg::skill green_onion_attack = {
 		bullet_hitbox.setOrigin(bullet_hitbox.getGeometricCenter());
 		bullet_hitbox.setPosition(player_hitbox.getPosition());
 
+		reg.emplace<mg::stats>(bullet_entity, mg::stats{ .health = 1, .attack = player_stats.attack, .speed = 30 });
+
 		reg.emplace<mg::trajectory>(bullet_entity, 10.f, sf::Vector2f{ 0, -1 });
+
+		reg.emplace<mg::alignment>(bullet_entity, mg::alignment::PLAYER);
 	},
 };
 
-const std::array<mg::character, 1> mg::character_templates = {
-	mg::character{
-		.sprite = mg::sprite{ miku_texture },
-		.hitbox = mg::hitbox{ 20.f },
-		.stats = {
-			.health = 100,
-			.speed = 10.f,
-		},
-		.skillset = {
-			green_onion_attack,
-			none,
-			none,
-			none,
-		}
+static const mg::character hatsune_miku 
+{
+	.sprite{ miku_texture },
+	.hitbox{ 20.f },
+    .stats{
+		.health = 1000,
+		.attack = 10,
+		.speed = 20,
+	},
+	.skillset{
+		green_onion_attack,
+		none,
+		none,
+		none,
 	}
 };
 
-auto something = [](entt::registry& reg, entt::entity player_entity) {};
+const std::array<mg::character, 1> mg::character_templates
+{
+	hatsune_miku,
+};

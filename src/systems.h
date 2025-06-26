@@ -9,4 +9,6 @@ namespace mg {
 	void handle_projectiles(const sf::RenderWindow& window, entt::registry& registry);
 
 	void handle_actions(const sf::RenderWindow& window, entt::registry& registry);
+	
+	void handle_collisions(const sf::RenderWindow& window, entt::registry& registry);
 }

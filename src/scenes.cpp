@@ -21,14 +21,18 @@ static void add_player(entt::registry& reg, sf::Vector2f position, const mg::cha
 	hitbox.setOrigin(hitbox.getGeometricCenter());
 	hitbox.setPosition(position);
 
+	reg.emplace<mg::stats>(entity, character.stats);
+
 	reg.emplace<mg::skillset>(entity, character.skillset);
+
+	reg.emplace<mg::alignment>(entity, mg::alignment::PLAYER);
 
 	using scancode = sf::Keyboard::Scancode;
 	reg.emplace<mg::player_input>(entity,
 		mg::keyboard_input{
 			scancode::Up,
 			scancode::Down,
-            scancode::Left,
+			scancode::Left,
 			scancode::Right,
 			scancode::Z,
 			scancode::X,
@@ -37,7 +41,7 @@ static void add_player(entt::registry& reg, sf::Vector2f position, const mg::cha
 		}
 	);
 
-    //reg.emplace<mg::user_input>(entity, mg::joystick_input{ 0u, sf::Joystick::Axis::X, sf::Joystick::Axis::Y, 0u, 1u, 2u, 3u });
+	//reg.emplace<mg::user_input>(entity, mg::joystick_input{ 0u, sf::Joystick::Axis::X, sf::Joystick::Axis::Y, 0u, 1u, 2u, 3u });
 }
 
 static void add_enemy(entt::registry& reg, sf::Vector2f position, const mg::enemy& enemy) {
@@ -48,13 +52,16 @@ static void add_enemy(entt::registry& reg, sf::Vector2f position, const mg::enem
 	sprite.setOrigin(sprite.getLocalBounds().getCenter());
 	sprite.setPosition(position);
 
-	mg::hitbox& hitbox = reg.emplace<mg::hitbox>(entity, 10);
+	mg::hitbox& hitbox = reg.emplace<mg::hitbox>(entity, enemy.hitbox);
 	hitbox.setFillColor(sf::Color::Red);
 	hitbox.setOrigin(hitbox.getGeometricCenter());
 	hitbox.setPosition(position);
 
 	reg.emplace<mg::stats>(entity, enemy.stats);
+
 	reg.emplace<mg::action>(entity, enemy.action);
+
+	reg.emplace<mg::alignment>(entity, mg::alignment::ENEMY);
 }
 
 static void handle_events(sf::RenderWindow& window) {
@@ -90,7 +97,7 @@ int mg::combat_scene(sf::RenderWindow& window) {
 	music.setVolume(20.f);
 
 	entt::registry registry;
-	add_player(registry, { window.getSize().x / 2.f, window.getSize().y / 2.f }, character_templates[0]);
+	add_player(registry, { window.getSize().x / 2.f, window.getSize().y / 2.f + 400 }, character_templates[0]);
 	add_enemy(registry, { window.getSize().x / 2.f, window.getSize().y / 2.f }, enemy_templates[0]);
 
 	while (window.isOpen())
@@ -103,6 +110,8 @@ int mg::combat_scene(sf::RenderWindow& window) {
 
 		handle_actions(window, registry);
 
+		handle_collisions(window, registry);
+
 		window.clear();
 		window.draw(background);
 
@@ -110,7 +119,7 @@ int mg::combat_scene(sf::RenderWindow& window) {
 			window.draw(sprite);
 		}
 
-		for (auto [entity, skills, hitbox] : registry.view<const mg::skillset, const mg::hitbox>().each()) {
+		for (auto [entity, hitbox] : registry.view<const mg::hitbox>().each()) {
 			window.draw(hitbox);
 		}
 

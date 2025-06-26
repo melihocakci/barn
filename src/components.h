@@ -68,7 +68,13 @@ namespace mg {
 	};
 
 	struct stats {
-		float health;
+		int health;
+		int attack;
 		float speed;
+	};
+
+	enum class alignment {
+		PLAYER,
+		ENEMY
 	};
 }
