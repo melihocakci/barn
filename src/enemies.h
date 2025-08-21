@@ -5,7 +5,7 @@
 #include <entt/entt.hpp>
 #include <SFML/Graphics.hpp>
 
-namespace mg {
+namespace project_stable {
 	struct enemy {
 		sprite sprite;
 		hitbox hitbox;

@@ -2,7 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 
-namespace mg {
+namespace project_stable {
 	int main_menu(sf::RenderWindow& window);
 
 	int combat_scene(sf::RenderWindow& window);

@@ -24,7 +24,7 @@ static void move_within_bounds(sf::Transformable& object, sf::Vector2f movement,
 	object.move(movement);
 }
 
-void mg::handle_player_input(const sf::RenderWindow& window, entt::registry& registry) {
+void project_stable::handle_player_input(const sf::RenderWindow& window, entt::registry& registry) {
 	for (auto [entity, player_input, sprite, hitbox, skills, stats] : registry.view<const player_input, sprite, hitbox, skillset, const stats>().each())
 	{
 		std::visit([&](const auto& input)
@@ -32,7 +32,7 @@ void mg::handle_player_input(const sf::RenderWindow& window, entt::registry& reg
 				sf::Vector2f delta{};
 
 				using T = std::decay_t<decltype(input)>;
-				if constexpr (std::is_same_v<T, mg::keyboard_input>) {
+				if constexpr (std::is_same_v<T, project_stable::keyboard_input>) {
 					if (sf::Keyboard::isKeyPressed(input.skill_1))
 						skills.skill_1(registry, entity);
 					if (sf::Keyboard::isKeyPressed(input.skill_2))
@@ -51,7 +51,7 @@ void mg::handle_player_input(const sf::RenderWindow& window, entt::registry& reg
 					if (sf::Keyboard::isKeyPressed(input.right))
 						delta += sf::Vector2f{ 1, 0 };
 				}
-				else if constexpr (std::is_same_v<T, mg::joystick_input>) {
+				else if constexpr (std::is_same_v<T, project_stable::joystick_input>) {
 					if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_1))
 						skills.skill_1(registry, entity);
 					if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_2))
@@ -77,7 +77,7 @@ void mg::handle_player_input(const sf::RenderWindow& window, entt::registry& reg
 	}
 }
 
-void mg::handle_projectiles(const sf::RenderWindow& window, entt::registry& registry) {
+void project_stable::handle_projectiles(const sf::RenderWindow& window, entt::registry& registry) {
 	for (auto [entity, trajectory, sprite, hitbox] : registry.view<const trajectory, sprite, hitbox>().each()) {
 		const sf::Rect<float> window_rect{ {0, 0}, { static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y) } };
 		const sf::Rect<float> sprite_rect = sprite.getGlobalBounds();
@@ -92,13 +92,13 @@ void mg::handle_projectiles(const sf::RenderWindow& window, entt::registry& regi
 	}
 }
 
-void mg::handle_actions(const sf::RenderWindow& window, entt::registry& registry) {
+void project_stable::handle_actions(const sf::RenderWindow& window, entt::registry& registry) {
 	for (auto [entity, action] : registry.view<const action>().each()) {
 		action(registry, entity);
 	}
 }
 
-void mg::handle_collisions(const sf::RenderWindow& window, entt::registry& registry) {
+void project_stable::handle_collisions(const sf::RenderWindow& window, entt::registry& registry) {
 	const auto view = registry.view<hitbox, stats, alignment>().each();
 	std::vector<entt::entity> entities_to_remove;
 

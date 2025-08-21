@@ -7,7 +7,7 @@
 
 static const sf::Texture pearto_texture{ "assets/texture/pearto.png" };
 
-static const mg::enemy pearto_enemy
+static const project_stable::enemy pearto_enemy
 {
 	.sprite{ pearto_texture },
 	.hitbox{ 60.f },
@@ -18,10 +18,10 @@ static const mg::enemy pearto_enemy
 		.speed = 5,
 	},
 	.action = [](entt::registry& reg, entt::entity entity) {
-		auto [enemy_hitbox, enemy_sprite, enemy_stats] = reg.get<mg::hitbox, mg::sprite, mg::stats>(entity);
+		auto [enemy_hitbox, enemy_sprite, enemy_stats] = reg.get<project_stable::hitbox, project_stable::sprite, project_stable::stats>(entity);
 		sf::Vector2f closest_player_position{ -100000.f, -100000.f };
 
-		for (auto [entity, _, player_hitbox] : reg.view<mg::skillset, mg::hitbox>().each()) {
+		for (auto [entity, _, player_hitbox] : reg.view<project_stable::skillset, project_stable::hitbox>().each()) {
 			if ((enemy_hitbox.getPosition() - closest_player_position).length() >
 				(enemy_hitbox.getPosition() - player_hitbox.getPosition()).length())
 			{
@@ -41,7 +41,7 @@ static const mg::enemy pearto_enemy
 };
 
 
-const std::array<mg::enemy, 1> mg::enemy_templates
+const std::array<project_stable::enemy, 1> project_stable::enemy_templates
 {
 	pearto_enemy,
 };
