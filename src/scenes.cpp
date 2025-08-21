@@ -8,18 +8,16 @@
 #include <SFML/Audio.hpp>
 #include <entt/entt.hpp>
 
-static void add_player(entt::registry& reg, sf::Vector2f position, const project_stable::character& character) {
+static void add_player(entt::registry& reg, const project_stable::character& character) {
 	const entt::entity entity = reg.create();
 
 	project_stable::sprite& sprite = reg.emplace<project_stable::sprite>(entity, character.sprite);
 	sprite.scale({ 0.05, 0.05 });
 	sprite.setOrigin(sprite.getLocalBounds().getCenter());
-	sprite.setPosition(position);
 
 	project_stable::hitbox& hitbox = reg.emplace<project_stable::hitbox>(entity, character.hitbox);
 	hitbox.setFillColor(sf::Color::Red);
 	hitbox.setOrigin(hitbox.getGeometricCenter());
-	hitbox.setPosition(position);
 
 	reg.emplace<project_stable::stats>(entity, character.stats);
 
@@ -44,18 +42,16 @@ static void add_player(entt::registry& reg, sf::Vector2f position, const project
 	//reg.emplace<project_stable::user_input>(entity, project_stable::joystick_input{ 0u, sf::Joystick::Axis::X, sf::Joystick::Axis::Y, 0u, 1u, 2u, 3u });
 }
 
-static void add_enemy(entt::registry& reg, sf::Vector2f position, const project_stable::enemy& enemy) {
+static void add_enemy(entt::registry& reg, const project_stable::enemy& enemy) {
 	const entt::entity entity = reg.create();
 
 	project_stable::sprite& sprite = reg.emplace<project_stable::sprite>(entity, enemy.sprite);
-	//sprite.scale({ 0.05, 0.05 });
+	sprite.scale({ 0.05, 0.05 });
 	sprite.setOrigin(sprite.getLocalBounds().getCenter());
-	sprite.setPosition(position);
 
 	project_stable::hitbox& hitbox = reg.emplace<project_stable::hitbox>(entity, enemy.hitbox);
 	hitbox.setFillColor(sf::Color::Red);
 	hitbox.setOrigin(hitbox.getGeometricCenter());
-	hitbox.setPosition(position);
 
 	reg.emplace<project_stable::stats>(entity, enemy.stats);
 
@@ -80,15 +76,8 @@ int project_stable::main_menu(sf::RenderWindow& window) {
 int project_stable::combat_scene(sf::RenderWindow& window) {
 	const sf::Texture bg_texture{ "assets/texture/bliss.jpg" };
 	project_stable::sprite background{ bg_texture };
-
-	background.setOrigin({
-		background.getTextureRect().size.x / 2.f,
-		background.getTextureRect().size.y / 2.f });
-	background.setPosition({
-		window.getSize().x / 2.f,
-		window.getSize().y / 2.f });
 	background.setScale({
-		static_cast<float>(window.getSize().x) / background.getTextureRect().size.x,
+		static_cast<float>(window.getSize().y) / background.getTextureRect().size.y,
 		static_cast<float>(window.getSize().y) / background.getTextureRect().size.y });
 
 	sf::Music music{ "assets/audio/Kasane Teto - Teto territory.mp3" };
@@ -97,20 +86,20 @@ int project_stable::combat_scene(sf::RenderWindow& window) {
 	music.setVolume(20.f);
 
 	entt::registry registry;
-	add_player(registry, { window.getSize().x / 2.f, window.getSize().y / 2.f + 400 }, character_templates[0]);
-	add_enemy(registry, { window.getSize().x / 2.f, window.getSize().y / 2.f }, enemy_templates[0]);
+	add_player(registry, character_templates[0]);
+	add_enemy(registry, enemy_templates[0]);
 
 	while (window.isOpen())
 	{
 		handle_events(window);
 
-		handle_player_input(window, registry);
+		player_input_system(registry);
 
-		handle_projectiles(window, registry);
+		trajectory_system(registry);
 
-		handle_actions(window, registry);
+		action_system(registry);
 
-		handle_collisions(window, registry);
+		hitbox_system(registry);
 
 		window.clear();
 		window.draw(background);
