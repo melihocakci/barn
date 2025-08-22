@@ -5,8 +5,8 @@
 int main() {
 	sf::RenderWindow window{
 		sf::VideoMode::getDesktopMode(),
-			"Teto Pear",
-			sf::State::Fullscreen
+		"Teto Pear",
+		sf::State::Fullscreen
 	};
 
 	window.setFramerateLimit(60);

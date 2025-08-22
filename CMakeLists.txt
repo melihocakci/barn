@@ -13,7 +13,7 @@ if(WIN32)
     file(COPY ${STEAM_LIB_DIR}/steam_api64.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
-add_executable(project_stable "src/main.cpp" "src/scenes.cpp" "src/systems.cpp" "src/characters.cpp" "src/enemies.cpp")
+add_executable(project_stable "src/main.cpp" "src/scenes.cpp" "src/systems.cpp" "src/static_elements.cpp")
 target_compile_features(project_stable PRIVATE cxx_std_23)
 target_link_libraries(project_stable PRIVATE steamworks_sdk EnTT::EnTT SFML::Graphics SFML::Audio)
 if(WIN32)
