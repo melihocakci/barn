@@ -8,7 +8,7 @@
 #include <chrono>
 
 namespace project_stable {
-	using hitbox = sf::CircleShape;
+	using hitbox = sf::RectangleShape;
 
 	using sprite = sf::Sprite;
 
@@ -67,14 +67,21 @@ namespace project_stable {
 		skill skill_4;
 	};
 
-	struct stats {
-		int health;
-		int attack;
-		float speed;
+	struct properties {
+		int health = 1;
+		int attack = 0;
+		float speed = 0;
+	};
+
+	enum class type {
+		CREATURE,
+		OBSTACLE,
+		PROJECTILE,
 	};
 
 	enum class alignment {
-		PLAYER,
-		ENEMY
+		ALLY,
+		FOE,
+		NEUTRAL,
 	};
 }

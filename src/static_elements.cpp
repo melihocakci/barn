@@ -24,29 +24,31 @@ static const project_stable::skill green_onion_attack
 {
 	.cooldown_time{ 250 },
 	.action = [](entt::registry& reg, entt::entity player_entity) {
-		auto [player_hitbox, player_stats] = reg.get<project_stable::hitbox, project_stable::stats>(player_entity);
+		auto [player_hitbox, player_stats] = reg.get<project_stable::hitbox, project_stable::properties>(player_entity);
 
 		const entt::entity bullet_entity = reg.create();
 		project_stable::sprite& bullet_sprite = reg.emplace<project_stable::sprite>(bullet_entity, project_stable::texture::green_onion);
 		bullet_sprite.setOrigin(bullet_sprite.getLocalBounds().getCenter());
 		bullet_sprite.setPosition(player_hitbox.getPosition());
 
-		project_stable::hitbox& bullet_hitbox = reg.emplace<project_stable::hitbox>(bullet_entity, 10);
+		project_stable::hitbox& bullet_hitbox = reg.emplace<project_stable::hitbox>(bullet_entity, sf::Vector2f{ 10, 10 });
 		bullet_hitbox.setOrigin(bullet_hitbox.getGeometricCenter());
 		bullet_hitbox.setPosition(player_hitbox.getPosition());
 
-		reg.emplace<project_stable::stats>(bullet_entity, project_stable::stats{.health = 1, .attack = player_stats.attack, .speed = 30 });
+		reg.emplace<project_stable::properties>(bullet_entity, project_stable::properties{.health = 1, .attack = player_stats.attack, .speed = 30 });
 
 		reg.emplace<project_stable::trajectory>(bullet_entity, 10.f, sf::Vector2f{ 0, -1 });
 
-		reg.emplace<project_stable::alignment>(bullet_entity, project_stable::alignment::PLAYER);
+		reg.emplace<project_stable::type>(bullet_entity, project_stable::type::PROJECTILE);
+
+		reg.emplace<project_stable::alignment>(bullet_entity, project_stable::alignment::ALLY);
 	},
 };
 
 static const project_stable::character hatsune_miku
 {
 	.sprite{ project_stable::texture::miku },
-	.hitbox{ 20.f },
+	.hitbox{{ 20.f, 20.f }},
 	.stats{
 		.health = 1000,
 		.attack = 10,
@@ -74,15 +76,16 @@ const std::array<project_stable::character, 1> project_stable::character_templat
 static const project_stable::enemy pearto_enemy
 {
 	.sprite{ project_stable::texture::pearto },
-	.hitbox{ 60.f },
+	.hitbox{{ 60.f, 60.f }},
 	.stats
 	{
 		.health = 100,
 		.attack = 10,
 		.speed = 5,
 	},
-	.action = [](entt::registry& reg, entt::entity entity) {
-		auto [enemy_hitbox, enemy_sprite, enemy_stats] = reg.get<project_stable::hitbox, project_stable::sprite, project_stable::stats>(entity);
+	.action = [](entt::registry& reg, entt::entity entity)
+	{
+		auto [enemy_hitbox, enemy_sprite, enemy_stats] = reg.get<project_stable::hitbox, project_stable::sprite, project_stable::properties>(entity);
 		sf::Vector2f closest_player_position{ -100000.f, -100000.f };
 
 		for (auto [entity, _, player_hitbox] : reg.view<project_stable::skillset, project_stable::hitbox>().each()) {

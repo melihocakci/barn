@@ -15,7 +15,7 @@ namespace project_stable {
 	struct character {
 		sprite sprite;
 		hitbox hitbox;
-		stats stats;
+		properties stats;
 		skillset skillset;
 	};
 
@@ -24,7 +24,7 @@ namespace project_stable {
 	struct enemy {
 		sprite sprite;
 		hitbox hitbox;
-		stats stats;
+		properties stats;
 		action action;
 	};
 

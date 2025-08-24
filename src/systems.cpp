@@ -7,7 +7,7 @@
 
 
 void project_stable::player_input_system(entt::registry& registry) {
-	for (auto [entity, player_input, sprite, hitbox, skills, stats] : registry.view<const player_input, sprite, hitbox, skillset, const stats>().each())
+	for (auto [entity, player_input, sprite, hitbox, skills, stats] : registry.view<const player_input, sprite, hitbox, skillset, const properties>().each())
 	{
 		std::visit([&](const auto& input)
 			{
@@ -76,19 +76,51 @@ void project_stable::action_system(entt::registry& registry) {
 }
 
 void project_stable::hitbox_system(entt::registry& registry) {
-	const auto view = registry.view<hitbox, stats, alignment>().each();
+	const auto view = registry.view<hitbox, properties, type, alignment>().each();
 	std::vector<entt::entity> entities_to_remove;
 
 	for (auto first_iteretor = view.begin(); first_iteretor != view.end(); ++first_iteretor) {
-		auto [first_entity, first_hitbox, first_stats, first_affiliation] = *first_iteretor;
+		auto [first_entity, first_hitbox, first_stats, first_type, first_alignment] = *first_iteretor;
 		auto second_iteretor = first_iteretor;
 
 		for (++second_iteretor; second_iteretor != view.end(); ++second_iteretor) {
-			auto [second_entity, second_hitbox, second_stats, second_affiliation] = *second_iteretor;
+			auto [second_entity, second_hitbox, second_stats, second_type, second_alignment] = *second_iteretor;
 
-			if (first_affiliation == second_affiliation) continue;
+			if (first_type == second_type) {
+				continue;
+			}
+			if (first_alignment == second_alignment) {
+				continue;
+			}
+			else if (!first_hitbox.getGlobalBounds().findIntersection(second_hitbox.getGlobalBounds())) {
+				continue;
+			}
+			else if (first_type == type::OBSTACLE && second_type == type::CREATURE || first_type == type::CREATURE && second_type == type::OBSTACLE) {
+				hitbox& obstacle_hitbox = (first_type == type::OBSTACLE) ? first_hitbox : second_hitbox;
+				hitbox& creature_hitbox = (first_type == type::CREATURE) ? first_hitbox : second_hitbox;
 
-			if (first_hitbox.getRadius() + second_hitbox.getRadius() > (first_hitbox.getPosition() - second_hitbox.getPosition()).length()) {
+				float dx = obstacle_hitbox.getGlobalBounds().getCenter().x - creature_hitbox.getGlobalBounds().getCenter().x;
+				float dy = obstacle_hitbox.getGlobalBounds().getCenter().y - creature_hitbox.getGlobalBounds().getCenter().y;
+
+				float overlapX = (obstacle_hitbox.getSize().x / 2.f + creature_hitbox.getSize().x / 2.f) - std::abs(dx);
+				float overlapY = (obstacle_hitbox.getSize().y / 2.f + creature_hitbox.getSize().y / 2.f) - std::abs(dy);
+
+				if (overlapX < overlapY) {
+					// Move along X axis
+					if (dx > 0)
+						creature_hitbox.move({ -overlapX, 0.f }); // Move left
+					else
+						creature_hitbox.move({ overlapX, 0.f }); // Move right
+				}
+				else {
+					// Move along Y axis
+					if (dy > 0)
+						creature_hitbox.move({ 0.f, -overlapY }); // Move up
+					else
+						creature_hitbox.move({ 0.f, overlapY }); // Move down
+				}
+			}
+			else {
 				first_stats.health -= second_stats.attack;
 				second_stats.health -= first_stats.attack;
 				if (first_stats.health <= 0) {
@@ -103,5 +135,9 @@ void project_stable::hitbox_system(entt::registry& registry) {
 
 	for (const auto& entity : entities_to_remove) {
 		registry.destroy(entity);
+	}
+
+	for (auto [entity, sprite, hitbox] : registry.view<sprite, const hitbox>().each()) {
+		sprite.setPosition(hitbox.getPosition());
 	}
 }
