@@ -1,5 +1,6 @@
 #include "systems.h"
 #include "components.h"
+#include "constants.h"
 
 #include <entt/entt.hpp>
 
@@ -7,7 +8,7 @@
 
 
 void project_stable::player_input_system(entt::registry& registry) {
-	for (auto [entity, player_input, sprite, hitbox, skills, stats] : registry.view<const player_input, sprite, hitbox, skillset, const properties>().each())
+	for (auto [entity, player_input, hitbox, skillset, properties] : registry.view<const player_input, hitbox, skillset, const properties>().each())
 	{
 		std::visit([&](const auto& input)
 			{
@@ -16,13 +17,13 @@ void project_stable::player_input_system(entt::registry& registry) {
 				using T = std::decay_t<decltype(input)>;
 				if constexpr (std::is_same_v<T, project_stable::keyboard_input>) {
 					if (sf::Keyboard::isKeyPressed(input.skill_1))
-						skills.skill_1(registry, entity);
+						skillset.skill_1(registry, entity);
 					if (sf::Keyboard::isKeyPressed(input.skill_2))
-						skills.skill_2(registry, entity);
+						skillset.skill_2(registry, entity);
 					if (sf::Keyboard::isKeyPressed(input.skill_3))
-						skills.skill_3(registry, entity);
+						skillset.skill_3(registry, entity);
 					if (sf::Keyboard::isKeyPressed(input.skill_4))
-						skills.skill_4(registry, entity);
+						skillset.skill_4(registry, entity);
 
 					if (sf::Keyboard::isKeyPressed(input.up))
 						delta += sf::Vector2f{ 0, -1 };
@@ -35,13 +36,13 @@ void project_stable::player_input_system(entt::registry& registry) {
 				}
 				else if constexpr (std::is_same_v<T, project_stable::joystick_input>) {
 					if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_1))
-						skills.skill_1(registry, entity);
+						skillset.skill_1(registry, entity);
 					if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_2))
-						skills.skill_2(registry, entity);
+						skillset.skill_2(registry, entity);
 					if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_3))
-						skills.skill_3(registry, entity);
+						skillset.skill_3(registry, entity);
 					if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_4))
-						skills.skill_4(registry, entity);
+						skillset.skill_4(registry, entity);
 
 					delta = {
 						sf::Joystick::getAxisPosition(input.joystick_id, input.horizontal_axis) / 100,
@@ -52,20 +53,18 @@ void project_stable::player_input_system(entt::registry& registry) {
 				if (delta.length() > 1.f) delta = delta.normalized();
 				else if (delta.length() < 0.05f) return;
 
-				delta *= stats.speed;
+				delta *= properties.speed;
 
 				hitbox.move(delta);
-				sprite.setPosition(hitbox.getPosition());
 			}, player_input
 		);
 	}
 }
 
 void project_stable::trajectory_system(entt::registry& registry) {
-	for (auto [entity, trajectory, sprite, hitbox] : registry.view<const trajectory, sprite, hitbox>().each()) {
+	for (auto [entity, trajectory, hitbox] : registry.view<const trajectory, hitbox>().each()) {
 		sf::Vector2f delta = trajectory.direction.normalized() * trajectory.speed;
 		hitbox.move(delta);
-		sprite.setPosition(hitbox.getPosition());
 	}
 }
 
@@ -136,8 +135,51 @@ void project_stable::hitbox_system(entt::registry& registry) {
 	for (const auto& entity : entities_to_remove) {
 		registry.destroy(entity);
 	}
+}
+
+void project_stable::sprite_system(entt::registry& registry, sf::RenderWindow& window, sprite& background) {
+	const float window_ratio = static_cast<float>(window.getSize().x) / window.getSize().y;
+	const float target_ratio = VIRTUAL_WIDTH / VIRTUAL_HEIGHT;
+
+	float scale_x = 1.f;
+	float scale_y = 1.f;
+	float offset_x = 0.f;
+	float offset_y = 0.f;
+
+	if (window_ratio > target_ratio) {
+		// Window is wider than target
+		scale_x = target_ratio / window_ratio;
+		offset_x = (1.f - scale_x) / 2.f;
+	}
+	else {
+		// Window is taller than target
+		scale_y = window_ratio / target_ratio;
+		offset_y = (1.f - scale_y) / 2.f;
+	}
+
+	sf::View view{ sf::FloatRect{ { 0.f, 0.f }, { VIRTUAL_WIDTH, VIRTUAL_HEIGHT } } };
+	view.setViewport(sf::FloatRect{ { offset_x, offset_y }, { scale_x, scale_y } });
+
 
 	for (auto [entity, sprite, hitbox] : registry.view<sprite, const hitbox>().each()) {
 		sprite.setPosition(hitbox.getPosition());
 	}
+
+	window.clear();
+	window.setView(view);
+
+	background.setScale({ VIRTUAL_WIDTH / background.getTextureRect().size.x, VIRTUAL_HEIGHT / background.getTextureRect().size.y });
+	window.draw(background);
+
+	for (auto [entity, sprite] : registry.view<const project_stable::sprite>().each()) {
+		window.draw(sprite);
+	}
+
+	for (auto [entity, hitbox] : registry.view<const project_stable::hitbox>().each()) {
+		window.draw(hitbox);
+	}
+
+	window.setView(window.getDefaultView());
+
+	window.display();
 }

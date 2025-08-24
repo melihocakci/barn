@@ -17,11 +17,10 @@ static void add_player(entt::registry& reg, const project_stable::character& cha
 		VIRTUAL_HEIGHT * 0.25f / sprite.getTextureRect().size.y
 		});
 	sprite.setOrigin(sprite.getLocalBounds().getCenter());
-	sprite.setPosition({ VIRTUAL_WIDTH * 0.5f, VIRTUAL_HEIGHT * 0.8f });
 
 	project_stable::hitbox& hitbox = reg.emplace<project_stable::hitbox>(entity, character.hitbox);
 	hitbox.setOrigin(hitbox.getGeometricCenter());
-	hitbox.setPosition(sprite.getPosition());
+	hitbox.setPosition({ VIRTUAL_WIDTH * 0.5f, VIRTUAL_HEIGHT * 0.8f });
 
 	hitbox.setFillColor(sf::Color::Transparent);
 	hitbox.setOutlineColor(sf::Color::Red);
@@ -62,11 +61,10 @@ static void add_enemy(entt::registry& reg, const project_stable::enemy& enemy) {
 		VIRTUAL_HEIGHT * 0.25f / sprite.getTextureRect().size.y
 		});
 	sprite.setOrigin(sprite.getLocalBounds().getCenter());
-	sprite.setPosition({ VIRTUAL_WIDTH * 0.5f, VIRTUAL_HEIGHT * 0.3f });
 
 	project_stable::hitbox& hitbox = reg.emplace<project_stable::hitbox>(entity, enemy.hitbox);
 	hitbox.setOrigin(hitbox.getGeometricCenter());
-	hitbox.setPosition(sprite.getPosition());
+	hitbox.setPosition({ VIRTUAL_WIDTH * 0.5f, VIRTUAL_HEIGHT * 0.3f });
 
 	hitbox.setFillColor(sf::Color::Transparent);
 	hitbox.setOutlineColor(sf::Color::Red);
@@ -96,8 +94,6 @@ int project_stable::main_menu(sf::RenderWindow& window) {
 
 int project_stable::combat_scene(sf::RenderWindow& window) {
 	sprite background{ texture::bliss };
-
-	background.setScale({ VIRTUAL_WIDTH / background.getTextureRect().size.x, VIRTUAL_HEIGHT / background.getTextureRect().size.y });
 
 	sf::Music music{ "assets/audio/Kasane Teto - Teto territory.mp3" };
 	//music.play();
@@ -147,18 +143,7 @@ int project_stable::combat_scene(sf::RenderWindow& window) {
 
 		hitbox_system(registry);
 
-		window.clear();
-		window.draw(background);
-
-		for (auto [entity, sprite] : registry.view<const project_stable::sprite>().each()) {
-			window.draw(sprite);
-		}
-
-		for (auto [entity, hitbox] : registry.view<const project_stable::hitbox>().each()) {
-			window.draw(hitbox);
-		}
-
-		window.display();
+		sprite_system(registry, window, background);
 	}
 
 	return 0;
