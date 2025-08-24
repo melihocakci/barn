@@ -79,11 +79,11 @@ void project_stable::hitbox_system(entt::registry& registry) {
 	std::vector<entt::entity> entities_to_remove;
 
 	for (auto first_iteretor = view.begin(); first_iteretor != view.end(); ++first_iteretor) {
-		auto [first_entity, first_hitbox, first_stats, first_type, first_alignment] = *first_iteretor;
+		auto [first_entity, first_hitbox, first_properties, first_type, first_alignment] = *first_iteretor;
 		auto second_iteretor = first_iteretor;
 
 		for (++second_iteretor; second_iteretor != view.end(); ++second_iteretor) {
-			auto [second_entity, second_hitbox, second_stats, second_type, second_alignment] = *second_iteretor;
+			auto [second_entity, second_hitbox, second_properties, second_type, second_alignment] = *second_iteretor;
 
 			if (first_type == second_type) {
 				continue;
@@ -119,13 +119,16 @@ void project_stable::hitbox_system(entt::registry& registry) {
 						creature_hitbox.move({ 0.f, overlapY }); // Move down
 				}
 			}
+			else if (first_type == type::OBSTACLE && second_type == type::PROJECTILE || first_type == type::PROJECTILE && second_type == type::OBSTACLE) {
+				entities_to_remove.push_back((first_type == type::PROJECTILE) ? first_entity : second_entity);
+			}
 			else {
-				first_stats.health -= second_stats.attack;
-				second_stats.health -= first_stats.attack;
-				if (first_stats.health <= 0) {
+				first_properties.health -= second_properties.attack;
+				second_properties.health -= first_properties.attack;
+				if (first_properties.health <= 0) {
 					entities_to_remove.push_back(first_entity);
 				}
-				if (second_stats.health <= 0) {
+				if (second_properties.health <= 0) {
 					entities_to_remove.push_back(second_entity);
 				}
 			}
