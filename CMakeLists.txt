@@ -5,6 +5,8 @@ add_subdirectory(lib/SFML)
 
 add_subdirectory(lib/entt)
 
+add_subdirectory(lib/box2d)
+
 add_library(steamworks_sdk INTERFACE)
 target_include_directories(steamworks_sdk INTERFACE lib/steamworks_sdk/public)
 if(WIN32)
@@ -15,7 +17,7 @@ endif()
 
 add_executable(project_stable "src/main.cpp" "src/scenes.cpp" "src/systems.cpp" "src/static_elements.cpp")
 target_compile_features(project_stable PRIVATE cxx_std_23)
-target_link_libraries(project_stable PRIVATE steamworks_sdk EnTT::EnTT SFML::Graphics SFML::Audio)
+target_link_libraries(project_stable PRIVATE steamworks_sdk EnTT::EnTT box2d SFML::Graphics SFML::Audio)
 if(WIN32)
     set_target_properties(project_stable PROPERTIES WIN32_EXECUTABLE TRUE)
     target_link_libraries(project_stable PRIVATE sfml-main)
