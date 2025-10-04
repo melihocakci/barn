@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(project_stable LANGUAGES CXX)
+project(barn LANGUAGES CXX)
 
 add_subdirectory(lib/SFML)
 
@@ -15,12 +15,12 @@ if(WIN32)
     file(COPY ${STEAM_LIB_DIR}/steam_api64.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
-add_executable(project_stable "src/main.cpp" "src/scenes.cpp" "src/systems.cpp" "src/static_elements.cpp")
-target_compile_features(project_stable PRIVATE cxx_std_23)
-target_link_libraries(project_stable PRIVATE steamworks_sdk EnTT::EnTT box2d SFML::Graphics SFML::Audio)
+add_executable(barn "src/main.cpp" "src/scenes.cpp" "src/systems.cpp" "src/static_elements.cpp")
+target_compile_features(barn PRIVATE cxx_std_23)
+target_link_libraries(barn PRIVATE steamworks_sdk EnTT::EnTT box2d SFML::Graphics SFML::Audio)
 if(WIN32)
-    set_target_properties(project_stable PROPERTIES WIN32_EXECUTABLE TRUE)
-    target_link_libraries(project_stable PRIVATE sfml-main)
+    set_target_properties(barn PROPERTIES WIN32_EXECUTABLE TRUE)
+    target_link_libraries(barn PRIVATE sfml-main)
 endif()
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/assets DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

@@ -4,7 +4,7 @@
 
 #include <SFML/Graphics.hpp>
 
-namespace project_stable {
+namespace barn {
 	namespace texture {
 		extern const sf::Texture miku;
 		extern const sf::Texture pearto;
