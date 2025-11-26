@@ -1,7 +1,9 @@
 #include "static_elements.h"
 #include "components.h"
+#include "utility.h"
 
 #include <entt/entt.hpp>
+#include <box2d/box2d.h>
 
 #include <array>
 
@@ -12,7 +14,7 @@ const sf::Texture barn::texture::bliss{ "assets/texture/bliss.jpg" };
 
 const barn::skill none = {
 	.cooldown_time{},
-	.action = [](entt::registry& reg, entt::entity player_entity) {
+	.action = [](entt::registry& reg, b2WorldId world, entt::entity player_entity) {
 	},
 };
 
@@ -23,21 +25,26 @@ const barn::skill none = {
 static const barn::skill green_onion_attack
 {
 	.cooldown_time{ 250 },
-	.action = [](entt::registry& reg, entt::entity player_entity) {
-		auto [player_hitbox, player_stats] = reg.get<barn::hitbox, barn::properties>(player_entity);
+	.action = [](entt::registry& reg, b2WorldId world_id, entt::entity player_entity) {
+		auto [player_body, player_stats] = reg.get<barn::body, barn::properties>(player_entity);
 
 		const entt::entity bullet_entity = reg.create();
 		barn::sprite& bullet_sprite = reg.emplace<barn::sprite>(bullet_entity, barn::texture::green_onion);
 		bullet_sprite.setOrigin(bullet_sprite.getLocalBounds().getCenter());
-		bullet_sprite.setPosition(player_hitbox.getPosition());
 
-		barn::hitbox& bullet_hitbox = reg.emplace<barn::hitbox>(bullet_entity, sf::Vector2f{ 10, 10 });
-		bullet_hitbox.setOrigin(bullet_hitbox.getGeometricCenter());
-		bullet_hitbox.setPosition(player_hitbox.getPosition());
+		b2BodyDef body_def = b2DefaultBodyDef();
+		body_def.type = b2_dynamicBody;
+		body_def.position = b2Body_GetPosition(player_body);
+		b2BodyId body_id = b2CreateBody(world_id, &body_def);
+		b2Polygon dynamic_box = b2MakeBox(1.0f, 1.0f);
+		b2ShapeDef shape_def = b2DefaultShapeDef();
+		shape_def.density = 1.0f;
+		shape_def.material.friction = 0.3f;
+		b2CreatePolygonShape(body_id, &shape_def, &dynamic_box);
+
+		reg.emplace<barn::body>(bullet_entity, body_id);
 
 		reg.emplace<barn::properties>(bullet_entity, barn::properties{.health = 1, .attack = player_stats.attack, .speed = 30 });
-
-		reg.emplace<barn::trajectory>(bullet_entity, 10.f, sf::Vector2f{ 0, -1 });
 
 		reg.emplace<barn::type>(bullet_entity, barn::type::PROJECTILE);
 
@@ -48,8 +55,8 @@ static const barn::skill green_onion_attack
 static const barn::character hatsune_miku
 {
 	.sprite{ barn::texture::miku },
-	.hitbox{{ 20.f, 20.f }},
-	.stats{
+	.size{ 1.f, 2.f },
+	.properties{
 		.health = 1000,
 		.attack = 10,
 		.speed = 20,
@@ -76,34 +83,40 @@ const std::array<barn::character, 1> barn::character_templates
 static const barn::enemy pearto_enemy
 {
 	.sprite{ barn::texture::pearto },
-	.hitbox{{ 60.f, 60.f }},
+	.size{ 2.f, 2.f },
 	.stats
 	{
 		.health = 100,
 		.attack = 10,
 		.speed = 5,
 	},
-	.action = [](entt::registry& reg, entt::entity entity)
+	.action = [](entt::registry& reg, b2WorldId world_id, entt::entity entity)
 	{
-		auto [enemy_hitbox, enemy_sprite, enemy_stats] = reg.get<barn::hitbox, barn::sprite, barn::properties>(entity);
-		sf::Vector2f closest_player_position{ -100000.f, -100000.f };
+		auto [enemy_body, enemy_stats] = reg.get<barn::body, barn::properties>(entity);
+		b2Vec2 enemy_position = b2Body_GetPosition(enemy_body);
 
-		for (auto [entity, _, player_hitbox] : reg.view<barn::skillset, barn::hitbox>().each()) {
-			if ((enemy_hitbox.getPosition() - closest_player_position).length() >
-				(enemy_hitbox.getPosition() - player_hitbox.getPosition()).length())
+		float shortest_distance = -1.f;
+		b2Vec2 closest_target{};
+
+		for (auto [entity, _, player_body] : reg.view<barn::skillset, barn::body>().each()) {
+			const b2Vec2 player_position = b2Body_GetPosition(player_body);
+
+			float distance = length(enemy_position - player_position);
+
+			if (distance < shortest_distance || shortest_distance < 0)
 			{
-				closest_player_position = player_hitbox.getPosition();
+				shortest_distance = distance;
+				closest_target = player_position;
 			}
 		}
 
-		const sf::Vector2f distance = closest_player_position - enemy_hitbox.getPosition();
-
-		if (distance.length() == 0) {
+		if (shortest_distance < 0) {
+			b2Body_SetLinearVelocity(enemy_body, { 0,0 });
 			return;
 		}
 
-		enemy_hitbox.move(distance.normalized() * enemy_stats.speed);
-		enemy_sprite.setPosition(enemy_hitbox.getPosition());
+		b2Vec2 vel = normalize(closest_target - enemy_position) * enemy_stats.speed;
+		b2Body_SetLinearVelocity(enemy_body, vel);
 	}
 };
 

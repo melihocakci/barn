@@ -4,17 +4,14 @@
 
 #include <entt/entt.hpp>
 #include <SFML/Graphics.hpp>
+#include <box2d/types.h>
 
 namespace barn {
-	void keyboard_system(entt::registry& registry);
-	
-	void joystick_system(entt::registry& registry);
+	void keyboard_system(entt::registry& registry, b2WorldId world_id);
 
-	void trajectory_system(entt::registry& registry);
+	void joystick_system(entt::registry& registry, b2WorldId world_id);
 
-	void action_system(entt::registry& registry);
-
-	void hitbox_system(entt::registry& registry);
+	void action_system(entt::registry& registry, b2WorldId world_id);
 
 	void sprite_system(entt::registry& registry, sf::RenderWindow& window, sprite& background);
 }
