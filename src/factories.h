@@ -5,12 +5,16 @@
 #include <box2d/types.h>
 #include <entt/entt.hpp>
 
+#include <variant>
+
 namespace barn {
-	void player_factory(entt::registry& reg, const b2WorldId world_id, const barn::character& def);
+	using control_method = std::variant<barn::keyboard_controls, barn::joystick_controls>;
 
-	void enemy_factory(entt::registry& reg, const b2WorldId world_id, const barn::enemy& def);
+	entt::entity create_player(entt::registry& reg, const b2WorldId world_id, const barn::player_def& def, const barn::control_method& controls);
 
-	void projectile_factory(entt::registry& reg, const b2WorldId world_id, const barn::projectile& def);
+	entt::entity create_enemy(entt::registry& reg, const b2WorldId world_id, const barn::enemy_def& def);
 
-	void border_factory(entt::registry& reg, const b2WorldId world_id);
+	entt::entity create_projectile(entt::registry& reg, const b2WorldId world_id, const barn::projectile_def& def);
+
+	entt::entity create_borders(entt::registry& reg, const b2WorldId world_id);
 }

@@ -5,6 +5,7 @@
 #include "constants.h"
 #include "factories.h"
 #include "assets.h"
+#include "config.h"
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
@@ -25,7 +26,7 @@ int barn::main_menu(sf::RenderWindow& window, const b2WorldId world_id) {
 }
 
 int barn::combat_scene(sf::RenderWindow& window, const b2WorldId world_id) {
-	const auto bliss_texture = load_texture("assets/texture/bliss.jpg");
+	const auto bliss_texture = get_texture("assets/texture/bliss.jpg");
 	sprite background{ *bliss_texture };
 
 	sf::Music music{ "assets/audio/Kasane Teto - Teto territory.mp3" };
@@ -35,15 +36,21 @@ int barn::combat_scene(sf::RenderWindow& window, const b2WorldId world_id) {
 
 	entt::registry registry;
 
-	border_factory(registry, world_id);
-	player_factory(registry, world_id, character_templates[0]);
-	enemy_factory(registry, world_id, enemy_templates[0]);
+	create_borders(registry, world_id);
+
+	player_def player = character_templates[0];
+	player.body.body.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS / 4 };
+	create_player(registry, world_id, player, config::player1);
+
+	enemy_def enemy = enemy_templates[0];
+	enemy.body.body.position = { VIRTUAL_WIDTH_METERS / 2, 3 * VIRTUAL_HEIGHT_METERS / 4 };
+	create_enemy(registry, world_id, enemy);
 
 	sf::Clock clock;
 
 	while (window.isOpen())
 	{
-		b2World_Step(world_id, clock.restart().asSeconds(), BOX2D_SUB_STEP_COUNT);
+		b2World_Step(world_id, 1.f / 240, BOX2D_SUB_STEP_COUNT);
 
 		handle_events(window);
 

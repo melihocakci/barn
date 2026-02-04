@@ -1,7 +1,7 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
-#include <box2d/box2d.h>
+#include <box2d/types.h>
 
 namespace barn {
 	int main_menu(sf::RenderWindow& window, const b2WorldId world_id);

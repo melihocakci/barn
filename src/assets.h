@@ -3,5 +3,5 @@
 #include <filesystem>
 
 namespace barn {
-	barn::texture load_texture(const std::filesystem::path& asset);
+	barn::texture get_texture(const std::filesystem::path& asset);
 }

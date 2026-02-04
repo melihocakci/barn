@@ -12,37 +12,37 @@
 namespace barn {
 	using body = b2BodyId;
 
-	using texture = std::shared_ptr<sf::Texture>;
+	using texture = std::shared_ptr<const sf::Texture>;
 
 	using sprite = sf::Sprite;
 
 	using action = std::function<void(entt::registry&, const b2WorldId, entt::entity)>;
 
 	struct keyboard_controls {
-		sf::Keyboard::Scan up;
-		sf::Keyboard::Scan down;
-		sf::Keyboard::Scan left;
-		sf::Keyboard::Scan right;
-		sf::Keyboard::Scan skill_1;
-		sf::Keyboard::Scan skill_2;
-		sf::Keyboard::Scan skill_3;
-		sf::Keyboard::Scan skill_4;
+		sf::Keyboard::Scan up{};
+		sf::Keyboard::Scan down{};
+		sf::Keyboard::Scan left{};
+		sf::Keyboard::Scan right{};
+		sf::Keyboard::Scan skill_1{};
+		sf::Keyboard::Scan skill_2{};
+		sf::Keyboard::Scan skill_3{};
+		sf::Keyboard::Scan skill_4{};
 	};
 
 	struct joystick_controls {
-		unsigned int joystick_id;
-		sf::Joystick::Axis horizontal_axis;
-		sf::Joystick::Axis vertical_axis;
-		unsigned int skill_1;
-		unsigned int skill_2;
-		unsigned int skill_3;
-		unsigned int skill_4;
+		unsigned int joystick_id{};
+		sf::Joystick::Axis horizontal_axis{};
+		sf::Joystick::Axis vertical_axis{};
+		unsigned int skill_1{};
+		unsigned int skill_2{};
+		unsigned int skill_3{};
+		unsigned int skill_4{};
 	};
 
 	struct skill {
 		std::chrono::steady_clock::time_point last_used_time{};
 		const std::chrono::milliseconds cooldown_time{};
-		const barn::action action;
+		const barn::action action = [](entt::registry& reg, const b2WorldId world, entt::entity player_entity) {};
 
 		void operator()(entt::registry& reg, const b2WorldId world, entt::entity ent) {
 			using namespace std::chrono;
@@ -58,10 +58,10 @@ namespace barn {
 	};
 
 	struct skillset {
-		skill skill_1;
-		skill skill_2;
-		skill skill_3;
-		skill skill_4;
+		skill skill_1{};
+		skill skill_2{};
+		skill skill_3{};
+		skill skill_4{};
 	};
 
 	struct properties {
