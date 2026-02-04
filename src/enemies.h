@@ -13,5 +13,5 @@ namespace mg {
 		action action;
 	};
 
-	extern const std::array<enemy, 1> set_enemies;
+	extern const std::array<enemy, 1> enemy_templates;
 }

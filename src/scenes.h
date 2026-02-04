@@ -5,5 +5,5 @@
 namespace mg {
 	int main_menu(sf::RenderWindow& window);
 
-	int scene1(sf::RenderWindow& window);
+	int combat_scene(sf::RenderWindow& window);
 }

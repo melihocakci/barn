@@ -35,6 +35,8 @@ namespace mg {
 		unsigned int skill_4;
 	};
 
+	using player_input = std::variant<keyboard_input, joystick_input>;
+
 	struct trajectory {
 		float speed{};
 		sf::Vector2f direction;
