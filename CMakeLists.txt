@@ -8,6 +8,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
+foreach(CONFIG_TYPE ${CMAKE_CONFIGURATION_TYPES})
+    string(TOUPPER ${CONFIG_TYPE} CONFIG_TYPE_UPPER)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${CONFIG_TYPE_UPPER} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${CONFIG_TYPE_UPPER} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+endforeach()
+
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
@@ -32,15 +38,25 @@ add_subdirectory(lib/entt EXCLUDE_FROM_ALL)
 
 add_subdirectory(lib/box2d EXCLUDE_FROM_ALL)
 
-add_library(steamworks_sdk INTERFACE EXCLUDE_FROM_ALL)
-target_include_directories(steamworks_sdk INTERFACE lib/steamworks_sdk/public)
+add_library(steamworks_sdk SHARED IMPORTED)
+target_include_directories(steamworks_sdk INTERFACE "lib/steamworks_sdk/public")
+set(STEAM_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/steamworks_sdk/redistributable_bin")
 if(WIN32)
-    set(STEAM_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/steamworks_sdk/redistributable_bin/win64)
-    target_link_libraries(steamworks_sdk INTERFACE ${STEAM_LIB_DIR}/steam_api64.lib)
-    file(COPY ${STEAM_LIB_DIR}/steam_api64.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+    set_target_properties(steamworks_sdk PROPERTIES 
+        IMPORTED_LOCATION "${STEAM_LIB_DIR}/win64/steam_api64.dll"
+        IMPORTED_IMPLIB "${STEAM_LIB_DIR}/win64/steam_api64.lib"
+    )
+elseif(UNIX AND NOT APPLE)
+    set_target_properties(steamworks_sdk PROPERTIES 
+        IMPORTED_LOCATION "${STEAM_LIB_DIR}/linux64/libsteam_api.so"
+    )
+elseif(APPLE)
+    set_target_properties(steamworks_sdk PROPERTIES 
+        IMPORTED_LOCATION "${STEAM_LIB_DIR}/osx/libsteam_api.dylib"
+    )
 endif()
 
-add_executable(${PROJECT_NAME}
+add_executable(${PROJECT_NAME} WIN32
     "src/main.cpp"
     "src/scenes.cpp"
     "src/systems.cpp"
@@ -50,9 +66,10 @@ add_executable(${PROJECT_NAME}
     "src/config.cpp"
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE "SDL3::SDL3" "SDL3_image::SDL3_image" "EnTT::EnTT" "box2d")
-if(WIN32)
-    set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
-endif()
+target_link_libraries(${PROJECT_NAME} PRIVATE "SDL3::SDL3" "SDL3_image::SDL3_image" "EnTT::EnTT" "box2d" "steamworks_sdk")
 
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR})
+get_target_property(STEAM_LIB steamworks_sdk IMPORTED_LOCATION)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${STEAM_LIB} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/assets
+)
