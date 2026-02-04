@@ -1,110 +1,118 @@
 #include "systems.h"
 #include "components.h"
 #include "constants.h"
-#include "utility.h"
-
-#include <entt/entt.hpp>
+#include "utils.h"
+#include "config.h"
 
 #include <box2d/box2d.h>
+#include <SDL3/SDL.h>
 
-#include <variant>
-
-
-void barn::keyboard_system(entt::registry& registry, const b2WorldId world_id) {
-	for (auto [entity, keyboard, body, skillset, properties] : registry.view<const keyboard_controls, body, skillset, const properties>().each())
+void barn::keyboard_system(entt::registry& registry, SDL_Renderer* renderer, b2WorldId world_id) {
+	const auto view = registry.view<barn::keyboard, barn::player, barn::body, barn::skillset, barn::properties>();
+	for (auto [entity, player, body, skillset, properties] : view.each())
 	{
-		if (sf::Keyboard::isKeyPressed(keyboard.skill_1))
-			skillset.skill_1(registry, world_id, entity);
-		if (sf::Keyboard::isKeyPressed(keyboard.skill_2))
-			skillset.skill_2(registry, world_id, entity);
-		if (sf::Keyboard::isKeyPressed(keyboard.skill_3))
-			skillset.skill_3(registry, world_id, entity);
-		if (sf::Keyboard::isKeyPressed(keyboard.skill_4))
-			skillset.skill_4(registry, world_id, entity);
+		const keyboard_controls controls = barn::keyboard_players[player];
+
+		const bool* state = SDL_GetKeyboardState(nullptr);
+
+		if (state[controls.skill1])
+			skillset.skill1(registry, renderer, world_id, entity);
+		if (state[controls.skill2])
+			skillset.skill2(registry, renderer, world_id, entity);
+		if (state[controls.skill3])
+			skillset.skill3(registry, renderer, world_id, entity);
+		if (state[controls.skill4])
+			skillset.skill4(registry, renderer, world_id, entity);
 
 		b2Vec2 vec{};
-		if (sf::Keyboard::isKeyPressed(keyboard.up))
+		if (state[controls.up])
 			vec += { 0, 1 };
-		if (sf::Keyboard::isKeyPressed(keyboard.down))
+		if (state[controls.down])
 			vec += { 0, -1 };
-		if (sf::Keyboard::isKeyPressed(keyboard.left))
+		if (state[controls.left])
 			vec += { -1, 0 };
-		if (sf::Keyboard::isKeyPressed(keyboard.right))
+		if (state[controls.right])
 			vec += { 1, 0 };
 
 		if (length(vec) > 1.f) vec = normalize(vec);
 
-		b2Body_SetLinearVelocity(body, vec * properties.speed);
+		b2Body_SetLinearVelocity(body.id, vec * properties.speed);
 	}
 }
 
-void barn::joystick_system(entt::registry& registry, const b2WorldId world_id) {
-	for (auto [entity, joystick, body, skillset, properties] : registry.view<const joystick_controls, body, skillset, const properties>().each())
+void barn::gamepad_system(entt::registry& registry, SDL_Renderer* renderer, b2WorldId world_id) {
+	const auto view = registry.view<barn::gamepad, barn::player, barn::body, barn::skillset, barn::properties>();
+	for (auto [entity, gamepad, player, body, skillset, properties] : view.each())
 	{
-		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.skill_1))
-			skillset.skill_1(registry, world_id, entity);
-		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.skill_2))
-			skillset.skill_2(registry, world_id, entity);
-		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.skill_3))
-			skillset.skill_3(registry, world_id, entity);
-		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.skill_4))
-			skillset.skill_4(registry, world_id, entity);
+		const gamepad_controls controls = barn::gamepad_players[player];
+
+		if (SDL_GetGamepadButton(gamepad.get(), controls.skill1))
+			skillset.skill1(registry, renderer, world_id, entity);
+		if (SDL_GetGamepadButton(gamepad.get(), controls.skill2))
+			skillset.skill2(registry, renderer, world_id, entity);
+		if (SDL_GetGamepadButton(gamepad.get(), controls.skill3))
+			skillset.skill3(registry, renderer, world_id, entity);
+		if (SDL_GetGamepadButton(gamepad.get(), controls.skill4))
+			skillset.skill4(registry, renderer, world_id, entity);
+
+		constexpr auto normalize_axis = [](const Sint16 axis) -> float
+			{
+				constexpr Sint16 DEAD_ZONE = 8000;
+				if (abs(axis) < DEAD_ZONE) return 0.f;
+				return static_cast<float>(axis > 0 ? axis - DEAD_ZONE : axis + DEAD_ZONE) / (axis > 0 ? 32767 - DEAD_ZONE : 32768 - DEAD_ZONE);
+			};
 
 		b2Vec2 vec = {
-			sf::Joystick::getAxisPosition(joystick.joystick_id, joystick.horizontal_axis) / 100,
-			-sf::Joystick::getAxisPosition(joystick.joystick_id, joystick.vertical_axis) / 100
+			normalize_axis(SDL_GetGamepadAxis(gamepad.get(), controls.axis_x)),
+			-normalize_axis(SDL_GetGamepadAxis(gamepad.get(), controls.axis_y))
 		};
 
-		if (length(vec) < 0.05f) vec = { 0,0 };
+		if (length(vec) > 1.f) vec = normalize(vec);
 
-		b2Body_SetLinearVelocity(body, vec * properties.speed);
+		b2Body_SetLinearVelocity(body.id, vec * properties.speed);
 	}
 }
 
-void barn::action_system(entt::registry& registry, const b2WorldId world_id) {
-	for (auto [entity, action] : registry.view<const action>().each()) {
-		action(registry, world_id, entity);
+void barn::action_system(entt::registry& registry, SDL_Renderer* renderer, b2WorldId world_id) {
+	for (auto [entity, action] : registry.view<barn::action>().each()) {
+		action(registry, renderer, world_id, entity);
 	}
 }
 
-void barn::sprite_system(entt::registry& registry, sf::RenderWindow& window, sprite& background) {
-	const float window_ratio = static_cast<float>(window.getSize().x) / window.getSize().y;
-	const float target_ratio = VIRTUAL_WIDTH_PIXELS / VIRTUAL_HEIGHT_PIXELS;
+void barn::sprite_system(entt::registry& registry, SDL_Renderer* renderer) {
+	SDL_RenderClear(renderer);
 
-	float scale_x = 1.f;
-	float scale_y = 1.f;
-	float offset_x = 0.f;
-	float offset_y = 0.f;
+	for (auto [entity, sprite] : registry.view<barn::sprite, barn::background>().each()) {
+		SDL_FRect dest_rect = { 0, 0, VIRTUAL_WIDTH_PIXELS, VIRTUAL_HEIGHT_PIXELS };
 
-	if (window_ratio > target_ratio) {
-		// Window is wider than target
-		scale_x = target_ratio / window_ratio;
-		offset_x = (1.f - scale_x) / 2.f;
-	}
-	else {
-		// Window is taller than target
-		scale_y = window_ratio / target_ratio;
-		offset_y = (1.f - scale_y) / 2.f;
+		SDL_RenderTexture(
+			renderer,
+			sprite.texture.get(),
+			nullptr,
+			&dest_rect
+		);
 	}
 
-	sf::View view{ sf::FloatRect{ { 0.f, 0.f }, { VIRTUAL_WIDTH_PIXELS, VIRTUAL_HEIGHT_PIXELS } } };
-	view.setViewport(sf::FloatRect{ { offset_x, offset_y }, { scale_x, scale_y } });
+	for (auto [entity, sprite, body] : registry.view<barn::sprite, barn::body>().each()) {
+		b2Vec2 pos = b2Body_GetPosition(body.id);
 
-	for (auto [entity, sprite, body] : registry.view<sprite, const body>().each()) {
-		sprite.setPosition(to_pixels(b2Body_GetPosition(body)));
+		const float width = sprite.width ? *sprite.width : static_cast<float>(sprite.texture->w);
+		const float height = sprite.height ? *sprite.height : static_cast<float>(sprite.texture->h);
+
+		SDL_FRect dest_rect = {
+			pos.x * PIXELS_PER_METER - width / 2,
+			VIRTUAL_HEIGHT_PIXELS - pos.y * PIXELS_PER_METER - height / 2,
+			width,
+			height
+		};
+
+		SDL_RenderTexture(
+			renderer,
+			sprite.texture.get(),
+			sprite.src_rect ? &(*sprite.src_rect) : nullptr,
+			&dest_rect
+		);
 	}
 
-	window.clear();
-	window.setView(view);
-
-	background.setScale({ VIRTUAL_WIDTH_PIXELS / background.getTextureRect().size.x, VIRTUAL_HEIGHT_PIXELS / background.getTextureRect().size.y });
-	window.draw(background);
-
-	for (auto [entity, sprite] : registry.view<const barn::sprite>().each()) {
-		window.draw(sprite);
-	}
-
-	window.setView(window.getDefaultView());
-
-	window.display();
+	SDL_RenderPresent(renderer);
 }

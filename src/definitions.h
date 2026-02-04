@@ -2,11 +2,8 @@
 
 #include "components.h"
 
-#include <box2d/collision.h>
-#include <box2d/types.h>
-
+#include <array>
 #include <filesystem>
-#include <vector>
 
 namespace barn {
 	struct circle_def {
@@ -27,7 +24,9 @@ namespace barn {
 
 	struct sprite_def {
 		std::filesystem::path texture{};
-		b2Vec2 size{ 1.f, 1.f };
+		std::optional<SDL_FRect> src_rect{};
+		std::optional<float> width{};
+		std::optional<float> height{};
 	};
 
 	struct player_def {
@@ -37,8 +36,6 @@ namespace barn {
 		barn::skillset skillset{};
 	};
 
-	extern const std::vector<player_def> character_templates;
-
 	struct enemy_def {
 		barn::body_def body{};
 		barn::sprite_def sprite{};
@@ -46,11 +43,13 @@ namespace barn {
 		barn::action action{};
 	};
 
-	extern const std::vector<enemy_def> enemy_templates;
-
 	struct projectile_def {
 		barn::body_def body{};
 		barn::sprite_def sprite{};
 		barn::properties properties{};
 	};
+
+	extern const std::array<player_def, 1> character_templates;
+
+	extern const std::array<enemy_def, 1> enemy_templates;
 }

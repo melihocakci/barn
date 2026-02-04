@@ -4,64 +4,75 @@
 #include "definitions.h"
 #include "constants.h"
 #include "factories.h"
-#include "assets.h"
 #include "config.h"
+#include "utils.h"
 
-#include <SFML/Graphics.hpp>
-#include <SFML/Audio.hpp>
 #include <entt/entt.hpp>
 #include <box2d/box2d.h>
+#include <SDL3/SDL.h>
 
-static void handle_events(sf::RenderWindow& window) {
-	while (const std::optional event = window.pollEvent())
-	{
-		if (event->is<sf::Event::Closed>()) {
-			window.close();
-		}
-	}
+int barn::main_menu(SDL_Window* window, SDL_Renderer* renderer, b2WorldId world_id) {
+	return combat_scene(window, renderer, world_id);
 }
 
-int barn::main_menu(sf::RenderWindow& window, const b2WorldId world_id) {
-	return combat_scene(window, world_id);
-}
-
-int barn::combat_scene(sf::RenderWindow& window, const b2WorldId world_id) {
-	const auto bliss_texture = get_texture("assets/texture/bliss.jpg");
-	sprite background{ *bliss_texture };
-
-	sf::Music music{ "assets/audio/Kasane Teto - Teto territory.mp3" };
-	//music.play();
-	music.setLooping(true);
-	music.setVolume(20.f);
-
+int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, b2WorldId world_id) {
 	entt::registry registry;
+
+	const auto bliss_texture = get_texture(renderer, "texture/bliss.jpg");
+	entt::entity background = registry.create();
+	registry.emplace<barn::sprite>(background, bliss_texture);
+	registry.emplace<barn::background>(background);
 
 	create_borders(registry, world_id);
 
-	player_def player = character_templates[0];
-	player.body.body.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS / 4 };
-	create_player(registry, world_id, player, config::player1);
+	barn::player_def player_def = character_templates[0];
+	player_def.body.body.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS / 4 };
+	entt::entity player_entity = create_player(registry, renderer, world_id, player_def);
+	registry.emplace<player>(player_entity, player::P1);
+	//registry.emplace<keyboard>(player_entity);
+	int count;
+	SDL_JoystickID* ids = SDL_GetGamepads(&count);
+	registry.emplace<gamepad>(player_entity, SDL_OpenGamepad(ids[0]), SDL_CloseGamepad);
+	SDL_free(ids);
 
-	enemy_def enemy = enemy_templates[0];
-	enemy.body.body.position = { VIRTUAL_WIDTH_METERS / 2, 3 * VIRTUAL_HEIGHT_METERS / 4 };
-	create_enemy(registry, world_id, enemy);
+	barn::enemy_def enemy_def = enemy_templates[0];
+	enemy_def.body.body.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS * 3 / 4 };
+	create_enemy(registry, renderer, world_id, enemy_def);
 
-	sf::Clock clock;
+	float accumulator = 0.0f;
+	Uint64 prevTicks = SDL_GetTicks();
 
-	while (window.isOpen())
-	{
-		b2World_Step(world_id, 1.f / 240, BOX2D_SUB_STEP_COUNT);
-
-		handle_events(window);
-
-		if (window.hasFocus()) {
-			keyboard_system(registry, world_id);
-			joystick_system(registry, world_id);
+	while (true) {
+		// --- Event Handling ---
+		SDL_Event event;
+		while (SDL_PollEvent(&event)) {
+			if (event.type == SDL_EVENT_QUIT) {
+				return 0;
+			}
 		}
 
-		action_system(registry, world_id);
+		// --- Timing ---
+		Uint64 currentTicks = SDL_GetTicks();
+		float deltaTime = (currentTicks - prevTicks) / 1000.0f;
+		prevTicks = currentTicks;
+		accumulator += deltaTime;
 
-		sprite_system(registry, window, background);
+		// --- Physics ---
+		while (accumulator >= PHYSICS_TIMESTEP) {
+			b2World_Step(world_id, PHYSICS_TIMESTEP, BOX2D_SUB_STEP_COUNT);
+			accumulator -= PHYSICS_TIMESTEP;
+		}
+
+		action_system(registry, renderer, world_id);
+
+		// --- Input ---
+		if (SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS) {
+			keyboard_system(registry, renderer, world_id);
+			gamepad_system(registry, renderer, world_id);
+		}
+
+		// --- Rendering ---
+		sprite_system(registry, renderer);
 	}
 
 	return 0;

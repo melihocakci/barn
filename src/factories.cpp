@@ -1,13 +1,13 @@
 #include "factories.h"
-#include "constants.h"
-#include "assets.h"
 #include "components.h"
+#include "constants.h"
+#include "utils.h"
 
 #include <box2d/box2d.h>
 #include <box2d/types.h>
 #include <box2d/collision.h>
 
-static void add_body(entt::registry& reg, const entt::entity entity, const b2WorldId world_id, const barn::body_def& def) {
+static barn::body make_body(b2WorldId world_id, const barn::body_def& def) {
 	b2BodyId body_id = b2CreateBody(world_id, &def.body);
 
 	for (const auto& [shape_def, circle] : def.circles) {
@@ -18,18 +18,14 @@ static void add_body(entt::registry& reg, const entt::entity entity, const b2Wor
 		b2CreatePolygonShape(body_id, &shape_def, &polygon);
 	}
 
-	reg.emplace<barn::body>(entity, body_id);
+	return body_id;
 }
 
-static void add_sprite(entt::registry& reg, const entt::entity entity, const barn::sprite_def& def) {
-	auto& texture = reg.emplace<barn::texture>(entity, barn::get_texture(def.texture));
-	auto& sprite = reg.emplace<barn::sprite>(entity, *texture);
-	const float scale = def.size.y * PIXELS_PER_METER / sprite.getTextureRect().size.y;
-	sprite.setScale({ scale, scale });
-	sprite.setOrigin(sprite.getLocalBounds().getCenter());
+static barn::sprite make_sprite(SDL_Renderer* renderer, const barn::sprite_def& def) {
+	return { barn::get_texture(renderer, def.texture), def.src_rect, def.width, def.height };
 }
 
-entt::entity barn::create_borders(entt::registry& reg, const b2WorldId world_id) {
+entt::entity barn::create_borders(entt::registry& reg, b2WorldId world_id) {
 	b2BodyDef body_def = b2DefaultBodyDef();
 	body_def.type = b2_staticBody;
 	body_def.position = { 0, 0 };
@@ -62,12 +58,12 @@ entt::entity barn::create_borders(entt::registry& reg, const b2WorldId world_id)
 	return entity;
 }
 
-entt::entity barn::create_player(entt::registry& reg, const b2WorldId world_id, const barn::player_def& def, const barn::control_method& controls) {
+entt::entity barn::create_player(entt::registry& reg, SDL_Renderer* renderer, b2WorldId world_id, const barn::player_def& def) {
 	const entt::entity entity = reg.create();
 
-	add_sprite(reg, entity, def.sprite);
+	reg.emplace<barn::sprite>(entity, make_sprite(renderer, def.sprite));
 
-	add_body(reg, entity, world_id, def.body);
+	reg.emplace<barn::body>(entity, make_body(world_id, def.body));
 
 	reg.emplace<barn::properties>(entity, def.properties);
 
@@ -77,23 +73,15 @@ entt::entity barn::create_player(entt::registry& reg, const b2WorldId world_id, 
 
 	reg.emplace<barn::alignment>(entity, barn::alignment::ALLY);
 
-	std::visit(
-		[&reg, &entity](auto&& arg) {
-			using T = std::decay_t<decltype(arg)>;
-			reg.emplace<T>(entity, arg);
-		},
-		controls
-	);
-
 	return entity;
 }
 
-entt::entity barn::create_enemy(entt::registry& reg, const b2WorldId world_id, const barn::enemy_def& def) {
+entt::entity barn::create_enemy(entt::registry& reg, SDL_Renderer* renderer, b2WorldId world_id, const barn::enemy_def& def) {
 	const entt::entity entity = reg.create();
 
-	add_sprite(reg, entity, def.sprite);
+	reg.emplace<barn::sprite>(entity, make_sprite(renderer, def.sprite));
 
-	add_body(reg, entity, world_id, def.body);
+	reg.emplace<barn::body>(entity, make_body(world_id, def.body));
 
 	reg.emplace<barn::properties>(entity, def.properties);
 
@@ -106,12 +94,12 @@ entt::entity barn::create_enemy(entt::registry& reg, const b2WorldId world_id, c
 	return entity;
 }
 
-entt::entity barn::create_projectile(entt::registry& reg, const b2WorldId world_id, const barn::projectile_def& def) {
+entt::entity barn::create_projectile(entt::registry& reg, SDL_Renderer* renderer, b2WorldId world_id, const barn::projectile_def& def) {
 	const entt::entity entity = reg.create();
 
-	add_sprite(reg, entity, def.sprite);
+	reg.emplace<barn::sprite>(entity, make_sprite(renderer, def.sprite));
 
-	add_body(reg, entity, world_id, def.body);
+	reg.emplace<barn::body>(entity, make_body(world_id, def.body));
 
 	reg.emplace<barn::properties>(entity, def.properties);
 

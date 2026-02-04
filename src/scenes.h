@@ -1,10 +1,9 @@
 #pragma once
 
-#include <SFML/Graphics.hpp>
-#include <box2d/types.h>
+#include "components.h"
 
 namespace barn {
-	int main_menu(sf::RenderWindow& window, const b2WorldId world_id);
+	int main_menu(SDL_Window* window, SDL_Renderer* renderer, b2WorldId world_id);
 
-	int combat_scene(sf::RenderWindow& window, const b2WorldId world_id);
+	int combat_scene(SDL_Window* window, SDL_Renderer* renderer, b2WorldId world_id);
 }
