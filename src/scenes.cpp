@@ -6,6 +6,7 @@
 #include "factories.h"
 #include "config.h"
 #include "utils.h"
+#include "assets.h"
 
 #include <entt/entt.hpp>
 #include <box2d/box2d.h>
@@ -16,17 +17,17 @@ int barn::main_menu(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mixer
 	return barn::combat_scene(window, renderer, mixer, world_id);
 }
 
-int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world_id) {
+int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
 	entt::registry registry;
 
-	const auto bliss_texture = get_texture(renderer, "texture/bliss.jpg");
+	const auto bliss_texture = get_texture(renderer, textures::bliss);
 	entt::entity background = registry.create();
 	registry.emplace<barn::sprite>(background, bliss_texture);
 	registry.emplace<barn::background>(background);
 
-	create_borders(registry, world_id);
-	
-	const barn::audio bg_music = get_audio(mixer, "audio/kasane_territory.ogg");
+	create_borders(registry, world);
+
+	const barn::audio bg_music = get_audio(mixer, audios::kasane_territory);
 	MIX_Track* track = MIX_CreateTrack(mixer);
 	MIX_SetTrackAudio(track, bg_music.get());
 	SDL_PropertiesID props = SDL_CreateProperties();
@@ -35,7 +36,7 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 
 	barn::player_def player_def = character_templates[0];
 	player_def.body.def.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS / 4 };
-	entt::entity player_entity = create_player(registry, renderer, world_id, player_def);
+	entt::entity player_entity = create_player(registry, renderer, mixer, world, player_def);
 	registry.emplace<player>(player_entity, player::P1);
 	registry.emplace<keyboard>(player_entity);
 	//int count;
@@ -45,7 +46,7 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 
 	barn::enemy_def enemy_def = enemy_templates[0];
 	enemy_def.body.def.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS * 3 / 4 };
-	create_enemy(registry, renderer, world_id, enemy_def);
+	create_enemy(registry, renderer, world, enemy_def);
 
 	float accumulator = 0.0f;
 	Uint64 prevTicks = SDL_GetTicks();
@@ -67,14 +68,14 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 
 		while (accumulator >= PHYSICS_TIMESTEP) {
 			if (SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS) {
-				keyboard_system(registry, renderer, world_id);
-				gamepad_system(registry, renderer, world_id);
+				keyboard_system(registry, renderer, mixer, world);
+				gamepad_system(registry, renderer, mixer, world);
 			}
 
-			physics_system(registry, world_id);
+			physics_system(registry, world);
 			accumulator -= PHYSICS_TIMESTEP;
 
-			action_system(registry, renderer, world_id);
+			action_system(registry, renderer, mixer, world);
 		}
 	}
 

@@ -9,6 +9,9 @@
 #include <chrono>
 #include <memory>
 
+#define ACTION_PARAMETERS entt::entity entity, entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world
+#define ACTION_VARIABLES entity, registry, renderer, mixer, world
+
 namespace barn {
 	struct body {
 		const b2BodyId id{};
@@ -40,8 +43,6 @@ namespace barn {
 		std::optional<float> height{};
 	};
 
-	using action = std::function<void(entt::registry&, SDL_Renderer*, b2WorldId, entt::entity)>;
-
 	struct keyboard {};
 
 	using gamepad = std::unique_ptr<SDL_Gamepad, decltype(&SDL_CloseGamepad)>;
@@ -66,35 +67,38 @@ namespace barn {
 		SDL_GamepadButton skill4{};
 	};
 
+	struct assets {
+		std::vector<barn::texture> textures{};
+		std::vector<barn::audio> audios{};
+	};
+
+	using action = void(*)(ACTION_PARAMETERS);
+
 	struct skill {
-		mutable std::chrono::steady_clock::time_point last_used_time{};
 		std::chrono::milliseconds cooldown{};
-		barn::action action = [](entt::registry&, SDL_Renderer*, b2WorldId, entt::entity) {};
+		barn::assets assets{};
+		barn::action action{};
+		std::chrono::steady_clock::time_point last_used_time{};
 
-		void operator()(entt::registry& reg, SDL_Renderer* renderer, b2WorldId world, entt::entity ent) const {
+		void operator()(ACTION_PARAMETERS) {
 			using namespace std::chrono;
-
-			auto current_time = steady_clock::now();
-			auto time_span = duration_cast<milliseconds>(current_time - last_used_time);
-
+			const steady_clock::time_point current_time = steady_clock::now();
+			const milliseconds time_span = duration_cast<milliseconds>(current_time - last_used_time);
 			if (time_span >= cooldown) {
-				action(reg, renderer, world, ent);
+				action(ACTION_VARIABLES);
 				last_used_time = current_time;
 			}
 		}
 	};
 
-	struct skillset {
-		barn::skill skill1{};
-		barn::skill skill2{};
-		barn::skill skill3{};
-		barn::skill skill4{};
-	};
+	constexpr size_t skillset_size = 4;
+
+	using skillset = std::array<skill, skillset_size>;
 
 	struct properties {
 		int health = 1;
 		int attack = 0;
-		float speed = 0;
+		float speed = 0.f;
 	};
 
 	enum category : std::uint64_t {

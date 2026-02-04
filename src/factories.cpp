@@ -8,23 +8,33 @@
 #include <box2d/collision.h>
 
 static void add_body(entt::entity entity, entt::registry& reg, b2WorldId world_id, const barn::body_def& def) {
-	const b2BodyId body_id = b2CreateBody(world_id, &def.def);
+	const barn::body& body = reg.emplace<barn::body>(entity, b2CreateBody(world_id, &def.def));
 
 	for (const auto& [shape_def, circle] : def.circles) {
-		b2CreateCircleShape(body_id, &shape_def, &circle);
+		b2CreateCircleShape(body.id, &shape_def, &circle);
 	}
 
 	for (const auto& [shape_def, polygon] : def.polygons) {
-		b2CreatePolygonShape(body_id, &shape_def, &polygon);
+		b2CreatePolygonShape(body.id, &shape_def, &polygon);
 	}
 
-	b2Body_SetUserData(body_id, new entt::entity{ entity });
-
-	reg.emplace<barn::body>(entity, body_id);
+	b2Body_SetUserData(body.id, new entt::entity{ entity });
 }
 
 static void add_sprite(entt::entity entity, entt::registry& reg, SDL_Renderer* renderer, const barn::sprite_def& def) {
 	reg.emplace<barn::sprite>(entity, barn::get_texture(renderer, def.texture), def.src_rect, def.width, def.height);
+}
+
+static void add_assets(entt::entity entity, entt::registry& reg, SDL_Renderer* renderer, MIX_Mixer* mixer, const barn::assets_def& def) {
+	barn::assets& assets = reg.emplace<barn::assets>(entity);
+
+	for (const auto& texture_path : def.textures) {
+		assets.textures.push_back(barn::get_texture(renderer, texture_path));
+	}
+
+	for (const auto& audio_path : def.audios) {
+		assets.audios.push_back(barn::get_audio(mixer, audio_path));
+	}
 }
 
 entt::entity barn::create_borders(entt::registry& reg, b2WorldId world_id) {
@@ -58,7 +68,7 @@ entt::entity barn::create_borders(entt::registry& reg, b2WorldId world_id) {
 	return entity;
 }
 
-entt::entity barn::create_player(entt::registry& reg, SDL_Renderer* renderer, b2WorldId world_id, const barn::player_def& def) {
+entt::entity barn::create_player(entt::registry& reg, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world_id, const barn::player_def& def) {
 	const entt::entity entity = reg.create();
 
 	add_sprite(entity, reg, renderer, def.sprite);
@@ -67,7 +77,11 @@ entt::entity barn::create_player(entt::registry& reg, SDL_Renderer* renderer, b2
 
 	reg.emplace<barn::properties>(entity, def.properties);
 
-	reg.emplace<barn::skillset>(entity, def.skillset);
+	barn::skillset& skillset = reg.emplace<barn::skillset>(entity);
+	for (auto [skill_def, skill] : std::views::zip(def.skillset, skillset)) {
+		skill.cooldown = skill_def.cooldown;
+		skill.action = skill_def.action;
+	}
 
 	reg.emplace<barn::category>(entity, barn::category::ALLY);
 

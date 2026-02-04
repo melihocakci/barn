@@ -7,22 +7,22 @@
 #include <box2d/box2d.h>
 #include <SDL3/SDL.h>
 
-void barn::keyboard_system(entt::registry& registry, SDL_Renderer* renderer, b2WorldId world_id) {
+void barn::keyboard_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
 	const auto view = registry.view<barn::keyboard, barn::player, barn::body, barn::skillset, barn::properties>();
 	for (auto [entity, player, body, skillset, properties] : view.each())
 	{
-		const keyboard_controls controls = barn::keyboard_players[player];
+		const keyboard_controls& controls = barn::config::keyboard_bindings[player];
 
 		const bool* state = SDL_GetKeyboardState(nullptr);
 
 		if (state[controls.skill1])
-			skillset.skill1(registry, renderer, world_id, entity);
+			skillset[0](ACTION_VARIABLES);
 		if (state[controls.skill2])
-			skillset.skill2(registry, renderer, world_id, entity);
+			skillset[1](ACTION_VARIABLES);
 		if (state[controls.skill3])
-			skillset.skill3(registry, renderer, world_id, entity);
+			skillset[2](ACTION_VARIABLES);
 		if (state[controls.skill4])
-			skillset.skill4(registry, renderer, world_id, entity);
+			skillset[3](ACTION_VARIABLES);
 
 		b2Vec2 vec{};
 		if (state[controls.up])
@@ -40,20 +40,20 @@ void barn::keyboard_system(entt::registry& registry, SDL_Renderer* renderer, b2W
 	}
 }
 
-void barn::gamepad_system(entt::registry& registry, SDL_Renderer* renderer, b2WorldId world_id) {
+void barn::gamepad_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
 	const auto view = registry.view<barn::gamepad, barn::player, barn::body, barn::skillset, barn::properties>();
 	for (auto [entity, gamepad, player, body, skillset, properties] : view.each())
 	{
-		const gamepad_controls controls = barn::gamepad_players[player];
+		const gamepad_controls& controls = barn::config::gamepad_bindings[player];
 
 		if (SDL_GetGamepadButton(gamepad.get(), controls.skill1))
-			skillset.skill1(registry, renderer, world_id, entity);
+			skillset[0](ACTION_VARIABLES);
 		if (SDL_GetGamepadButton(gamepad.get(), controls.skill2))
-			skillset.skill2(registry, renderer, world_id, entity);
+			skillset[1](ACTION_VARIABLES);
 		if (SDL_GetGamepadButton(gamepad.get(), controls.skill3))
-			skillset.skill3(registry, renderer, world_id, entity);
+			skillset[2](ACTION_VARIABLES);
 		if (SDL_GetGamepadButton(gamepad.get(), controls.skill4))
-			skillset.skill4(registry, renderer, world_id, entity);
+			skillset[3](ACTION_VARIABLES);
 
 		constexpr auto normalize_axis = [](const Sint16 axis) -> float
 			{
@@ -73,9 +73,9 @@ void barn::gamepad_system(entt::registry& registry, SDL_Renderer* renderer, b2Wo
 	}
 }
 
-void barn::action_system(entt::registry& registry, SDL_Renderer* renderer, b2WorldId world_id) {
+void barn::action_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
 	for (auto [entity, action] : registry.view<barn::action>().each()) {
-		action(registry, renderer, world_id, entity);
+		action(ACTION_VARIABLES);
 	}
 }
 
@@ -94,7 +94,7 @@ void barn::sprite_system(entt::registry& registry, SDL_Renderer* renderer) {
 	}
 
 	for (auto [entity, sprite, body] : registry.view<barn::sprite, barn::body>().each()) {
-		b2Vec2 pos = b2Body_GetPosition(body.id);
+		if (!sprite.texture) continue;
 
 		const float texture_aspect_ratio = static_cast<float>(sprite.texture->w) / sprite.texture->h;
 
@@ -116,6 +116,7 @@ void barn::sprite_system(entt::registry& registry, SDL_Renderer* renderer) {
 			height = sprite.texture->h;
 		}
 
+		const b2Vec2 pos = b2Body_GetPosition(body.id);
 		SDL_FRect dest_rect = {
 			pos.x * PIXELS_PER_METER - width / 2,
 			VIRTUAL_HEIGHT_PIXELS - pos.y * PIXELS_PER_METER - height / 2,
@@ -147,7 +148,7 @@ void barn::physics_system(entt::registry& registry, b2WorldId world_id) {
 	}
 
 	const b2ContactEvents contact_events = b2World_GetContactEvents(world_id);
-	
+
 	for (int i = 0; i < contact_events.beginCount; ++i)
 	{
 		const b2ContactBeginTouchEvent& begin_event = contact_events.beginEvents[i];
@@ -161,7 +162,7 @@ void barn::physics_system(entt::registry& registry, b2WorldId world_id) {
 		const b2BodyId bodyB = b2Shape_GetBody(begin_event.shapeIdB);
 		const entt::entity enttB = *static_cast<entt::entity*>(b2Body_GetUserData(bodyB));
 
-		if (!registry.all_of<barn::category> (enttA) || !registry.all_of<barn::category>(enttB)) {
+		if (!registry.all_of<barn::category>(enttA) || !registry.all_of<barn::category>(enttB)) {
 			continue;
 		}
 
@@ -215,7 +216,7 @@ void barn::physics_system(entt::registry& registry, b2WorldId world_id) {
 		const entt::entity enttA = *static_cast<entt::entity*>(b2Body_GetUserData(bodyA));
 		const b2BodyId bodyB = b2Shape_GetBody(end_event.shapeIdB);
 		const entt::entity enttB = *static_cast<entt::entity*>(b2Body_GetUserData(bodyB));
-		
+
 		if (!registry.all_of<barn::category>(enttA) || !registry.all_of<barn::category>(enttB)) {
 			continue;
 		}

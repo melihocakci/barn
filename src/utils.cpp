@@ -3,54 +3,50 @@
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_mixer/SDL_mixer.h>
 
-barn::texture barn::get_texture(SDL_Renderer* renderer, const std::filesystem::path& asset) {
-	static std::map<std::filesystem::path, barn::texture::weak_type> textures;
+barn::texture barn::get_texture(SDL_Renderer* renderer, std::string_view path) {
+	static std::unordered_map<std::string_view, barn::texture::weak_type> textures{};
 
-	auto it = textures.find(asset);
+	auto it = textures.find(path);
 	if (it != textures.end()) {
 		if (auto existing = it->second.lock()) {
 			return existing;
 		}
 	}
 
-	const std::filesystem::path combined_path = "assets" / asset;
-
 	barn::texture texture{
-		IMG_LoadTexture(renderer, combined_path.generic_string().c_str()),
+		IMG_LoadTexture(renderer, path.data()),
 		SDL_DestroyTexture
 	};
 
 	if (!texture) {
-		SDL_Log("Failed to load texture: %s, SDL_Error: %s", asset.generic_string().c_str(), SDL_GetError());
+		SDL_Log("Failed to load texture: %s, SDL_Error: %s", path.data(), SDL_GetError());
 		return nullptr;
 	}
 
-	textures[asset] = texture;
+	textures[path] = texture;
 	return texture;
 }
 
-barn::audio barn::get_audio(MIX_Mixer* mixer, const std::filesystem::path& asset) {
-	static std::map<std::filesystem::path, barn::audio::weak_type> audios;
+barn::audio barn::get_audio(MIX_Mixer* mixer, std::string_view path) {
+	static std::unordered_map<std::string_view, barn::audio::weak_type> audios{};
 
-	auto it = audios.find(asset);
+	auto it = audios.find(path);
 	if (it != audios.end()) {
 		if (auto existing = it->second.lock()) {
 			return existing;
 		}
 	}
 
-	const std::filesystem::path combined_path = "assets" / asset;
-
 	barn::audio audio{
-		MIX_LoadAudio(mixer, combined_path.generic_string().c_str(), false),
+		MIX_LoadAudio(mixer, path.data(), false),
 		MIX_DestroyAudio
 	};
 
 	if (!audio) {
-		SDL_Log("Failed to load audio: %s, SDL_Error: %s", asset.generic_string().c_str(), SDL_GetError());
+		SDL_Log("Failed to load audio: %s, SDL_Error: %s", path.data(), SDL_GetError());
 		return nullptr;
 	}
 
-	audios[asset] = audio;
+	audios[path] = audio;
 	return audio;
 }

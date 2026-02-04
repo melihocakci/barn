@@ -18,8 +18,8 @@ struct sdl_guard {
 		if (!success) throw std::runtime_error(SDL_GetError());
 
 		success = SDL_CreateWindowAndRenderer(
-			PROJECT_NAME,
-			VIRTUAL_WIDTH_PIXELS, VIRTUAL_HEIGHT_PIXELS,
+			barn::PROJECT_NAME,
+			barn::VIRTUAL_WIDTH_PIXELS, barn::VIRTUAL_HEIGHT_PIXELS,
 			SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS,
 			&window, &renderer);
 		if (!success) throw std::runtime_error(SDL_GetError());
@@ -29,8 +29,8 @@ struct sdl_guard {
 
 		success = SDL_SetRenderLogicalPresentation(
 			renderer,
-			VIRTUAL_WIDTH_PIXELS,
-			VIRTUAL_HEIGHT_PIXELS,
+			barn::VIRTUAL_WIDTH_PIXELS,
+			barn::VIRTUAL_HEIGHT_PIXELS,
 			SDL_LOGICAL_PRESENTATION_LETTERBOX
 		);
 		if (!success) throw std::runtime_error(SDL_GetError());

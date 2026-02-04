@@ -1,6 +1,7 @@
 #include "config.h"
 
-decltype(barn::keyboard_players) barn::keyboard_players{
+decltype(barn::config::keyboard_bindings) barn::config::keyboard_bindings
+{
 	keyboard_controls{
 		.up = SDL_SCANCODE_UP,
 		.down = SDL_SCANCODE_DOWN,
@@ -43,7 +44,7 @@ decltype(barn::keyboard_players) barn::keyboard_players{
 	}
 };
 
-decltype(barn::gamepad_players) barn::gamepad_players
+decltype(barn::config::gamepad_bindings) barn::config::gamepad_bindings
 {
 	gamepad_controls{
 		.axis_x = SDL_GAMEPAD_AXIS_LEFTX,

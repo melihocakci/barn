@@ -3,6 +3,7 @@
 #include "utils.h"
 #include "factories.h"
 #include "constants.h"
+#include "assets.h"
 
 #include <box2d/box2d.h>
 
@@ -63,8 +64,7 @@ decltype(barn::character_templates) barn::character_templates
 			}
 		},
 		.sprite{
-			.texture = "texture/miku.png",
-			//.width = 1.f * PIXELS_PER_METER,
+			.texture = textures::miku,
 			.height = 1.58f * PIXELS_PER_METER,
 		},
 		.properties{
@@ -72,23 +72,31 @@ decltype(barn::character_templates) barn::character_templates
 			.attack = 10,
 			.speed = 10,
 		},
+		.assets{
+			.textures = {
+				textures::green_onion,
+			},
+			.audios = {
+				audios::weiii,
+			},
+		},
 		.skillset{
-			.skill1 {
+			skill_def{
 				.cooldown = 250ms,
-				.action = [](entt::registry& reg, SDL_Renderer* renderer, b2WorldId world_id, entt::entity player_entity) {
-					auto [player_body, player_prop] = reg.get<barn::body, barn::properties>(player_entity);
+				.action = [](ACTION_PARAMETERS) {
+					auto [player_body, player_prop] = registry.get<barn::body, barn::properties>(entity);
 
 					barn::bullet_def def;
 					def.body.def.type = b2_kinematicBody;
 					def.body.def.position = b2Body_GetPosition(player_body.id);
 					def.body.def.linearVelocity = b2Vec2{ 0.f, 20.f };
 					def.body.circles.emplace_back(ally_bullet_shape_def, b2Circle({}, 0.25f));
-					def.sprite.texture = "texture/green-onion.png";
+					def.sprite.texture = textures::green_onion;
 					def.sprite.width = 1.f * PIXELS_PER_METER;
 					def.properties.attack = player_prop.attack;
 					def.type = barn::category::ALLY_BULLET;
 
-					barn::create_bullet(reg, renderer, world_id, def);
+					barn::create_bullet(registry, renderer, world, def);
 				},
 			},
 		}
@@ -111,7 +119,7 @@ decltype(barn::enemy_templates) barn::enemy_templates
 			}
 		},
 		.sprite{
-			.texture = "texture/pearto.png",
+			.texture = textures::pearto,
 			.height = 2.f * PIXELS_PER_METER,
 		},
 		.properties
@@ -120,15 +128,15 @@ decltype(barn::enemy_templates) barn::enemy_templates
 			.attack = 10,
 			.speed = 5,
 		},
-		.action = [](entt::registry& reg, SDL_Renderer* renderer, b2WorldId world_id, entt::entity entity)
+		.action = [](ACTION_PARAMETERS)
 		{
-			auto [enemy_body, enemy_stats] = reg.get<barn::body, barn::properties>(entity);
+			auto [enemy_body, enemy_stats] = registry.get<barn::body, barn::properties>(entity);
 			b2Vec2 enemy_position = b2Body_GetPosition(enemy_body.id);
 
 			float shortest_distance = -1.f;
 			b2Vec2 closest_target{};
 
-			for (auto [entity, _, player_body] : reg.view<barn::skillset, barn::body>().each()) {
+			for (auto [entity, _, player_body] : registry.view<barn::player, barn::body>().each()) {
 				const b2Vec2 player_position = b2Body_GetPosition(player_body.id);
 
 				float distance = length(enemy_position - player_position);
