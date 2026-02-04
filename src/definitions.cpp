@@ -10,12 +10,43 @@
 
 using namespace std::chrono_literals;
 
-static const b2BodyDef dynamic_body_def = [] {
+static const b2BodyDef default_body_def = [] {
 	b2BodyDef def = b2DefaultBodyDef();
 	def.type = b2_dynamicBody;
 	def.fixedRotation = true;
 	return def;
 	}();
+
+static const b2ShapeDef ally_shape_def = [] {
+	b2ShapeDef def = b2DefaultShapeDef();
+	def.enableContactEvents = true;
+	def.filter.categoryBits = barn::category::ALLY;
+	def.filter.maskBits = barn::category::FOE | barn::category::FOE_BULLET | barn::category::OBSTACLE;
+	return def;
+	}();
+
+static const b2ShapeDef foe_shape_def = [] {
+	b2ShapeDef def = b2DefaultShapeDef();
+	def.enableContactEvents = true;
+	def.filter.categoryBits = barn::category::FOE;
+	def.filter.maskBits = barn::category::ALLY | barn::category::ALLY_BULLET | barn::category::OBSTACLE;
+	return def;
+	}();
+
+static const b2ShapeDef ally_bullet_shape_def = [] {
+	b2ShapeDef def = b2DefaultShapeDef();
+	def.filter.categoryBits = barn::category::ALLY_BULLET;
+	def.filter.maskBits = barn::category::FOE | barn::category::OBSTACLE;
+	return def;
+	}();
+
+static const b2ShapeDef foe_bullet_shape_def = [] {
+	b2ShapeDef def = b2DefaultShapeDef();
+	def.filter.categoryBits = barn::category::FOE_BULLET;
+	def.filter.maskBits = barn::category::ALLY | barn::category::OBSTACLE;
+	return def;
+	}();
+
 
 ///
 /// Characters
@@ -26,39 +57,38 @@ decltype(barn::character_templates) barn::character_templates
 {
 	player_def{
 		.body{
-			.body = dynamic_body_def,
+			.body = default_body_def,
 			.circles{
-				{.circle{ {}, 0.5f }}
+				{ally_shape_def, b2Circle{{}, 0.25f}}
 			}
 		},
 		.sprite{
 			.texture = "texture/miku.png",
-			.width = 1.f * PIXELS_PER_METER,
-			.height = 2.f * PIXELS_PER_METER,
+			//.width = 1.f * PIXELS_PER_METER,
+			.height = 1.58f * PIXELS_PER_METER,
 		},
 		.properties{
 			.health = 1000,
 			.attack = 10,
-			.speed = 20,
+			.speed = 10,
 		},
 		.skillset{
 			.skill1 {
-				.cooldown_time{ 250ms },
+				.cooldown = 250ms,
 				.action = [](entt::registry& reg, SDL_Renderer* renderer, b2WorldId world_id, entt::entity player_entity) {
 					auto [player_body, player_prop] = reg.get<barn::body, barn::properties>(player_entity);
 
-					barn::projectile_def projdef;
-					projdef.body.body.type = b2_kinematicBody;
-					projdef.body.body.isBullet = true;
-					projdef.body.body.position = b2Body_GetPosition(player_body.id);
-					projdef.body.body.linearVelocity = b2Vec2{ 0.f, player_prop.speed };
-					projdef.body.circles.emplace_back(b2DefaultShapeDef(), b2Circle({}, 0.5f));
-					projdef.sprite.texture = "texture/green-onion.png";
-					//projdef.sprite.width = 1.f * PIXELS_PER_METER;
-					//projdef.sprite.height = 1.f * PIXELS_PER_METER;
-					projdef.properties.attack = player_prop.attack;
+					barn::bullet_def def;
+					def.body.body.type = b2_kinematicBody;
+					def.body.body.position = b2Body_GetPosition(player_body.id);
+					def.body.body.linearVelocity = b2Vec2{ 0.f, 20.f };
+					def.body.circles.emplace_back(ally_bullet_shape_def, b2Circle({}, 0.25f));
+					def.sprite.texture = "texture/green-onion.png";
+					def.sprite.width = 1.f * PIXELS_PER_METER;
+					def.properties.attack = player_prop.attack;
+					def.type = barn::category::ALLY_BULLET;
 
-					barn::create_projectile(reg, renderer, world_id, projdef);
+					barn::create_bullet(reg, renderer, world_id, def);
 				},
 			},
 		}
@@ -75,14 +105,13 @@ decltype(barn::enemy_templates) barn::enemy_templates
 {
 	enemy_def{
 		.body{
-			.body = dynamic_body_def,
+			.body = default_body_def,
 			.circles{
-				{.circle{{ 0, 0 }, 0.5f }}
+				{foe_shape_def, b2Circle{{}, 0.5f}}
 			}
 		},
 		.sprite{
 			.texture = "texture/pearto.png",
-			.width = 2.f * PIXELS_PER_METER,
 			.height = 2.f * PIXELS_PER_METER,
 		},
 		.properties
@@ -112,7 +141,7 @@ decltype(barn::enemy_templates) barn::enemy_templates
 			}
 
 			if (shortest_distance < 0) {
-				b2Body_SetLinearVelocity(enemy_body.id, { 0,0 });
+				b2Body_SetLinearVelocity(enemy_body.id, { 0, 0 });
 				return;
 			}
 

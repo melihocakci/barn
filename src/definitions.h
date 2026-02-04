@@ -43,10 +43,11 @@ namespace barn {
 		barn::action action{};
 	};
 
-	struct projectile_def {
+	struct bullet_def {
 		barn::body_def body{};
 		barn::sprite_def sprite{};
 		barn::properties properties{};
+		barn::category type{};
 	};
 
 	extern const std::array<player_def, 1> character_templates;

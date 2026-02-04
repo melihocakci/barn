@@ -29,11 +29,11 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, b2WorldId wor
 	player_def.body.body.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS / 4 };
 	entt::entity player_entity = create_player(registry, renderer, world_id, player_def);
 	registry.emplace<player>(player_entity, player::P1);
-	//registry.emplace<keyboard>(player_entity);
-	int count;
-	SDL_JoystickID* ids = SDL_GetGamepads(&count);
-	registry.emplace<gamepad>(player_entity, SDL_OpenGamepad(ids[0]), SDL_CloseGamepad);
-	SDL_free(ids);
+	registry.emplace<keyboard>(player_entity);
+	//int count;
+	//SDL_JoystickID* ids = SDL_GetGamepads(&count);
+	//registry.emplace<gamepad>(player_entity, SDL_OpenGamepad(ids[0]), SDL_CloseGamepad);
+	//SDL_free(ids);
 
 	barn::enemy_def enemy_def = enemy_templates[0];
 	enemy_def.body.body.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS * 3 / 4 };
@@ -43,7 +43,6 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, b2WorldId wor
 	Uint64 prevTicks = SDL_GetTicks();
 
 	while (true) {
-		// --- Event Handling ---
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
 			if (event.type == SDL_EVENT_QUIT) {
@@ -51,28 +50,24 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, b2WorldId wor
 			}
 		}
 
-		// --- Timing ---
+		sprite_system(registry, renderer);
+
 		Uint64 currentTicks = SDL_GetTicks();
 		float deltaTime = (currentTicks - prevTicks) / 1000.0f;
 		prevTicks = currentTicks;
 		accumulator += deltaTime;
 
-		// --- Physics ---
 		while (accumulator >= PHYSICS_TIMESTEP) {
-			b2World_Step(world_id, PHYSICS_TIMESTEP, BOX2D_SUB_STEP_COUNT);
+			if (SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS) {
+				keyboard_system(registry, renderer, world_id);
+				gamepad_system(registry, renderer, world_id);
+			}
+
+			physics_system(registry, world_id);
 			accumulator -= PHYSICS_TIMESTEP;
+
+			action_system(registry, renderer, world_id);
 		}
-
-		action_system(registry, renderer, world_id);
-
-		// --- Input ---
-		if (SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS) {
-			keyboard_system(registry, renderer, world_id);
-			gamepad_system(registry, renderer, world_id);
-		}
-
-		// --- Rendering ---
-		sprite_system(registry, renderer);
 	}
 
 	return 0;

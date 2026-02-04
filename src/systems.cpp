@@ -96,8 +96,25 @@ void barn::sprite_system(entt::registry& registry, SDL_Renderer* renderer) {
 	for (auto [entity, sprite, body] : registry.view<barn::sprite, barn::body>().each()) {
 		b2Vec2 pos = b2Body_GetPosition(body.id);
 
-		const float width = sprite.width ? *sprite.width : static_cast<float>(sprite.texture->w);
-		const float height = sprite.height ? *sprite.height : static_cast<float>(sprite.texture->h);
+		const float texture_aspect_ratio = static_cast<float>(sprite.texture->w) / sprite.texture->h;
+
+		float width{}, height{};
+		if (sprite.width && sprite.height) {
+			width = *sprite.width;
+			height = *sprite.height;
+		}
+		else if (!sprite.width && sprite.height) {
+			height = *sprite.height;
+			width = height * texture_aspect_ratio;
+		}
+		else if (sprite.width && !sprite.height) {
+			width = *sprite.width;
+			height = width / texture_aspect_ratio;
+		}
+		else {
+			width = sprite.texture->w;
+			height = sprite.texture->h;
+		}
 
 		SDL_FRect dest_rect = {
 			pos.x * PIXELS_PER_METER - width / 2,
@@ -115,4 +132,104 @@ void barn::sprite_system(entt::registry& registry, SDL_Renderer* renderer) {
 	}
 
 	SDL_RenderPresent(renderer);
+}
+
+void barn::physics_system(entt::registry& registry, b2WorldId world_id) {
+	b2World_Step(world_id, PHYSICS_TIMESTEP, BOX2D_SUB_STEP_COUNT);
+
+	for (auto [entity, body] : registry.view<barn::bullet, barn::body>().each()) {
+		constexpr float BULLET_DESTROY_MARGIN = 2.f;
+		const b2Vec2 pos = b2Body_GetPosition(body.id);
+		if (pos.x < -BULLET_DESTROY_MARGIN || pos.x > VIRTUAL_WIDTH_METERS + BULLET_DESTROY_MARGIN ||
+			pos.y < -BULLET_DESTROY_MARGIN || pos.y > VIRTUAL_HEIGHT_METERS + BULLET_DESTROY_MARGIN) {
+			registry.destroy(entity);
+		}
+	}
+
+	const b2ContactEvents contact_events = b2World_GetContactEvents(world_id);
+	
+	for (int i = 0; i < contact_events.beginCount; ++i)
+	{
+		const b2ContactBeginTouchEvent& begin_event = contact_events.beginEvents[i];
+
+		if (!b2Shape_IsValid(begin_event.shapeIdA) || !b2Shape_IsValid(begin_event.shapeIdB)) {
+			continue;
+		}
+
+		const b2BodyId bodyA = b2Shape_GetBody(begin_event.shapeIdA);
+		const entt::entity enttA = *static_cast<entt::entity*>(b2Body_GetUserData(bodyA));
+		const b2BodyId bodyB = b2Shape_GetBody(begin_event.shapeIdB);
+		const entt::entity enttB = *static_cast<entt::entity*>(b2Body_GetUserData(bodyB));
+
+		if (!registry.all_of<barn::category> (enttA) || !registry.all_of<barn::category>(enttB)) {
+			continue;
+		}
+
+		const barn::category typeA = registry.get<barn::category>(enttA);
+		const barn::category typeB = registry.get<barn::category>(enttB);
+
+		const auto [first, first_type] = typeA < typeB ? std::pair{ enttA, typeA } : std::pair{ enttB, typeB };
+		const auto [second, second_type] = typeA < typeB ? std::pair{ enttB, typeB } : std::pair{ enttA, typeA };
+
+		if (first_type & category::ALLY) {
+			if (second_type & category::FOE) {
+				barn::properties& first_prop = registry.get<barn::properties>(first);
+				barn::properties& second_prop = registry.get<barn::properties>(second);
+				first_prop.health -= second_prop.attack;
+				if (first_prop.health <= 0) {
+					registry.destroy(first);
+				}
+			}
+			else if (second_type & category::FOE_BULLET) {
+				barn::properties& first_prop = registry.get<barn::properties>(first);
+				barn::properties& second_prop = registry.get<barn::properties>(second);
+				first_prop.health -= second_prop.attack;
+				registry.destroy(second);
+				if (first_prop.health <= 0) {
+					registry.destroy(first);
+				}
+			}
+		}
+		else if (first_type & category::FOE) {
+			if (second_type & category::ALLY_BULLET) {
+				barn::properties& first_prop = registry.get<barn::properties>(first);
+				barn::properties& second_prop = registry.get<barn::properties>(second);
+				first_prop.health -= second_prop.attack;
+				registry.destroy(second);
+				if (first_prop.health <= 0) {
+					registry.destroy(first);
+				}
+			}
+		}
+	}
+
+	for (int i = 0; i < contact_events.endCount; ++i)
+	{
+		b2ContactEndTouchEvent& end_event = contact_events.endEvents[i];
+
+		if (!b2Shape_IsValid(end_event.shapeIdA) || !b2Shape_IsValid(end_event.shapeIdB)) {
+			continue;
+		}
+
+		const b2BodyId bodyA = b2Shape_GetBody(end_event.shapeIdA);
+		const entt::entity enttA = *static_cast<entt::entity*>(b2Body_GetUserData(bodyA));
+		const b2BodyId bodyB = b2Shape_GetBody(end_event.shapeIdB);
+		const entt::entity enttB = *static_cast<entt::entity*>(b2Body_GetUserData(bodyB));
+		
+		if (!registry.all_of<barn::category>(enttA) || !registry.all_of<barn::category>(enttB)) {
+			continue;
+		}
+
+		const auto typeA = registry.get<barn::category>(enttA);
+		const auto typeB = registry.get<barn::category>(enttB);
+
+		const auto [first, first_type] = typeA < typeB ? std::pair{ enttA, typeA } : std::pair{ enttB, typeB };
+		const auto [second, second_type] = typeA < typeB ? std::pair{ enttB, typeB } : std::pair{ enttA, typeA };
+
+		if (first_type & (category::ALLY_BULLET | category::FOE_BULLET)) {
+			if (second_type & category::OBSTACLE) {
+				registry.destroy(first);
+			}
+		}
+	}
 }

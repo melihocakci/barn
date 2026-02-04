@@ -12,4 +12,6 @@ namespace barn {
 	void action_system(entt::registry& registry, SDL_Renderer* renderer, b2WorldId world_id);
 
 	void sprite_system(entt::registry& registry, SDL_Renderer* renderer);
+
+	void physics_system(entt::registry& registry, b2WorldId world_id);
 }

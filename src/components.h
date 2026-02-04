@@ -10,11 +10,14 @@
 
 namespace barn {
 	struct body {
-		b2BodyId id{};
+		const b2BodyId id{};
 
 		body(b2BodyId body_id) : id(body_id) {}
-		~body() {
+		~body() noexcept {
 			if (b2Body_IsValid(id)) {
+				if (b2Body_GetUserData(id)) {
+					delete static_cast<entt::entity*>(b2Body_GetUserData(id));
+				}
 				b2DestroyBody(id);
 			}
 		}
@@ -62,7 +65,7 @@ namespace barn {
 
 	struct skill {
 		mutable std::chrono::steady_clock::time_point last_used_time{};
-		std::chrono::milliseconds cooldown_time{};
+		std::chrono::milliseconds cooldown{};
 		barn::action action = [](entt::registry&, SDL_Renderer*, b2WorldId, entt::entity) {};
 
 		void operator()(entt::registry& reg, SDL_Renderer* renderer, b2WorldId world, entt::entity ent) const {
@@ -71,7 +74,7 @@ namespace barn {
 			auto current_time = steady_clock::now();
 			auto time_span = duration_cast<milliseconds>(current_time - last_used_time);
 
-			if (time_span >= cooldown_time) {
+			if (time_span >= cooldown) {
 				action(reg, renderer, world, ent);
 				last_used_time = current_time;
 			}
@@ -91,21 +94,16 @@ namespace barn {
 		float speed = 0;
 	};
 
-	enum class type {
-		CREATURE,
-		OBSTACLE,
-		PROJECTILE,
-		BACKGROUND,
-		UI,
+	enum category : std::uint64_t {
+		ALLY = 1,
+		FOE = 2,
+		ALLY_BULLET = 4,
+		FOE_BULLET = 8,
+		OBSTACLE = 16,
 	};
 
 	struct background {};
-
-	enum class alignment {
-		ALLY,
-		FOE,
-		NEUTRAL,
-	};
+	struct bullet {};
 
 	enum player {
 		P1,

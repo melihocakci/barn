@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 4.1)
 
 project(barn LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
@@ -44,7 +47,6 @@ add_executable(${PROJECT_NAME}
     "src/config.cpp"
 )
 
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
 target_link_libraries(${PROJECT_NAME} PRIVATE "SDL3::SDL3" "SDL3_image::SDL3_image" "EnTT::EnTT" "box2d")
 if(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)

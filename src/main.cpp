@@ -12,7 +12,11 @@ struct sdl_guard {
 		bool success = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD);
 		if (!success) throw std::runtime_error(SDL_GetError());
 
-		success = SDL_CreateWindowAndRenderer(PROJECT_NAME, 1920, 1080, SDL_WINDOW_FULLSCREEN, &window, &renderer);
+		success = SDL_CreateWindowAndRenderer(
+			PROJECT_NAME,
+			VIRTUAL_WIDTH_PIXELS, VIRTUAL_HEIGHT_PIXELS,
+			SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS,
+			&window, &renderer);
 		if (!success) throw std::runtime_error(SDL_GetError());
 
 		success = SDL_SetRenderVSync(renderer, 1);
