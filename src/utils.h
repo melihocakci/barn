@@ -20,7 +20,15 @@ namespace barn {
 		return vec / length(vec);
 	}
 
-	barn::texture get_texture(SDL_Renderer* renderer, std::string_view path);
+	template<typename asset_t, typename loader_t>
+		requires ((std::is_same_v<asset_t, SDL_Texture>&& std::is_same_v<loader_t, SDL_Renderer>) || (std::is_same_v<asset_t, MIX_Audio> && std::is_same_v<loader_t, MIX_Mixer>))
+	barn::asset<asset_t> get_asset(loader_t* loader, std::string_view path);
 
-	barn::audio get_audio(MIX_Mixer* mixer, std::string_view path);
+	inline barn::texture get_texture(SDL_Renderer* renderer, std::string_view path) {
+		return get_asset<SDL_Texture>(renderer, path);
+	}
+
+	inline barn::audio get_audio(MIX_Mixer* mixer, std::string_view path) {
+		return get_asset<MIX_Audio>(mixer, path);
+	}
 }

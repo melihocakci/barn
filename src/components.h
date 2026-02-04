@@ -8,6 +8,7 @@
 #include <functional>
 #include <chrono>
 #include <memory>
+#include <future>
 
 #define ACTION_PARAMETERS entt::entity entity, entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world
 #define ACTION_VARIABLES entity, registry, renderer, mixer, world
@@ -32,9 +33,26 @@ namespace barn {
 		}
 	};
 
-	using texture = std::shared_ptr<SDL_Texture>;
+	template<typename T>
+	struct asset {
+		std::shared_ptr<std::shared_future<T*>> ptr{};
+		T& operator *() const {
+			return *ptr->get();
+		}
+		T* operator->() const {
+			return ptr->get();
+		}
+		T* get() const {
+			return ptr->get();
+		}
+		operator bool() const {
+			return ptr->get();
+		}
+	};
 
-	using audio = std::shared_ptr<MIX_Audio>;
+	using texture = barn::asset<SDL_Texture>;
+
+	using audio = barn::asset<MIX_Audio>;
 
 	struct sprite {
 		barn::texture texture;

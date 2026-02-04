@@ -3,50 +3,67 @@
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_mixer/SDL_mixer.h>
 
-barn::texture barn::get_texture(SDL_Renderer* renderer, std::string_view path) {
-	static std::unordered_map<std::string_view, barn::texture::weak_type> textures{};
+#include <future>
 
-	auto it = textures.find(path);
-	if (it != textures.end()) {
+template barn::asset<SDL_Texture> barn::get_asset(SDL_Renderer*, std::string_view);
+template barn::asset<MIX_Audio> barn::get_asset(MIX_Mixer*, std::string_view);
+
+template<typename asset_t, typename loader_t>
+	requires((std::is_same_v<asset_t, SDL_Texture>&& std::is_same_v<loader_t, SDL_Renderer>) || (std::is_same_v<asset_t, MIX_Audio> && std::is_same_v<loader_t, MIX_Mixer>))
+barn::asset<asset_t> barn::get_asset(loader_t* loader, std::string_view path) {
+	using element_t = asset_t*;
+	using future_t = std::shared_future<element_t>;
+	using shared_ptr_t = std::shared_ptr<future_t>;
+	using weak_ptr_t = std::weak_ptr<future_t>;
+
+	static std::unordered_map<std::string_view, weak_ptr_t> assets{};
+
+	const auto it = assets.find(path);
+	if (it != assets.end()) {
 		if (auto existing = it->second.lock()) {
-			return existing;
+			return { existing };
 		}
 	}
 
-	barn::texture texture{
-		IMG_LoadTexture(renderer, path.data()),
-		SDL_DestroyTexture
-	};
+	shared_ptr_t asset_ptr;
+	if constexpr (std::is_same_v<asset_t, SDL_Texture>) {
+		asset_ptr = shared_ptr_t{
+			new future_t{},
+			[](future_t* future)
+			{
+				if (future->get()) {
+					SDL_DestroyTexture(future->get());
+				}
+			}
+		};
 
-	if (!texture) {
-		SDL_Log("Failed to load texture: %s, SDL_Error: %s", path.data(), SDL_GetError());
-		return nullptr;
+		*asset_ptr = std::async(std::launch::async,
+			[loader, path]()
+			{
+				return IMG_LoadTexture(loader, path.data());
+			});
+	}
+	else if constexpr (std::is_same_v<asset_t, MIX_Audio>) {
+		asset_ptr = shared_ptr_t{
+			new future_t{},
+			[](future_t* future)
+			{
+				if (future->get()) {
+					MIX_DestroyAudio(future->get());
+				}
+			}
+		};
+
+		*asset_ptr = std::async(std::launch::async,
+			[loader, path]()
+			{
+				return MIX_LoadAudio(loader, path.data(), false);
+			});
+	}
+	else {
+		static_assert("Unsupported asset type");
 	}
 
-	textures[path] = texture;
-	return texture;
-}
-
-barn::audio barn::get_audio(MIX_Mixer* mixer, std::string_view path) {
-	static std::unordered_map<std::string_view, barn::audio::weak_type> audios{};
-
-	auto it = audios.find(path);
-	if (it != audios.end()) {
-		if (auto existing = it->second.lock()) {
-			return existing;
-		}
-	}
-
-	barn::audio audio{
-		MIX_LoadAudio(mixer, path.data(), false),
-		MIX_DestroyAudio
-	};
-
-	if (!audio) {
-		SDL_Log("Failed to load audio: %s, SDL_Error: %s", path.data(), SDL_GetError());
-		return nullptr;
-	}
-
-	audios[path] = audio;
-	return audio;
+	assets[path] = asset_ptr;
+	return { asset_ptr };
 }
