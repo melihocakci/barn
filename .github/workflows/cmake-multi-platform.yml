@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         build_type: [Release]
         include:
           - os: windows-latest
@@ -22,6 +22,9 @@ jobs:
           - os: ubuntu-latest
             cpp_compiler: g++
             c_compiler: gcc
+          - os: macos-latest
+            cpp_compiler: clang++
+            c_compiler: clang
 
     steps:
     - name: Install dependencies (Linux)
@@ -34,7 +37,7 @@ jobs:
         libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev
         libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev
         libpipewire-0.3-dev libwayland-dev libdecor-0-dev liburing-dev
-    
+
     - name: Install CMake
       uses: jwlawson/actions-setup-cmake@v2
       with:
