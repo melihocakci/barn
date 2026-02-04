@@ -2,29 +2,11 @@
 #include "components.h"
 
 #include <entt/entt.hpp>
-#include <SFML/Graphics.hpp>
 
 #include <variant>
 
-static sf::Rect<float> get_bounds(const sf::RenderWindow& window, float padding) {
-	return { {padding, padding}, { window.getSize().x - 2 * padding, window.getSize().y - 2 * padding } };
-}
 
-static void move_within_bounds(sf::Transformable& object, sf::Vector2f movement, sf::FloatRect bounds) {
-	if (object.getPosition().x + movement.x < bounds.position.x)
-		movement.x = bounds.position.x - object.getPosition().x;
-	else if (object.getPosition().x + movement.x > bounds.position.x + bounds.size.x)
-		movement.x = bounds.position.x + bounds.size.x - object.getPosition().x;
-
-	if (object.getPosition().y + movement.y < bounds.position.y)
-		movement.y = bounds.position.y - object.getPosition().y;
-	else if (object.getPosition().y + movement.y > bounds.position.y + bounds.size.y)
-		movement.y = bounds.position.y + bounds.size.y - object.getPosition().y;
-
-	object.move(movement);
-}
-
-void project_stable::handle_player_input(const sf::RenderWindow& window, entt::registry& registry) {
+void project_stable::player_input_system(entt::registry& registry) {
 	for (auto [entity, player_input, sprite, hitbox, skills, stats] : registry.view<const player_input, sprite, hitbox, skillset, const stats>().each())
 	{
 		std::visit([&](const auto& input)
@@ -70,35 +52,30 @@ void project_stable::handle_player_input(const sf::RenderWindow& window, entt::r
 				if (delta.length() > 1.f) delta = delta.normalized();
 				else if (delta.length() < 0.05f) return;
 
-				move_within_bounds(hitbox, delta * stats.speed, get_bounds(window, hitbox.getRadius()));
+				delta *= stats.speed;
+
+				hitbox.move(delta);
 				sprite.setPosition(hitbox.getPosition());
 			}, player_input
 		);
 	}
 }
 
-void project_stable::handle_projectiles(const sf::RenderWindow& window, entt::registry& registry) {
+void project_stable::trajectory_system(entt::registry& registry) {
 	for (auto [entity, trajectory, sprite, hitbox] : registry.view<const trajectory, sprite, hitbox>().each()) {
-		const sf::Rect<float> window_rect{ {0, 0}, { static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y) } };
-		const sf::Rect<float> sprite_rect = sprite.getGlobalBounds();
-		if (!window_rect.findIntersection(sprite_rect)) {
-			registry.destroy(entity);
-			continue;
-		}
-
-		sf::Vector2f delta = trajectory.direction.normalized().componentWiseMul({ trajectory.speed, trajectory.speed });
-		sprite.move(delta);
+		sf::Vector2f delta = trajectory.direction.normalized() * trajectory.speed;
 		hitbox.move(delta);
+		sprite.setPosition(hitbox.getPosition());
 	}
 }
 
-void project_stable::handle_actions(const sf::RenderWindow& window, entt::registry& registry) {
+void project_stable::action_system(entt::registry& registry) {
 	for (auto [entity, action] : registry.view<const action>().each()) {
 		action(registry, entity);
 	}
 }
 
-void project_stable::handle_collisions(const sf::RenderWindow& window, entt::registry& registry) {
+void project_stable::hitbox_system(entt::registry& registry) {
 	const auto view = registry.view<hitbox, stats, alignment>().each();
 	std::vector<entt::entity> entities_to_remove;
 
