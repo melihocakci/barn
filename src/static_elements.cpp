@@ -6,6 +6,9 @@
 #include <box2d/box2d.h>
 
 #include <array>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 const sf::Texture barn::texture::miku{ "assets/texture/miku.png" };
 const sf::Texture barn::texture::pearto{ "assets/texture/pearto.png" };
@@ -24,7 +27,7 @@ const barn::skill none = {
 
 static const barn::skill green_onion_attack
 {
-	.cooldown_time{ 250 },
+	.cooldown_time{ 250ms },
 	.action = [](entt::registry& reg, b2WorldId world_id, entt::entity player_entity) {
 		auto [player_body, player_stats] = reg.get<barn::body, barn::properties>(player_entity);
 
@@ -54,7 +57,7 @@ static const barn::skill green_onion_attack
 
 static const barn::character hatsune_miku
 {
-	.sprite{ barn::texture::miku },
+	.sprite = barn::sprite{ barn::texture::miku },
 	.size{ 1.f, 2.f },
 	.properties{
 		.health = 1000,
@@ -82,7 +85,7 @@ const std::array<barn::character, 1> barn::character_templates
 
 static const barn::enemy pearto_enemy
 {
-	.sprite{ barn::texture::pearto },
+	.sprite = barn::sprite{ barn::texture::pearto },
 	.size{ 2.f, 2.f },
 	.stats
 	{
