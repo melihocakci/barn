@@ -7,13 +7,16 @@
 
 #include <functional>
 #include <chrono>
+#include <memory>
 
 namespace barn {
 	using body = b2BodyId;
 
+	using texture = std::shared_ptr<sf::Texture>;
+
 	using sprite = sf::Sprite;
 
-	using action = std::function<void(entt::registry&, b2WorldId, entt::entity)>;
+	using action = std::function<void(entt::registry&, const b2WorldId, entt::entity)>;
 
 	struct keyboard_controls {
 		sf::Keyboard::Scan up;
@@ -41,7 +44,7 @@ namespace barn {
 		const std::chrono::milliseconds cooldown_time{};
 		const barn::action action;
 
-		void operator()(entt::registry& reg, b2WorldId world, entt::entity ent) {
+		void operator()(entt::registry& reg, const b2WorldId world, entt::entity ent) {
 			using namespace std::chrono;
 
 			auto current_time = steady_clock::now();

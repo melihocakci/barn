@@ -10,7 +10,7 @@
 #include <variant>
 
 
-void barn::keyboard_system(entt::registry& registry, b2WorldId world_id) {
+void barn::keyboard_system(entt::registry& registry, const b2WorldId world_id) {
 	for (auto [entity, keyboard, body, skillset, properties] : registry.view<const keyboard_controls, body, skillset, const properties>().each())
 	{
 		if (sf::Keyboard::isKeyPressed(keyboard.skill_1))
@@ -38,7 +38,7 @@ void barn::keyboard_system(entt::registry& registry, b2WorldId world_id) {
 	}
 }
 
-void barn::joystick_system(entt::registry& registry, b2WorldId world_id) {
+void barn::joystick_system(entt::registry& registry, const b2WorldId world_id) {
 	for (auto [entity, joystick, body, skillset, properties] : registry.view<const joystick_controls, body, skillset, const properties>().each())
 	{
 		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.skill_1))
@@ -61,7 +61,7 @@ void barn::joystick_system(entt::registry& registry, b2WorldId world_id) {
 	}
 }
 
-void barn::action_system(entt::registry& registry, b2WorldId world_id) {
+void barn::action_system(entt::registry& registry, const b2WorldId world_id) {
 	for (auto [entity, action] : registry.view<const action>().each()) {
 		action(registry, world_id, entity);
 	}
