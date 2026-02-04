@@ -2,6 +2,7 @@
 #include "components.h"
 #include "systems.h"
 #include "static_elements.h"
+#include "constants.h"
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
@@ -11,18 +12,29 @@ static void add_player(entt::registry& reg, const project_stable::character& cha
 	const entt::entity entity = reg.create();
 
 	project_stable::sprite& sprite = reg.emplace<project_stable::sprite>(entity, character.sprite);
-	sprite.scale({ 0.05, 0.05 });
+	sprite.setScale({
+		VIRTUAL_HEIGHT * 0.25f / sprite.getTextureRect().size.y,
+		VIRTUAL_HEIGHT * 0.25f / sprite.getTextureRect().size.y
+		});
 	sprite.setOrigin(sprite.getLocalBounds().getCenter());
+	sprite.setPosition({ VIRTUAL_WIDTH * 0.5f, VIRTUAL_HEIGHT * 0.8f });
 
 	project_stable::hitbox& hitbox = reg.emplace<project_stable::hitbox>(entity, character.hitbox);
-	hitbox.setFillColor(sf::Color::Red);
 	hitbox.setOrigin(hitbox.getGeometricCenter());
+	hitbox.setPosition(sprite.getPosition());
 
-	reg.emplace<project_stable::stats>(entity, character.stats);
+	hitbox.setFillColor(sf::Color::Transparent);
+	hitbox.setOutlineColor(sf::Color::Red);
+	hitbox.setOutlineThickness(2.f);
+
+
+	reg.emplace<project_stable::properties>(entity, character.stats);
 
 	reg.emplace<project_stable::skillset>(entity, character.skillset);
 
-	reg.emplace<project_stable::alignment>(entity, project_stable::alignment::PLAYER);
+	reg.emplace<project_stable::type>(entity, project_stable::type::CREATURE);
+
+	reg.emplace<project_stable::alignment>(entity, project_stable::alignment::ALLY);
 
 	using scancode = sf::Keyboard::Scancode;
 	reg.emplace<project_stable::player_input>(entity,
@@ -45,18 +57,28 @@ static void add_enemy(entt::registry& reg, const project_stable::enemy& enemy) {
 	const entt::entity entity = reg.create();
 
 	project_stable::sprite& sprite = reg.emplace<project_stable::sprite>(entity, enemy.sprite);
-	sprite.scale({ 0.05, 0.05 });
+	sprite.setScale({
+		VIRTUAL_HEIGHT * 0.25f / sprite.getTextureRect().size.y,
+		VIRTUAL_HEIGHT * 0.25f / sprite.getTextureRect().size.y
+		});
 	sprite.setOrigin(sprite.getLocalBounds().getCenter());
+	sprite.setPosition({ VIRTUAL_WIDTH * 0.5f, VIRTUAL_HEIGHT * 0.3f });
 
 	project_stable::hitbox& hitbox = reg.emplace<project_stable::hitbox>(entity, enemy.hitbox);
-	hitbox.setFillColor(sf::Color::Red);
 	hitbox.setOrigin(hitbox.getGeometricCenter());
+	hitbox.setPosition(sprite.getPosition());
 
-	reg.emplace<project_stable::stats>(entity, enemy.stats);
+	hitbox.setFillColor(sf::Color::Transparent);
+	hitbox.setOutlineColor(sf::Color::Red);
+	hitbox.setOutlineThickness(2.f);
+
+	reg.emplace<project_stable::properties>(entity, enemy.stats);
 
 	reg.emplace<project_stable::action>(entity, enemy.action);
 
-	reg.emplace<project_stable::alignment>(entity, project_stable::alignment::ENEMY);
+	reg.emplace<project_stable::type>(entity, project_stable::type::CREATURE);
+
+	reg.emplace<project_stable::alignment>(entity, project_stable::alignment::FOE);
 }
 
 static void handle_events(sf::RenderWindow& window) {
@@ -73,15 +95,9 @@ int project_stable::main_menu(sf::RenderWindow& window) {
 }
 
 int project_stable::combat_scene(sf::RenderWindow& window) {
-	project_stable::sprite background{ texture::bliss };
+	sprite background{ texture::bliss };
 
-	const float scale = window.getSize().x < window.getSize().y ?
-		static_cast<float>(window.getSize().x) / background.getTextureRect().size.x :
-		static_cast<float>(window.getSize().y) / background.getTextureRect().size.y;
-
-	background.setScale({ scale, scale });
-	auto var = background.getLocalBounds().size.x;
-	background.setPosition({ (window.getSize().x - background.getGlobalBounds().size.x) / 2.f, 0 });
+	background.setScale({ VIRTUAL_WIDTH / background.getTextureRect().size.x, VIRTUAL_HEIGHT / background.getTextureRect().size.y });
 
 	sf::Music music{ "assets/audio/Kasane Teto - Teto territory.mp3" };
 	//music.play();
@@ -89,6 +105,33 @@ int project_stable::combat_scene(sf::RenderWindow& window) {
 	music.setVolume(20.f);
 
 	entt::registry registry;
+
+	constexpr float border_thickness = 50.f;
+
+	entt::entity top_border = registry.create();
+	registry.emplace<hitbox>(top_border, sf::Vector2f{ VIRTUAL_WIDTH + 2.f * border_thickness, border_thickness }).setPosition({ -border_thickness, -border_thickness });
+	registry.emplace<type>(top_border, type::OBSTACLE);
+	registry.emplace<alignment>(top_border, alignment::NEUTRAL);
+	registry.emplace<properties>(top_border);
+
+	entt::entity bottom_border = registry.create();
+	registry.emplace<hitbox>(bottom_border, sf::Vector2f{ VIRTUAL_WIDTH + 2.f * border_thickness, border_thickness }).setPosition({ -border_thickness, VIRTUAL_HEIGHT });
+	registry.emplace<type>(bottom_border, type::OBSTACLE);
+	registry.emplace<alignment>(bottom_border, alignment::NEUTRAL);
+	registry.emplace<properties>(bottom_border);
+
+	entt::entity left_border = registry.create();
+	registry.emplace<hitbox>(left_border, sf::Vector2f{ border_thickness, VIRTUAL_HEIGHT + 2.f * border_thickness }).setPosition({ -border_thickness, -border_thickness });
+	registry.emplace<type>(left_border, type::OBSTACLE);
+	registry.emplace<alignment>(left_border, alignment::NEUTRAL);
+	registry.emplace<properties>(left_border);
+
+	entt::entity right_border = registry.create();
+	registry.emplace<hitbox>(right_border, sf::Vector2f{ border_thickness, VIRTUAL_HEIGHT + 2.f * border_thickness }).setPosition({ VIRTUAL_WIDTH, -border_thickness });
+	registry.emplace<type>(right_border, type::OBSTACLE);
+	registry.emplace<alignment>(right_border, alignment::NEUTRAL);
+	registry.emplace<properties>(right_border);
+
 	add_player(registry, character_templates[0]);
 	add_enemy(registry, enemy_templates[0]);
 
