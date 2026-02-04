@@ -4,7 +4,7 @@
 
 #include <SFML/Graphics.hpp>
 
-namespace mg {
+namespace project_stable {
 	struct character {
 		sprite sprite;
 		hitbox hitbox;

@@ -8,28 +8,28 @@
 #include <SFML/Audio.hpp>
 #include <entt/entt.hpp>
 
-static void add_player(entt::registry& reg, sf::Vector2f position, const mg::character& character) {
+static void add_player(entt::registry& reg, sf::Vector2f position, const project_stable::character& character) {
 	const entt::entity entity = reg.create();
 
-	mg::sprite& sprite = reg.emplace<mg::sprite>(entity, character.sprite);
+	project_stable::sprite& sprite = reg.emplace<project_stable::sprite>(entity, character.sprite);
 	sprite.scale({ 0.05, 0.05 });
 	sprite.setOrigin(sprite.getLocalBounds().getCenter());
 	sprite.setPosition(position);
 
-	mg::hitbox& hitbox = reg.emplace<mg::hitbox>(entity, character.hitbox);
+	project_stable::hitbox& hitbox = reg.emplace<project_stable::hitbox>(entity, character.hitbox);
 	hitbox.setFillColor(sf::Color::Red);
 	hitbox.setOrigin(hitbox.getGeometricCenter());
 	hitbox.setPosition(position);
 
-	reg.emplace<mg::stats>(entity, character.stats);
+	reg.emplace<project_stable::stats>(entity, character.stats);
 
-	reg.emplace<mg::skillset>(entity, character.skillset);
+	reg.emplace<project_stable::skillset>(entity, character.skillset);
 
-	reg.emplace<mg::alignment>(entity, mg::alignment::PLAYER);
+	reg.emplace<project_stable::alignment>(entity, project_stable::alignment::PLAYER);
 
 	using scancode = sf::Keyboard::Scancode;
-	reg.emplace<mg::player_input>(entity,
-		mg::keyboard_input{
+	reg.emplace<project_stable::player_input>(entity,
+		project_stable::keyboard_input{
 			scancode::Up,
 			scancode::Down,
 			scancode::Left,
@@ -41,27 +41,27 @@ static void add_player(entt::registry& reg, sf::Vector2f position, const mg::cha
 		}
 	);
 
-	//reg.emplace<mg::user_input>(entity, mg::joystick_input{ 0u, sf::Joystick::Axis::X, sf::Joystick::Axis::Y, 0u, 1u, 2u, 3u });
+	//reg.emplace<project_stable::user_input>(entity, project_stable::joystick_input{ 0u, sf::Joystick::Axis::X, sf::Joystick::Axis::Y, 0u, 1u, 2u, 3u });
 }
 
-static void add_enemy(entt::registry& reg, sf::Vector2f position, const mg::enemy& enemy) {
+static void add_enemy(entt::registry& reg, sf::Vector2f position, const project_stable::enemy& enemy) {
 	const entt::entity entity = reg.create();
 
-	mg::sprite& sprite = reg.emplace<mg::sprite>(entity, enemy.sprite);
+	project_stable::sprite& sprite = reg.emplace<project_stable::sprite>(entity, enemy.sprite);
 	//sprite.scale({ 0.05, 0.05 });
 	sprite.setOrigin(sprite.getLocalBounds().getCenter());
 	sprite.setPosition(position);
 
-	mg::hitbox& hitbox = reg.emplace<mg::hitbox>(entity, enemy.hitbox);
+	project_stable::hitbox& hitbox = reg.emplace<project_stable::hitbox>(entity, enemy.hitbox);
 	hitbox.setFillColor(sf::Color::Red);
 	hitbox.setOrigin(hitbox.getGeometricCenter());
 	hitbox.setPosition(position);
 
-	reg.emplace<mg::stats>(entity, enemy.stats);
+	reg.emplace<project_stable::stats>(entity, enemy.stats);
 
-	reg.emplace<mg::action>(entity, enemy.action);
+	reg.emplace<project_stable::action>(entity, enemy.action);
 
-	reg.emplace<mg::alignment>(entity, mg::alignment::ENEMY);
+	reg.emplace<project_stable::alignment>(entity, project_stable::alignment::ENEMY);
 }
 
 static void handle_events(sf::RenderWindow& window) {
@@ -73,13 +73,13 @@ static void handle_events(sf::RenderWindow& window) {
 	}
 }
 
-int mg::main_menu(sf::RenderWindow& window) {
+int project_stable::main_menu(sf::RenderWindow& window) {
 	return combat_scene(window);
 }
 
-int mg::combat_scene(sf::RenderWindow& window) {
+int project_stable::combat_scene(sf::RenderWindow& window) {
 	const sf::Texture bg_texture{ "assets/texture/bliss.jpg" };
-	mg::sprite background{ bg_texture };
+	project_stable::sprite background{ bg_texture };
 
 	background.setOrigin({
 		background.getTextureRect().size.x / 2.f,
@@ -115,11 +115,11 @@ int mg::combat_scene(sf::RenderWindow& window) {
 		window.clear();
 		window.draw(background);
 
-		for (auto [entity, sprite] : registry.view<const mg::sprite>().each()) {
+		for (auto [entity, sprite] : registry.view<const project_stable::sprite>().each()) {
 			window.draw(sprite);
 		}
 
-		for (auto [entity, hitbox] : registry.view<const mg::hitbox>().each()) {
+		for (auto [entity, hitbox] : registry.view<const project_stable::hitbox>().each()) {
 			window.draw(hitbox);
 		}
 

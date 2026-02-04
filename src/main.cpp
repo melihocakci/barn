@@ -11,5 +11,5 @@ int main() {
 
 	window.setFramerateLimit(60);
 
-	return mg::main_menu(window);
+	return project_stable::main_menu(window);
 }

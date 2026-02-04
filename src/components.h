@@ -7,7 +7,7 @@
 #include <functional>
 #include <chrono>
 
-namespace mg {
+namespace project_stable {
 	using hitbox = sf::CircleShape;
 
 	using sprite = sf::Sprite;
@@ -45,7 +45,7 @@ namespace mg {
 	struct skill {
 		std::chrono::steady_clock::time_point last_used_time{};
 		const std::chrono::milliseconds cooldown_time{};
-		const mg::action action;
+		const project_stable::action action;
 
 		void operator()(entt::registry& reg, entt::entity ent) {
 			using namespace std::chrono;

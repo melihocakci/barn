@@ -6,7 +6,7 @@
 
 #include <array>
 
-const mg::skill none = {
+const project_stable::skill none = {
 	.cooldown_time{},
 	.action = [](entt::registry& reg, entt::entity player_entity) {
 	},
@@ -18,32 +18,32 @@ const mg::skill none = {
 
 static const sf::Texture miku_texture{ "assets/texture/miku.png" };
 
-static const mg::skill green_onion_attack 
+static const project_stable::skill green_onion_attack 
 {
 	.cooldown_time{ 250 },
 	.action = [](entt::registry& reg, entt::entity player_entity) {
 		static const sf::Texture bullet_texture{ "assets/texture/green-onion.png" };
 
-		auto [player_hitbox, player_stats] = reg.get<mg::hitbox, mg::stats>(player_entity);
+		auto [player_hitbox, player_stats] = reg.get<project_stable::hitbox, project_stable::stats>(player_entity);
 
 		const entt::entity bullet_entity = reg.create();
-		mg::sprite& bullet_sprite = reg.emplace<mg::sprite>(bullet_entity, bullet_texture);
+		project_stable::sprite& bullet_sprite = reg.emplace<project_stable::sprite>(bullet_entity, bullet_texture);
 		bullet_sprite.setOrigin(bullet_sprite.getLocalBounds().getCenter());
 		bullet_sprite.setPosition(player_hitbox.getPosition());
 
-		mg::hitbox& bullet_hitbox = reg.emplace<mg::hitbox>(bullet_entity, 10);
+		project_stable::hitbox& bullet_hitbox = reg.emplace<project_stable::hitbox>(bullet_entity, 10);
 		bullet_hitbox.setOrigin(bullet_hitbox.getGeometricCenter());
 		bullet_hitbox.setPosition(player_hitbox.getPosition());
 
-		reg.emplace<mg::stats>(bullet_entity, mg::stats{ .health = 1, .attack = player_stats.attack, .speed = 30 });
+		reg.emplace<project_stable::stats>(bullet_entity, project_stable::stats{ .health = 1, .attack = player_stats.attack, .speed = 30 });
 
-		reg.emplace<mg::trajectory>(bullet_entity, 10.f, sf::Vector2f{ 0, -1 });
+		reg.emplace<project_stable::trajectory>(bullet_entity, 10.f, sf::Vector2f{ 0, -1 });
 
-		reg.emplace<mg::alignment>(bullet_entity, mg::alignment::PLAYER);
+		reg.emplace<project_stable::alignment>(bullet_entity, project_stable::alignment::PLAYER);
 	},
 };
 
-static const mg::character hatsune_miku 
+static const project_stable::character hatsune_miku 
 {
 	.sprite{ miku_texture },
 	.hitbox{ 20.f },
@@ -60,7 +60,7 @@ static const mg::character hatsune_miku
 	}
 };
 
-const std::array<mg::character, 1> mg::character_templates
+const std::array<project_stable::character, 1> project_stable::character_templates
 {
 	hatsune_miku,
 };
