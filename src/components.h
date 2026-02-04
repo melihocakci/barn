@@ -9,11 +9,11 @@
 #include <chrono>
 
 namespace barn {
-	using hitbox = sf::RectangleShape;
+	using body = b2BodyId;
 
 	using sprite = sf::Sprite;
 
-	using action = std::function<void(entt::registry&, entt::entity)>;
+	using action = std::function<void(entt::registry&, b2WorldId, entt::entity)>;
 
 	struct keyboard_controls {
 		sf::Keyboard::Scan up;
@@ -36,24 +36,19 @@ namespace barn {
 		unsigned int skill_4;
 	};
 
-	struct trajectory {
-		float speed{};
-		sf::Vector2f direction;
-	};
-
 	struct skill {
 		std::chrono::steady_clock::time_point last_used_time{};
 		const std::chrono::milliseconds cooldown_time{};
 		const barn::action action;
 
-		void operator()(entt::registry& reg, entt::entity ent) {
+		void operator()(entt::registry& reg, b2WorldId world, entt::entity ent) {
 			using namespace std::chrono;
 
 			auto current_time = steady_clock::now();
 			auto time_span = duration_cast<milliseconds>(current_time - last_used_time);
 
 			if (time_span >= cooldown_time) {
-				action(reg, ent);
+				action(reg, world, ent);
 				last_used_time = current_time;
 			}
 		}

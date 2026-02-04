@@ -13,19 +13,19 @@ namespace barn {
 	}
 
 	struct character {
-		sprite sprite;
-		hitbox hitbox;
-		properties stats;
-		skillset skillset;
+		barn::sprite sprite;
+		b2Vec2 size;
+		barn::properties properties;
+		barn::skillset skillset;
 	};
 
 	extern const std::array<character, 1> character_templates;
 
 	struct enemy {
-		sprite sprite;
-		hitbox hitbox;
-		properties stats;
-		action action;
+		barn::sprite sprite;
+		b2Vec2 size;
+		barn::properties stats;
+		barn::action action;
 	};
 
 	extern const std::array<enemy, 1> enemy_templates;

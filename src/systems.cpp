@@ -1,151 +1,75 @@
 #include "systems.h"
 #include "components.h"
 #include "constants.h"
+#include "utility.h"
 
 #include <entt/entt.hpp>
+
+#include <box2d/box2d.h>
 
 #include <variant>
 
 
-void barn::keyboard_system(entt::registry& registry) {
-	for (auto [entity, input, hitbox, skillset, properties] : registry.view<const keyboard_controls, hitbox, skillset, const properties>().each())
+void barn::keyboard_system(entt::registry& registry, b2WorldId world_id) {
+	for (auto [entity, keyboard, body, skillset, properties] : registry.view<const keyboard_controls, body, skillset, const properties>().each())
 	{
-		if (sf::Keyboard::isKeyPressed(input.skill_1))
-			skillset.skill_1(registry, entity);
-		if (sf::Keyboard::isKeyPressed(input.skill_2))
-			skillset.skill_2(registry, entity);
-		if (sf::Keyboard::isKeyPressed(input.skill_3))
-			skillset.skill_3(registry, entity);
-		if (sf::Keyboard::isKeyPressed(input.skill_4))
-			skillset.skill_4(registry, entity);
+		if (sf::Keyboard::isKeyPressed(keyboard.skill_1))
+			skillset.skill_1(registry, world_id, entity);
+		if (sf::Keyboard::isKeyPressed(keyboard.skill_2))
+			skillset.skill_2(registry, world_id, entity);
+		if (sf::Keyboard::isKeyPressed(keyboard.skill_3))
+			skillset.skill_3(registry, world_id, entity);
+		if (sf::Keyboard::isKeyPressed(keyboard.skill_4))
+			skillset.skill_4(registry, world_id, entity);
 
-		sf::Vector2f delta{};
-		if (sf::Keyboard::isKeyPressed(input.up))
-			delta += sf::Vector2f{ 0, -1 };
-		if (sf::Keyboard::isKeyPressed(input.down))
-			delta += sf::Vector2f{ 0, 1 };
-		if (sf::Keyboard::isKeyPressed(input.left))
-			delta += sf::Vector2f{ -1, 0 };
-		if (sf::Keyboard::isKeyPressed(input.right))
-			delta += sf::Vector2f{ 1, 0 };
+		b2Vec2 vec{};
+		if (sf::Keyboard::isKeyPressed(keyboard.up))
+			vec += { 0, 1 };
+		if (sf::Keyboard::isKeyPressed(keyboard.down))
+			vec += { 0, -1 };
+		if (sf::Keyboard::isKeyPressed(keyboard.left))
+			vec += { -1, 0 };
+		if (sf::Keyboard::isKeyPressed(keyboard.right))
+			vec += { 1, 0 };
 
-		if (delta.length() > 1.f) delta = delta.normalized();
-		else if (delta.length() < 0.05f) return;
+		if (length(vec) > 1.f) vec = normalize(vec);
 
-		delta *= properties.speed;
-
-		hitbox.move(delta);
+		b2Body_SetLinearVelocity(body, vec * properties.speed);
 	}
 }
 
-void barn::joystick_system(entt::registry& registry) {
-	for (auto [entity, input, hitbox, skillset, properties] : registry.view<const joystick_controls, hitbox, skillset, const properties>().each())
+void barn::joystick_system(entt::registry& registry, b2WorldId world_id) {
+	for (auto [entity, joystick, body, skillset, properties] : registry.view<const joystick_controls, body, skillset, const properties>().each())
 	{
-		if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_1))
-			skillset.skill_1(registry, entity);
-		if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_2))
-			skillset.skill_2(registry, entity);
-		if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_3))
-			skillset.skill_3(registry, entity);
-		if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_4))
-			skillset.skill_4(registry, entity);
+		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.skill_1))
+			skillset.skill_1(registry, world_id, entity);
+		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.skill_2))
+			skillset.skill_2(registry, world_id, entity);
+		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.skill_3))
+			skillset.skill_3(registry, world_id, entity);
+		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.skill_4))
+			skillset.skill_4(registry, world_id, entity);
 
-		sf::Vector2f delta = {
-			sf::Joystick::getAxisPosition(input.joystick_id, input.horizontal_axis) / 100,
-			sf::Joystick::getAxisPosition(input.joystick_id, input.vertical_axis) / 100
+		b2Vec2 vec = {
+			sf::Joystick::getAxisPosition(joystick.joystick_id, joystick.horizontal_axis) / 100,
+			-sf::Joystick::getAxisPosition(joystick.joystick_id, joystick.vertical_axis) / 100
 		};
 
-		if (delta.length() > 1.f) delta = delta.normalized();
-		else if (delta.length() < 0.05f) return;
+		if (length(vec) < 0.05f) vec = { 0,0 };
 
-		delta *= properties.speed;
-
-		hitbox.move(delta);
+		b2Body_SetLinearVelocity(body, vec * properties.speed);
 	}
 }
 
-void barn::trajectory_system(entt::registry& registry) {
-	for (auto [entity, trajectory, hitbox] : registry.view<const trajectory, hitbox>().each()) {
-		sf::Vector2f delta = trajectory.direction.normalized() * trajectory.speed;
-		hitbox.move(delta);
-	}
-}
-
-void barn::action_system(entt::registry& registry) {
+void barn::action_system(entt::registry& registry, b2WorldId world_id) {
 	for (auto [entity, action] : registry.view<const action>().each()) {
-		action(registry, entity);
-	}
-}
-
-void barn::hitbox_system(entt::registry& registry) {
-	const auto view = registry.view<hitbox, properties, type, alignment>().each();
-	std::vector<entt::entity> entities_to_remove;
-
-	for (auto first_iteretor = view.begin(); first_iteretor != view.end(); ++first_iteretor) {
-		auto [first_entity, first_hitbox, first_properties, first_type, first_alignment] = *first_iteretor;
-		auto second_iteretor = first_iteretor;
-
-		for (++second_iteretor; second_iteretor != view.end(); ++second_iteretor) {
-			auto [second_entity, second_hitbox, second_properties, second_type, second_alignment] = *second_iteretor;
-
-			if (first_type == second_type) {
-				continue;
-			}
-			if (first_alignment == second_alignment) {
-				continue;
-			}
-			else if (!first_hitbox.getGlobalBounds().findIntersection(second_hitbox.getGlobalBounds())) {
-				continue;
-			}
-			else if (first_type == type::OBSTACLE && second_type == type::CREATURE || first_type == type::CREATURE && second_type == type::OBSTACLE) {
-				hitbox& obstacle_hitbox = (first_type == type::OBSTACLE) ? first_hitbox : second_hitbox;
-				hitbox& creature_hitbox = (first_type == type::CREATURE) ? first_hitbox : second_hitbox;
-
-				float dx = obstacle_hitbox.getGlobalBounds().getCenter().x - creature_hitbox.getGlobalBounds().getCenter().x;
-				float dy = obstacle_hitbox.getGlobalBounds().getCenter().y - creature_hitbox.getGlobalBounds().getCenter().y;
-
-				float overlapX = (obstacle_hitbox.getSize().x / 2.f + creature_hitbox.getSize().x / 2.f) - std::abs(dx);
-				float overlapY = (obstacle_hitbox.getSize().y / 2.f + creature_hitbox.getSize().y / 2.f) - std::abs(dy);
-
-				if (overlapX < overlapY) {
-					// Move along X axis
-					if (dx > 0)
-						creature_hitbox.move({ -overlapX, 0.f }); // Move left
-					else
-						creature_hitbox.move({ overlapX, 0.f }); // Move right
-				}
-				else {
-					// Move along Y axis
-					if (dy > 0)
-						creature_hitbox.move({ 0.f, -overlapY }); // Move up
-					else
-						creature_hitbox.move({ 0.f, overlapY }); // Move down
-				}
-			}
-			else if (first_type == type::OBSTACLE && second_type == type::PROJECTILE || first_type == type::PROJECTILE && second_type == type::OBSTACLE) {
-				entities_to_remove.push_back((first_type == type::PROJECTILE) ? first_entity : second_entity);
-			}
-			else {
-				first_properties.health -= second_properties.attack;
-				second_properties.health -= first_properties.attack;
-				if (first_properties.health <= 0) {
-					entities_to_remove.push_back(first_entity);
-				}
-				if (second_properties.health <= 0) {
-					entities_to_remove.push_back(second_entity);
-				}
-			}
-		}
-	}
-
-	for (const auto& entity : entities_to_remove) {
-		registry.destroy(entity);
+		action(registry, world_id, entity);
 	}
 }
 
 void barn::sprite_system(entt::registry& registry, sf::RenderWindow& window, sprite& background) {
 	const float window_ratio = static_cast<float>(window.getSize().x) / window.getSize().y;
-	const float target_ratio = VIRTUAL_WIDTH / VIRTUAL_HEIGHT;
+	const float target_ratio = VIRTUAL_WIDTH_PIXELS / VIRTUAL_HEIGHT_PIXELS;
 
 	float scale_x = 1.f;
 	float scale_y = 1.f;
@@ -163,26 +87,21 @@ void barn::sprite_system(entt::registry& registry, sf::RenderWindow& window, spr
 		offset_y = (1.f - scale_y) / 2.f;
 	}
 
-	sf::View view{ sf::FloatRect{ { 0.f, 0.f }, { VIRTUAL_WIDTH, VIRTUAL_HEIGHT } } };
+	sf::View view{ sf::FloatRect{ { 0.f, 0.f }, { VIRTUAL_WIDTH_PIXELS, VIRTUAL_HEIGHT_PIXELS } } };
 	view.setViewport(sf::FloatRect{ { offset_x, offset_y }, { scale_x, scale_y } });
 
-
-	for (auto [entity, sprite, hitbox] : registry.view<sprite, const hitbox>().each()) {
-		sprite.setPosition(hitbox.getPosition());
+	for (auto [entity, sprite, body] : registry.view<sprite, const body>().each()) {
+		sprite.setPosition(to_pixels(b2Body_GetPosition(body)));
 	}
 
 	window.clear();
 	window.setView(view);
 
-	background.setScale({ VIRTUAL_WIDTH / background.getTextureRect().size.x, VIRTUAL_HEIGHT / background.getTextureRect().size.y });
+	background.setScale({ VIRTUAL_WIDTH_PIXELS / background.getTextureRect().size.x, VIRTUAL_HEIGHT_PIXELS / background.getTextureRect().size.y });
 	window.draw(background);
 
 	for (auto [entity, sprite] : registry.view<const barn::sprite>().each()) {
 		window.draw(sprite);
-	}
-
-	for (auto [entity, hitbox] : registry.view<const barn::hitbox>().each()) {
-		window.draw(hitbox);
 	}
 
 	window.setView(window.getDefaultView());
