@@ -1,8 +1,7 @@
 #include "scenes.h"
 #include "components.h"
 #include "systems.h"
-#include "characters.h"
-#include "enemies.h"
+#include "static_elements.h"
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
@@ -39,7 +38,7 @@ static void add_player(entt::registry& reg, const project_stable::character& cha
 		}
 	);
 
-	//reg.emplace<project_stable::user_input>(entity, project_stable::joystick_input{ 0u, sf::Joystick::Axis::X, sf::Joystick::Axis::Y, 0u, 1u, 2u, 3u });
+	//reg.emplace<project_stable::player_input>(entity, project_stable::joystick_input{ 0u, sf::Joystick::Axis::X, sf::Joystick::Axis::Y, 0u, 1u, 2u, 3u });
 }
 
 static void add_enemy(entt::registry& reg, const project_stable::enemy& enemy) {
@@ -74,11 +73,15 @@ int project_stable::main_menu(sf::RenderWindow& window) {
 }
 
 int project_stable::combat_scene(sf::RenderWindow& window) {
-	const sf::Texture bg_texture{ "assets/texture/bliss.jpg" };
-	project_stable::sprite background{ bg_texture };
-	background.setScale({
-		static_cast<float>(window.getSize().y) / background.getTextureRect().size.y,
-		static_cast<float>(window.getSize().y) / background.getTextureRect().size.y });
+	project_stable::sprite background{ texture::bliss };
+
+	const float scale = window.getSize().x < window.getSize().y ?
+		static_cast<float>(window.getSize().x) / background.getTextureRect().size.x :
+		static_cast<float>(window.getSize().y) / background.getTextureRect().size.y;
+
+	background.setScale({ scale, scale });
+	auto var = background.getLocalBounds().size.x;
+	background.setPosition({ (window.getSize().x - background.getGlobalBounds().size.x) / 2.f, 0 });
 
 	sf::Music music{ "assets/audio/Kasane Teto - Teto territory.mp3" };
 	//music.play();
