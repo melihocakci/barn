@@ -28,7 +28,7 @@ namespace barn {
 		return get_asset<SDL_Texture>(renderer, path);
 	}
 
-	inline barn::audio get_audio(MIX_Mixer* mixer, std::string_view path) {
-		return get_asset<MIX_Audio>(mixer, path);
+	inline barn::audio get_audio(std::string_view path) {
+		return get_asset<MIX_Audio, MIX_Mixer>(static_cast<MIX_Mixer*>(nullptr), path);
 	}
 }

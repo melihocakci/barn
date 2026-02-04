@@ -33,7 +33,7 @@ static void add_assets(entt::entity entity, entt::registry& reg, SDL_Renderer* r
 	}
 
 	for (const auto& audio_path : def.audios) {
-		assets.audios.push_back(barn::get_audio(mixer, audio_path));
+		assets.audios.push_back(barn::get_audio(audio_path));
 	}
 }
 
@@ -75,13 +75,15 @@ entt::entity barn::create_player(entt::registry& reg, SDL_Renderer* renderer, MI
 
 	add_body(entity, reg, world_id, def.body);
 
-	reg.emplace<barn::properties>(entity, def.properties);
+	add_assets(entity, reg, renderer, mixer, def.assets);
 
 	barn::skillset& skillset = reg.emplace<barn::skillset>(entity);
 	for (auto [skill_def, skill] : std::views::zip(def.skillset, skillset)) {
 		skill.cooldown = skill_def.cooldown;
 		skill.action = skill_def.action;
 	}
+
+	reg.emplace<barn::properties>(entity, def.properties);
 
 	reg.emplace<barn::category>(entity, barn::category::ALLY);
 

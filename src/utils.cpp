@@ -25,9 +25,9 @@ barn::asset<asset_t> barn::get_asset(loader_t* loader, std::string_view path) {
 		}
 	}
 
-	shared_ptr_t asset_ptr;
+	shared_ptr_t asset;
 	if constexpr (std::is_same_v<asset_t, SDL_Texture>) {
-		asset_ptr = shared_ptr_t{
+		asset = shared_ptr_t{
 			new future_t{},
 			[](future_t* future)
 			{
@@ -37,14 +37,23 @@ barn::asset<asset_t> barn::get_asset(loader_t* loader, std::string_view path) {
 			}
 		};
 
-		*asset_ptr = std::async(std::launch::async,
-			[loader, path]()
+		std::future<SDL_Surface*> surf_ftr = std::async(std::launch::async,
+			[path]() -> SDL_Surface*
 			{
-				return IMG_LoadTexture(loader, path.data());
+				return IMG_Load(path.data());
+			});
+
+		*asset = std::async(std::launch::deferred,
+			[loader, surf_ftr = std::move(surf_ftr)]() mutable -> SDL_Texture*
+			{
+				SDL_Surface* surf = surf_ftr.get();
+				SDL_Texture* texture = SDL_CreateTextureFromSurface(loader, surf);
+				SDL_DestroySurface(surf);
+				return texture;
 			});
 	}
 	else if constexpr (std::is_same_v<asset_t, MIX_Audio>) {
-		asset_ptr = shared_ptr_t{
+		asset = shared_ptr_t{
 			new future_t{},
 			[](future_t* future)
 			{
@@ -54,16 +63,16 @@ barn::asset<asset_t> barn::get_asset(loader_t* loader, std::string_view path) {
 			}
 		};
 
-		*asset_ptr = std::async(std::launch::async,
-			[loader, path]()
+		*asset = std::async(std::launch::async,
+			[path]() -> MIX_Audio*
 			{
-				return MIX_LoadAudio(loader, path.data(), false);
+				return MIX_LoadAudio(nullptr, path.data(), false);
 			});
 	}
 	else {
 		static_assert("Unsupported asset type");
 	}
 
-	assets[path] = asset_ptr;
-	return { asset_ptr };
+	assets[path] = asset;
+	return { asset };
 }
