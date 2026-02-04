@@ -57,7 +57,7 @@ decltype(barn::character_templates) barn::character_templates
 {
 	player_def{
 		.body{
-			.body = default_body_def,
+			.def = default_body_def,
 			.circles{
 				{ally_shape_def, b2Circle{{}, 0.25f}}
 			}
@@ -79,9 +79,9 @@ decltype(barn::character_templates) barn::character_templates
 					auto [player_body, player_prop] = reg.get<barn::body, barn::properties>(player_entity);
 
 					barn::bullet_def def;
-					def.body.body.type = b2_kinematicBody;
-					def.body.body.position = b2Body_GetPosition(player_body.id);
-					def.body.body.linearVelocity = b2Vec2{ 0.f, 20.f };
+					def.body.def.type = b2_kinematicBody;
+					def.body.def.position = b2Body_GetPosition(player_body.id);
+					def.body.def.linearVelocity = b2Vec2{ 0.f, 20.f };
 					def.body.circles.emplace_back(ally_bullet_shape_def, b2Circle({}, 0.25f));
 					def.sprite.texture = "texture/green-onion.png";
 					def.sprite.width = 1.f * PIXELS_PER_METER;
@@ -105,7 +105,7 @@ decltype(barn::enemy_templates) barn::enemy_templates
 {
 	enemy_def{
 		.body{
-			.body = default_body_def,
+			.def = default_body_def,
 			.circles{
 				{foe_shape_def, b2Circle{{}, 0.5f}}
 			}

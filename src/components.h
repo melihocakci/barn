@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SDL3/SDL.h>
+#include <SDL3_mixer/SDL_mixer.h>
 #include <entt/entt.hpp>
 #include <box2d/box2d.h>
 
@@ -29,6 +30,8 @@ namespace barn {
 	};
 
 	using texture = std::shared_ptr<SDL_Texture>;
+
+	using audio = std::shared_ptr<MIX_Audio>;
 
 	struct sprite {
 		barn::texture texture;
@@ -96,10 +99,10 @@ namespace barn {
 
 	enum category : std::uint64_t {
 		ALLY = 1,
-		FOE = 2,
-		ALLY_BULLET = 4,
-		FOE_BULLET = 8,
-		OBSTACLE = 16,
+		FOE = 1 << 1,
+		ALLY_BULLET = 1 << 2,
+		FOE_BULLET = 1 << 3,
+		OBSTACLE = 1 << 4,
 	};
 
 	struct background {};

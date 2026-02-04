@@ -4,6 +4,7 @@
 
 #include <box2d/types.h>
 #include <SDL3/SDL.h>
+#include <SDL3_mixer/SDL_mixer.h>
 
 #include <filesystem>
 #include <math.h>
@@ -22,4 +23,6 @@ namespace barn {
 	}
 
 	barn::texture get_texture(SDL_Renderer* renderer, const std::filesystem::path& asset);
+
+	barn::audio get_audio(MIX_Mixer* mixer, const std::filesystem::path& asset);
 }

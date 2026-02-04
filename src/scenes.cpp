@@ -10,12 +10,13 @@
 #include <entt/entt.hpp>
 #include <box2d/box2d.h>
 #include <SDL3/SDL.h>
+#include <SDL3_mixer/SDL_mixer.h>
 
-int barn::main_menu(SDL_Window* window, SDL_Renderer* renderer, b2WorldId world_id) {
-	return combat_scene(window, renderer, world_id);
+int barn::main_menu(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world_id) {
+	return barn::combat_scene(window, renderer, mixer, world_id);
 }
 
-int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, b2WorldId world_id) {
+int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world_id) {
 	entt::registry registry;
 
 	const auto bliss_texture = get_texture(renderer, "texture/bliss.jpg");
@@ -24,9 +25,16 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, b2WorldId wor
 	registry.emplace<barn::background>(background);
 
 	create_borders(registry, world_id);
+	
+	const barn::audio bg_music = get_audio(mixer, "audio/kasane_territory.ogg");
+	MIX_Track* track = MIX_CreateTrack(mixer);
+	MIX_SetTrackAudio(track, bg_music.get());
+	SDL_PropertiesID props = SDL_CreateProperties();
+	SDL_SetNumberProperty(props, MIX_PROP_PLAY_LOOPS_NUMBER, -1);
+	MIX_PlayTrack(track, props);
 
 	barn::player_def player_def = character_templates[0];
-	player_def.body.body.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS / 4 };
+	player_def.body.def.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS / 4 };
 	entt::entity player_entity = create_player(registry, renderer, world_id, player_def);
 	registry.emplace<player>(player_entity, player::P1);
 	registry.emplace<keyboard>(player_entity);
@@ -36,7 +44,7 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, b2WorldId wor
 	//SDL_free(ids);
 
 	barn::enemy_def enemy_def = enemy_templates[0];
-	enemy_def.body.body.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS * 3 / 4 };
+	enemy_def.body.def.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS * 3 / 4 };
 	create_enemy(registry, renderer, world_id, enemy_def);
 
 	float accumulator = 0.0f;

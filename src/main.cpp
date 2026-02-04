@@ -3,13 +3,18 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <SDL3_mixer/SDL_mixer.h>
 #include <box2d/box2d.h>
 
 struct sdl_guard {
 	SDL_Window* window{};
 	SDL_Renderer* renderer{};
+	MIX_Mixer* mixer{};
 	sdl_guard() {
 		bool success = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD);
+		if (!success) throw std::runtime_error(SDL_GetError());
+
+		success = MIX_Init();
 		if (!success) throw std::runtime_error(SDL_GetError());
 
 		success = SDL_CreateWindowAndRenderer(
@@ -29,10 +34,15 @@ struct sdl_guard {
 			SDL_LOGICAL_PRESENTATION_LETTERBOX
 		);
 		if (!success) throw std::runtime_error(SDL_GetError());
+
+		mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
+		if (!mixer) throw std::runtime_error(SDL_GetError());
 	}
 	~sdl_guard() {
+		if (mixer) MIX_DestroyMixer(mixer);
 		if (renderer) SDL_DestroyRenderer(renderer);
 		if (window) SDL_DestroyWindow(window);
+		MIX_Quit();
 		SDL_Quit();
 	}
 };
@@ -54,5 +64,5 @@ int main(int argc, char* argv[]) {
 	sdl_guard sdl_guard{};
 	b2_guard b2_guard{};
 
-	return barn::main_menu(sdl_guard.window, sdl_guard.renderer, b2_guard.world_id);
+	return barn::main_menu(sdl_guard.window, sdl_guard.renderer, sdl_guard.mixer, b2_guard.world_id);
 }

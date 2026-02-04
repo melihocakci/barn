@@ -8,7 +8,7 @@
 #include <box2d/collision.h>
 
 static void add_body(entt::entity entity, entt::registry& reg, b2WorldId world_id, const barn::body_def& def) {
-	const b2BodyId body_id = b2CreateBody(world_id, &def.body);
+	const b2BodyId body_id = b2CreateBody(world_id, &def.def);
 
 	for (const auto& [shape_def, circle] : def.circles) {
 		b2CreateCircleShape(body_id, &shape_def, &circle);
@@ -31,8 +31,8 @@ entt::entity barn::create_borders(entt::registry& reg, b2WorldId world_id) {
 	entt::entity entity = reg.create();
 
 	barn::body_def body_def{};
-	body_def.body.type = b2_staticBody;
-	body_def.body.position = { 0, 0 };
+	body_def.def.type = b2_staticBody;
+	body_def.def.position = { 0, 0 };
 
 	b2ShapeDef shape_def = b2DefaultShapeDef();
 	shape_def.filter.categoryBits = barn::category::OBSTACLE;

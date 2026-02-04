@@ -7,17 +7,17 @@
 
 namespace barn {
 	struct circle_def {
-		b2ShapeDef shape = b2DefaultShapeDef();
+		b2ShapeDef def = b2DefaultShapeDef();
 		b2Circle circle{};
 	};
 
 	struct polygon_def {
-		b2ShapeDef shape = b2DefaultShapeDef();
+		b2ShapeDef def = b2DefaultShapeDef();
 		b2Polygon polygon{};
 	};
 
 	struct body_def {
-		b2BodyDef body = b2DefaultBodyDef();
+		b2BodyDef def = b2DefaultBodyDef();
 		std::vector<circle_def> circles{};
 		std::vector<polygon_def> polygons{};
 	};
