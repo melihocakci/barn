@@ -11,7 +11,7 @@ static sf::RenderWindow create_window() {
 		sf::State::Fullscreen
 	};
 
-	window.setFramerateLimit(FRAME_RATE);
+	window.setVerticalSyncEnabled(true);
 
 	return window;
 }

@@ -145,8 +145,12 @@ int barn::combat_scene(sf::RenderWindow& window, const b2WorldId world_id) {
 	add_player(registry, world_id, character_templates[0]);
 	add_enemy(registry, world_id, enemy_templates[0]);
 
+	sf::Clock clock;
+
 	while (window.isOpen())
 	{
+		b2World_Step(world_id, clock.restart().asSeconds(), BOX2D_SUB_STEP_COUNT);
+
 		handle_events(window);
 
 		if (window.hasFocus()) {
@@ -157,8 +161,6 @@ int barn::combat_scene(sf::RenderWindow& window, const b2WorldId world_id) {
 		action_system(registry, world_id);
 
 		sprite_system(registry, window, background);
-
-		b2World_Step(world_id, TIME_STEP, SUB_STEP_COUNT);
 	}
 
 	return 0;
