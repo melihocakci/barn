@@ -2,6 +2,7 @@
 #include "components.h"
 #include "systems.h"
 #include "characters.h"
+#include "enemies.h"
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
@@ -10,12 +11,12 @@
 static void add_player(entt::registry& reg, sf::Vector2f position, const mg::character& character) {
 	const entt::entity entity = reg.create();
 
-	sf::Sprite& sprite = reg.emplace<sf::Sprite>(entity, character.sprite);
+	mg::sprite& sprite = reg.emplace<mg::sprite>(entity, character.sprite);
 	sprite.scale({ 0.05, 0.05 });
 	sprite.setOrigin(sprite.getLocalBounds().getCenter());
 	sprite.setPosition(position);
 
-	sf::CircleShape& hitbox = reg.emplace<sf::CircleShape>(entity, 10);
+	mg::hitbox& hitbox = reg.emplace<mg::hitbox>(entity, 10);
 	hitbox.setFillColor(sf::Color::Red);
 	hitbox.setOrigin(hitbox.getGeometricCenter());
 	hitbox.setPosition(position);
@@ -36,6 +37,23 @@ static void add_player(entt::registry& reg, sf::Vector2f position, const mg::cha
 	reg.emplace<mg::joystick_input>(entity, 0u, sf::Joystick::Axis::X, sf::Joystick::Axis::Y, 0u, 1u, 2u, 3u);
 }
 
+static void add_enemy(entt::registry& reg, sf::Vector2f position, const mg::enemy& enemy) {
+	const entt::entity entity = reg.create();
+
+	mg::sprite& sprite = reg.emplace<mg::sprite>(entity, enemy.sprite);
+	//sprite.scale({ 0.05, 0.05 });
+	sprite.setOrigin(sprite.getLocalBounds().getCenter());
+	sprite.setPosition(position);
+
+	mg::hitbox& hitbox = reg.emplace<mg::hitbox>(entity, 10);
+	hitbox.setFillColor(sf::Color::Red);
+	hitbox.setOrigin(hitbox.getGeometricCenter());
+	hitbox.setPosition(position);
+
+	reg.emplace<mg::stats>(entity, enemy.stats);
+	reg.emplace<mg::action>(entity, enemy.action);
+}
+
 static void handle_events(sf::RenderWindow& window) {
 	while (const std::optional event = window.pollEvent())
 	{
@@ -51,7 +69,7 @@ int mg::main_menu(sf::RenderWindow& window) {
 
 int mg::scene1(sf::RenderWindow& window) {
 	const sf::Texture bg_texture{ "assets/texture/bliss.jpg" };
-	sf::Sprite background{ bg_texture };
+	mg::sprite background{ bg_texture };
 
 	background.setOrigin({
 		background.getTextureRect().size.x / 2.f,
@@ -70,6 +88,7 @@ int mg::scene1(sf::RenderWindow& window) {
 
 	entt::registry registry;
 	add_player(registry, { window.getSize().x / 2.f, window.getSize().y / 2.f }, playable_characters[0]);
+	add_enemy(registry, { window.getSize().x / 2.f, window.getSize().y / 2.f }, set_enemies[0]);
 
 	while (window.isOpen())
 	{
@@ -81,14 +100,16 @@ int mg::scene1(sf::RenderWindow& window) {
 
 		handle_projectiles(window, registry);
 
+		handle_actions(window, registry);
+
 		window.clear();
 		window.draw(background);
 
-		for (auto [entity, sprite] : registry.view<const sf::Sprite>().each()) {
+		for (auto [entity, sprite] : registry.view<const mg::sprite>().each()) {
 			window.draw(sprite);
 		}
 
-		for (auto [entity, skills, hitbox] : registry.view<const mg::skillset, const sf::CircleShape>().each()) {
+		for (auto [entity, skills, hitbox] : registry.view<const mg::skillset, const mg::hitbox>().each()) {
 			window.draw(hitbox);
 		}
 

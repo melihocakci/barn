@@ -7,7 +7,7 @@
 namespace mg {
 	struct character {
 		std::string name;
-		const sf::Sprite sprite;
+		sprite sprite;
 		skillset skillset;
 	};
 

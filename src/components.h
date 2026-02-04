@@ -2,11 +2,18 @@
 
 #include <SFML/Window.hpp>
 #include <entt/entt.hpp>
+#include <SFML/Graphics.hpp>
 
 #include <functional>
 #include <chrono>
 
 namespace mg {
+	using hitbox = sf::CircleShape;
+
+	using sprite = sf::Sprite;
+
+	using action = std::function<void(entt::registry&, entt::entity)>;
+
 	struct keyboard_input {
 		sf::Keyboard::Scan up;
 		sf::Keyboard::Scan down;
@@ -29,14 +36,14 @@ namespace mg {
 	};
 
 	struct trajectory {
-		float speed;
+		float speed{};
 		sf::Vector2f direction;
 	};
 
 	struct skill {
 		std::chrono::steady_clock::time_point last_used_time{};
 		const std::chrono::milliseconds cooldown_time{};
-		const std::function<void(entt::registry&, entt::entity)> action;
+		const mg::action action;
 
 		void operator()(entt::registry& reg, entt::entity ent) {
 			using namespace std::chrono;
@@ -56,5 +63,10 @@ namespace mg {
 		skill skill_2;
 		skill skill_3;
 		skill skill_4;
+	};
+
+	struct stats {
+		float health;
+		float speed;
 	};
 }
