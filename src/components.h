@@ -1,20 +1,21 @@
 #pragma once
 
 #include <SFML/Window.hpp>
-#include <entt/entt.hpp>
 #include <SFML/Graphics.hpp>
+#include <entt/entt.hpp>
+#include <box2d/types.h>
 
 #include <functional>
 #include <chrono>
 
-namespace project_stable {
+namespace barn {
 	using hitbox = sf::RectangleShape;
 
 	using sprite = sf::Sprite;
 
 	using action = std::function<void(entt::registry&, entt::entity)>;
 
-	struct keyboard_input {
+	struct keyboard_controls {
 		sf::Keyboard::Scan up;
 		sf::Keyboard::Scan down;
 		sf::Keyboard::Scan left;
@@ -25,7 +26,7 @@ namespace project_stable {
 		sf::Keyboard::Scan skill_4;
 	};
 
-	struct joystick_input {
+	struct joystick_controls {
 		unsigned int joystick_id;
 		sf::Joystick::Axis horizontal_axis;
 		sf::Joystick::Axis vertical_axis;
@@ -35,8 +36,6 @@ namespace project_stable {
 		unsigned int skill_4;
 	};
 
-	using player_input = std::variant<keyboard_input, joystick_input>;
-
 	struct trajectory {
 		float speed{};
 		sf::Vector2f direction;
@@ -45,7 +44,7 @@ namespace project_stable {
 	struct skill {
 		std::chrono::steady_clock::time_point last_used_time{};
 		const std::chrono::milliseconds cooldown_time{};
-		const project_stable::action action;
+		const barn::action action;
 
 		void operator()(entt::registry& reg, entt::entity ent) {
 			using namespace std::chrono;

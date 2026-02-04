@@ -5,8 +5,10 @@
 #include <entt/entt.hpp>
 #include <SFML/Graphics.hpp>
 
-namespace project_stable {
-	void player_input_system(entt::registry& registry);
+namespace barn {
+	void keyboard_system(entt::registry& registry);
+	
+	void joystick_system(entt::registry& registry);
 
 	void trajectory_system(entt::registry& registry);
 

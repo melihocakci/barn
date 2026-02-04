@@ -7,74 +7,77 @@
 #include <variant>
 
 
-void project_stable::player_input_system(entt::registry& registry) {
-	for (auto [entity, player_input, hitbox, skillset, properties] : registry.view<const player_input, hitbox, skillset, const properties>().each())
+void barn::keyboard_system(entt::registry& registry) {
+	for (auto [entity, input, hitbox, skillset, properties] : registry.view<const keyboard_controls, hitbox, skillset, const properties>().each())
 	{
-		std::visit([&](const auto& input)
-			{
-				sf::Vector2f delta{};
+		if (sf::Keyboard::isKeyPressed(input.skill_1))
+			skillset.skill_1(registry, entity);
+		if (sf::Keyboard::isKeyPressed(input.skill_2))
+			skillset.skill_2(registry, entity);
+		if (sf::Keyboard::isKeyPressed(input.skill_3))
+			skillset.skill_3(registry, entity);
+		if (sf::Keyboard::isKeyPressed(input.skill_4))
+			skillset.skill_4(registry, entity);
 
-				using T = std::decay_t<decltype(input)>;
-				if constexpr (std::is_same_v<T, project_stable::keyboard_input>) {
-					if (sf::Keyboard::isKeyPressed(input.skill_1))
-						skillset.skill_1(registry, entity);
-					if (sf::Keyboard::isKeyPressed(input.skill_2))
-						skillset.skill_2(registry, entity);
-					if (sf::Keyboard::isKeyPressed(input.skill_3))
-						skillset.skill_3(registry, entity);
-					if (sf::Keyboard::isKeyPressed(input.skill_4))
-						skillset.skill_4(registry, entity);
+		sf::Vector2f delta{};
+		if (sf::Keyboard::isKeyPressed(input.up))
+			delta += sf::Vector2f{ 0, -1 };
+		if (sf::Keyboard::isKeyPressed(input.down))
+			delta += sf::Vector2f{ 0, 1 };
+		if (sf::Keyboard::isKeyPressed(input.left))
+			delta += sf::Vector2f{ -1, 0 };
+		if (sf::Keyboard::isKeyPressed(input.right))
+			delta += sf::Vector2f{ 1, 0 };
 
-					if (sf::Keyboard::isKeyPressed(input.up))
-						delta += sf::Vector2f{ 0, -1 };
-					if (sf::Keyboard::isKeyPressed(input.down))
-						delta += sf::Vector2f{ 0, 1 };
-					if (sf::Keyboard::isKeyPressed(input.left))
-						delta += sf::Vector2f{ -1, 0 };
-					if (sf::Keyboard::isKeyPressed(input.right))
-						delta += sf::Vector2f{ 1, 0 };
-				}
-				else if constexpr (std::is_same_v<T, project_stable::joystick_input>) {
-					if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_1))
-						skillset.skill_1(registry, entity);
-					if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_2))
-						skillset.skill_2(registry, entity);
-					if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_3))
-						skillset.skill_3(registry, entity);
-					if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_4))
-						skillset.skill_4(registry, entity);
+		if (delta.length() > 1.f) delta = delta.normalized();
+		else if (delta.length() < 0.05f) return;
 
-					delta = {
-						sf::Joystick::getAxisPosition(input.joystick_id, input.horizontal_axis) / 100,
-						sf::Joystick::getAxisPosition(input.joystick_id, input.vertical_axis) / 100
-					};
-				}
+		delta *= properties.speed;
 
-				if (delta.length() > 1.f) delta = delta.normalized();
-				else if (delta.length() < 0.05f) return;
-
-				delta *= properties.speed;
-
-				hitbox.move(delta);
-			}, player_input
-		);
+		hitbox.move(delta);
 	}
 }
 
-void project_stable::trajectory_system(entt::registry& registry) {
+void barn::joystick_system(entt::registry& registry) {
+	for (auto [entity, input, hitbox, skillset, properties] : registry.view<const joystick_controls, hitbox, skillset, const properties>().each())
+	{
+		if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_1))
+			skillset.skill_1(registry, entity);
+		if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_2))
+			skillset.skill_2(registry, entity);
+		if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_3))
+			skillset.skill_3(registry, entity);
+		if (sf::Joystick::isButtonPressed(input.joystick_id, input.skill_4))
+			skillset.skill_4(registry, entity);
+
+		sf::Vector2f delta = {
+			sf::Joystick::getAxisPosition(input.joystick_id, input.horizontal_axis) / 100,
+			sf::Joystick::getAxisPosition(input.joystick_id, input.vertical_axis) / 100
+		};
+
+		if (delta.length() > 1.f) delta = delta.normalized();
+		else if (delta.length() < 0.05f) return;
+
+		delta *= properties.speed;
+
+		hitbox.move(delta);
+	}
+}
+
+void barn::trajectory_system(entt::registry& registry) {
 	for (auto [entity, trajectory, hitbox] : registry.view<const trajectory, hitbox>().each()) {
 		sf::Vector2f delta = trajectory.direction.normalized() * trajectory.speed;
 		hitbox.move(delta);
 	}
 }
 
-void project_stable::action_system(entt::registry& registry) {
+void barn::action_system(entt::registry& registry) {
 	for (auto [entity, action] : registry.view<const action>().each()) {
 		action(registry, entity);
 	}
 }
 
-void project_stable::hitbox_system(entt::registry& registry) {
+void barn::hitbox_system(entt::registry& registry) {
 	const auto view = registry.view<hitbox, properties, type, alignment>().each();
 	std::vector<entt::entity> entities_to_remove;
 
@@ -140,7 +143,7 @@ void project_stable::hitbox_system(entt::registry& registry) {
 	}
 }
 
-void project_stable::sprite_system(entt::registry& registry, sf::RenderWindow& window, sprite& background) {
+void barn::sprite_system(entt::registry& registry, sf::RenderWindow& window, sprite& background) {
 	const float window_ratio = static_cast<float>(window.getSize().x) / window.getSize().y;
 	const float target_ratio = VIRTUAL_WIDTH / VIRTUAL_HEIGHT;
 
@@ -174,11 +177,11 @@ void project_stable::sprite_system(entt::registry& registry, sf::RenderWindow& w
 	background.setScale({ VIRTUAL_WIDTH / background.getTextureRect().size.x, VIRTUAL_HEIGHT / background.getTextureRect().size.y });
 	window.draw(background);
 
-	for (auto [entity, sprite] : registry.view<const project_stable::sprite>().each()) {
+	for (auto [entity, sprite] : registry.view<const barn::sprite>().each()) {
 		window.draw(sprite);
 	}
 
-	for (auto [entity, hitbox] : registry.view<const project_stable::hitbox>().each()) {
+	for (auto [entity, hitbox] : registry.view<const barn::hitbox>().each()) {
 		window.draw(hitbox);
 	}
 
