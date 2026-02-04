@@ -6,6 +6,7 @@
 #include "components.h"
 #include "entity_creators.h"
 #include "systems.h"
+#include "static_elements.h"
 
 static void handle_events(sf::RenderWindow& window) {
 	while (const std::optional event = window.pollEvent())
@@ -40,7 +41,7 @@ int mg::scene1(sf::RenderWindow& window) {
 	music.setVolume(20.f);
 
 	entt::registry registry;
-	add_miku(registry, { window.getSize().x / 2.f, window.getSize().y / 2.f });
+	add_player(registry, { window.getSize().x / 2.f, window.getSize().y / 2.f }, playable_characters[0]);
 
 	while (window.isOpen())
 	{

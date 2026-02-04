@@ -32,28 +32,28 @@ static void move_within_bounds(sf::Transformable& object, sf::Vector2f delta, co
 }
 
 void mg::handle_keyboard_inputs(const sf::RenderWindow& window, entt::registry& registry) {
-	for (auto [entity, keyboard, sprite, hitbox] : registry.view<const mg::keyboard_input, sf::Sprite, sf::CircleShape>().each()) {
+	for (auto [entity, keyboard, sprite, hitbox, skills] : registry.view<const mg::keyboard_input, sf::Sprite, sf::CircleShape, mg::skillset>().each()) {
 		sf::Vector2f delta{ 0, 0 };
-		if (sf::Keyboard::isKeyPressed(keyboard.up_button))
+		if (sf::Keyboard::isKeyPressed(keyboard.up))
 			delta += sf::Vector2f{ 0, -1 };
-		if (sf::Keyboard::isKeyPressed(keyboard.down_button))
+		if (sf::Keyboard::isKeyPressed(keyboard.down))
 			delta += sf::Vector2f{ 0, 1 };
-		if (sf::Keyboard::isKeyPressed(keyboard.left_button))
+		if (sf::Keyboard::isKeyPressed(keyboard.left))
 			delta += sf::Vector2f{ -1, 0 };
-		if (sf::Keyboard::isKeyPressed(keyboard.right_button))
+		if (sf::Keyboard::isKeyPressed(keyboard.right))
 			delta += sf::Vector2f{ 1, 0 };
 
 		const auto bounds = get_bounds(window, hitbox.getRadius());
 		move_within_bounds(sprite, delta, bounds);
 		move_within_bounds(hitbox, delta, bounds);
 
-		if (sf::Keyboard::isKeyPressed(keyboard.fire_button))
-			add_bullet(registry, hitbox.getPosition());
+		if (sf::Keyboard::isKeyPressed(keyboard.skill_1))
+			skills.skill_1(registry, entity);
 	}
 }
 
 void mg::handle_joystick_inputs(const sf::RenderWindow& window, entt::registry& registry) {
-	for (auto [entity, joystick, sprite, hitbox] : registry.view<const mg::joystick_input, sf::Sprite, sf::CircleShape>().each()) {
+	for (auto [entity, joystick, sprite, hitbox, skills] : registry.view<const mg::joystick_input, sf::Sprite, sf::CircleShape, mg::skillset>().each()) {
 		const sf::Rect<float> sprite_rect = hitbox.getGlobalBounds();
 
 		sf::Vector2f delta{
@@ -65,8 +65,8 @@ void mg::handle_joystick_inputs(const sf::RenderWindow& window, entt::registry& 
 		move_within_bounds(sprite, delta, bounds);
 		move_within_bounds(hitbox, delta, bounds);
 
-		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.fire_button))
-			add_bullet(registry, hitbox.getPosition());
+		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.skill_1))
+			skills.skill_1(registry, entity);
 	}
 }
 

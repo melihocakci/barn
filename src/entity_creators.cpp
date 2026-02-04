@@ -1,25 +1,24 @@
-#pragma once
-
 #include <entt/entt.hpp>
 #include <SFML/Graphics.hpp>
 
 #include "entity_creators.h"
 #include "components.h"
+#include "static_elements.h"
 
-void mg::add_miku(entt::registry& reg, sf::Vector2f position) {
-	static const sf::Texture texture{ "res/miku.png" };
-
+void mg::add_player(entt::registry& reg, sf::Vector2f position, const character& character) {
 	const entt::entity entity = reg.create();
 
-	sf::Sprite& sprite = reg.emplace<sf::Sprite>(entity, texture);
+	sf::Sprite& sprite = reg.emplace<sf::Sprite>(entity, character.texture);
 	sprite.scale({ 0.05, 0.05 });
-	sprite.setOrigin({ sprite.getTextureRect().size.x / 2.f , sprite.getTextureRect().size.y / 2.f });
+	sprite.setOrigin(sprite.getLocalBounds().getCenter());
 	sprite.setPosition(position);
 
 	sf::CircleShape& hitbox = reg.emplace<sf::CircleShape>(entity, 10);
 	hitbox.setFillColor(sf::Color::Red);
-	hitbox.setOrigin({ hitbox.getRadius(), hitbox.getRadius() });
+	hitbox.setOrigin(hitbox.getGeometricCenter());
 	hitbox.setPosition(position);
+
+	reg.emplace<mg::skillset>(entity, character.skillset);
 
 	using scancode = sf::Keyboard::Scancode;
 	reg.emplace<mg::keyboard_input>(entity,
