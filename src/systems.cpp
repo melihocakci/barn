@@ -10,30 +10,25 @@ static sf::Rect<float> get_bounds(const sf::RenderWindow& window, float padding)
 	return { {padding, padding}, { window.getSize().x - 2 * padding, window.getSize().y - 2 * padding } };
 }
 
-static void move_within_bounds(sf::Transformable& object, sf::Vector2f delta, const sf::Rect<float>& bounds) {
-	if (delta.length() < 0.05f) {
-		return;
-	}
-	else if (delta.length() > 1.f) {
-		delta = delta.normalized();
-	}
+static void move_within_bounds(sf::Transformable& object, sf::Vector2f movement, sf::FloatRect bounds) {
+	if (object.getPosition().x + movement.x < bounds.position.x)
+		movement.x = bounds.position.x - object.getPosition().x;
+	else if (object.getPosition().x + movement.x > bounds.position.x + bounds.size.x)
+		movement.x = bounds.position.x + bounds.size.x - object.getPosition().x;
 
-	const sf::Vector2f BASE_SPEED = { bounds.size.x / 120.f, bounds.size.x / 120.f };
-	delta = delta.componentWiseMul(BASE_SPEED);
+	if (object.getPosition().y + movement.y < bounds.position.y)
+		movement.y = bounds.position.y - object.getPosition().y;
+	else if (object.getPosition().y + movement.y > bounds.position.y + bounds.size.y)
+		movement.y = bounds.position.y + bounds.size.y - object.getPosition().y;
 
-	if (object.getPosition().x + delta.x < bounds.position.x) delta.x = bounds.position.x - object.getPosition().x;
-	else if (object.getPosition().x + delta.x > bounds.position.x + bounds.size.x) delta.x = bounds.position.x + bounds.size.x - object.getPosition().x;
-
-	if (object.getPosition().y + delta.y < bounds.position.y) delta.y = bounds.position.y - object.getPosition().y;
-	else if (object.getPosition().y + delta.y > bounds.position.y + bounds.size.y) delta.y = bounds.position.y + bounds.size.y - object.getPosition().y;
-
-	object.move(delta);
+	object.move(movement);
 }
 
 void mg::handle_player_input(const sf::RenderWindow& window, entt::registry& registry) {
-	for (auto [entity, player_input, sprite, hitbox, skills] : registry.view<const mg::player_input, mg::sprite, mg::hitbox, mg::skillset>().each()) {
-        std::visit(
-			[&](const auto& input) {
+	for (auto [entity, player_input, sprite, hitbox, skills, stats] : registry.view<const player_input, sprite, hitbox, skillset, const stats>().each())
+	{
+		std::visit([&](const auto& input)
+			{
 				sf::Vector2f delta{};
 
 				using T = std::decay_t<decltype(input)>;
@@ -72,17 +67,18 @@ void mg::handle_player_input(const sf::RenderWindow& window, entt::registry& reg
 					};
 				}
 
-				const auto bounds = get_bounds(window, hitbox.getRadius());
-				move_within_bounds(hitbox, delta, bounds);
+				if (delta.length() > 1.f) delta = delta.normalized();
+				else if (delta.length() < 0.05f) return;
+
+				move_within_bounds(hitbox, delta * stats.speed, get_bounds(window, hitbox.getRadius()));
 				sprite.setPosition(hitbox.getPosition());
-			},
-            player_input
+			}, player_input
 		);
 	}
 }
 
 void mg::handle_projectiles(const sf::RenderWindow& window, entt::registry& registry) {
-	for (auto [entity, trajectory, sprite, hitbox] : registry.view<const mg::trajectory, mg::sprite, mg::hitbox>().each()) {
+	for (auto [entity, trajectory, sprite, hitbox] : registry.view<const trajectory, sprite, hitbox>().each()) {
 		const sf::Rect<float> window_rect{ {0, 0}, { static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y) } };
 		const sf::Rect<float> sprite_rect = sprite.getGlobalBounds();
 		if (!window_rect.findIntersection(sprite_rect)) {
@@ -97,7 +93,38 @@ void mg::handle_projectiles(const sf::RenderWindow& window, entt::registry& regi
 }
 
 void mg::handle_actions(const sf::RenderWindow& window, entt::registry& registry) {
-	for (auto [entity, action] : registry.view<const mg::action>().each()) {
+	for (auto [entity, action] : registry.view<const action>().each()) {
 		action(registry, entity);
+	}
+}
+
+void mg::handle_collisions(const sf::RenderWindow& window, entt::registry& registry) {
+	const auto view = registry.view<hitbox, stats, alignment>().each();
+	std::vector<entt::entity> entities_to_remove;
+
+	for (auto first_iteretor = view.begin(); first_iteretor != view.end(); ++first_iteretor) {
+		auto [first_entity, first_hitbox, first_stats, first_affiliation] = *first_iteretor;
+		auto second_iteretor = first_iteretor;
+
+		for (++second_iteretor; second_iteretor != view.end(); ++second_iteretor) {
+			auto [second_entity, second_hitbox, second_stats, second_affiliation] = *second_iteretor;
+
+			if (first_affiliation == second_affiliation) continue;
+
+			if (first_hitbox.getRadius() + second_hitbox.getRadius() > (first_hitbox.getPosition() - second_hitbox.getPosition()).length()) {
+				first_stats.health -= second_stats.attack;
+				second_stats.health -= first_stats.attack;
+				if (first_stats.health <= 0) {
+					entities_to_remove.push_back(first_entity);
+				}
+				if (second_stats.health <= 0) {
+					entities_to_remove.push_back(second_entity);
+				}
+			}
+		}
+	}
+
+	for (const auto& entity : entities_to_remove) {
+		registry.destroy(entity);
 	}
 }
