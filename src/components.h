@@ -77,6 +77,8 @@ namespace project_stable {
 		CREATURE,
 		OBSTACLE,
 		PROJECTILE,
+		BACKGROUND,
+		UI,
 	};
 
 	enum class alignment {
