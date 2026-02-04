@@ -1,8 +1,9 @@
 #pragma once
 
 #include <SFML/Window.hpp>
-#include <functional>
 #include <entt/entt.hpp>
+
+#include <functional>
 #include <chrono>
 
 namespace mg {
@@ -12,32 +13,30 @@ namespace mg {
 		sf::Keyboard::Scan left;
 		sf::Keyboard::Scan right;
 		sf::Keyboard::Scan skill_1;
+		sf::Keyboard::Scan skill_2;
+		sf::Keyboard::Scan skill_3;
+		sf::Keyboard::Scan skill_4;
 	};
 
 	struct joystick_input {
-		unsigned int joystick_id{};
+		unsigned int joystick_id;
 		sf::Joystick::Axis horizontal_axis;
 		sf::Joystick::Axis vertical_axis;
-		unsigned int skill_1{};
+		unsigned int skill_1;
+		unsigned int skill_2;
+		unsigned int skill_3;
+		unsigned int skill_4;
 	};
 
-	struct projectile {
-		float speed{};
+	struct trajectory {
+		float speed;
 		sf::Vector2f direction;
-	};
-
-	struct stats {
-		int health{};
-		int max_health{};
-		int damage{};
-		int armor{};
-		int speed{};
 	};
 
 	struct skill {
 		std::chrono::steady_clock::time_point last_used_time{};
 		const std::chrono::milliseconds cooldown_time{};
-		const std::function<void(entt::registry&, entt::entity)>& action;
+		const std::function<void(entt::registry&, entt::entity)> action;
 
 		void operator()(entt::registry& reg, entt::entity ent) {
 			using namespace std::chrono;
@@ -54,5 +53,8 @@ namespace mg {
 
 	struct skillset {
 		skill skill_1;
+		skill skill_2;
+		skill skill_3;
+		skill skill_4;
 	};
 }

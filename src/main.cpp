@@ -1,6 +1,6 @@
-#include <SFML/Graphics.hpp>
-
 #include "scenes.h"
+
+#include <SFML/Graphics.hpp>
 
 int main() {
 	sf::RenderWindow window{

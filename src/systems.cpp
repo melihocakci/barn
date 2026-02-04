@@ -1,11 +1,8 @@
-#pragma once
+#include "systems.h"
+#include "components.h"
 
 #include <entt/entt.hpp>
 #include <SFML/Graphics.hpp>
-
-#include "systems.h"
-#include "components.h"
-#include "entity_creators.h"
 
 static sf::Rect<float> get_bounds(const sf::RenderWindow& window, float padding) {
 	return { {padding, padding}, { window.getSize().x - 2 * padding, window.getSize().y - 2 * padding } };
@@ -49,6 +46,12 @@ void mg::handle_keyboard_inputs(const sf::RenderWindow& window, entt::registry& 
 
 		if (sf::Keyboard::isKeyPressed(keyboard.skill_1))
 			skills.skill_1(registry, entity);
+		if (sf::Keyboard::isKeyPressed(keyboard.skill_2))
+			skills.skill_2(registry, entity);
+		if (sf::Keyboard::isKeyPressed(keyboard.skill_3))
+			skills.skill_3(registry, entity);
+		if (sf::Keyboard::isKeyPressed(keyboard.skill_4))
+			skills.skill_4(registry, entity);
 	}
 }
 
@@ -67,11 +70,17 @@ void mg::handle_joystick_inputs(const sf::RenderWindow& window, entt::registry& 
 
 		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.skill_1))
 			skills.skill_1(registry, entity);
+		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.skill_2))
+			skills.skill_2(registry, entity);
+		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.skill_3))
+			skills.skill_3(registry, entity);
+		if (sf::Joystick::isButtonPressed(joystick.joystick_id, joystick.skill_4))
+			skills.skill_4(registry, entity);
 	}
 }
 
 void mg::handle_projectiles(const sf::RenderWindow& window, entt::registry& registry) {
-	for (auto [entity, projectile, sprite, hitbox] : registry.view<const mg::projectile, sf::Sprite, sf::CircleShape>().each()) {
+	for (auto [entity, trajectory, sprite, hitbox] : registry.view<const mg::trajectory, sf::Sprite, sf::CircleShape>().each()) {
 		const sf::Rect<float> window_rect{ {0, 0}, { static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y) } };
 		const sf::Rect<float> sprite_rect = sprite.getGlobalBounds();
 		if (!window_rect.findIntersection(sprite_rect)) {
@@ -79,7 +88,7 @@ void mg::handle_projectiles(const sf::RenderWindow& window, entt::registry& regi
 			continue;
 		}
 
-		sf::Vector2f delta = projectile.direction.normalized().componentWiseMul({ projectile.speed, projectile.speed });
+		sf::Vector2f delta = trajectory.direction.normalized().componentWiseMul({ trajectory.speed, trajectory.speed });
 		sprite.move(delta);
 		hitbox.move(delta);
 	}
