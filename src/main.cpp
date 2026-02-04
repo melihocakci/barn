@@ -6,183 +6,180 @@
 #include <mutex>
 
 namespace mg {
-    struct keyboard_control {
-        sf::Keyboard::Scan up;
-        sf::Keyboard::Scan down;
-        sf::Keyboard::Scan left;
-        sf::Keyboard::Scan right;
-        sf::Keyboard::Scan fire;
-    };
+	struct keyboard_player {
+		sf::Keyboard::Scan up;
+		sf::Keyboard::Scan down;
+		sf::Keyboard::Scan left;
+		sf::Keyboard::Scan right;
+		sf::Keyboard::Scan fire;
+	};
 
-    struct bullet_control {
-        float speed;
-        sf::Vector2f direction;
-    };
+	struct joystick_player {
+		unsigned int id;
+		unsigned int fire;
+	};
 
-    class window_manager {
-    public:
-        window_manager(sf::RenderWindow&& w) : window{ std::move(w) } {
-            window.setFramerateLimit(60);
-        }
+	struct projectile {
+		float speed{};
+		sf::Vector2f direction;
+	};
 
-        void handle_events() {
-            while (const std::optional event = window.pollEvent())
-            {
-                if (event->is<sf::Event::Closed>()) {
-                    exit(0);
-                }
-                else if (const auto* pressed_key = event->getIf<sf::Event::KeyPressed>()) {
-                    keys[pressed_key->scancode] = true;
-                }
-                else if (const auto* released_key = event->getIf<sf::Event::KeyReleased>())
-                {
-                    keys[released_key->scancode] = false;
-                }
-            }
-        }
+	void add_miku(entt::registry& reg) {
+		static const sf::Texture texture{ "res/miku.png" };
 
-        bool key_pressed(const sf::Keyboard::Scancode& scancode) const {
-            auto it = keys.find(scancode);
-            return it != keys.end() ? it->second : false;
-        }
+		const entt::entity entity = reg.create();
 
-        sf::RenderWindow* operator->() {
-            return &window;
-        }
+		sf::Sprite& sprite = reg.emplace<sf::Sprite>(entity, texture);
+		sprite.scale({ 0.05, 0.05 });
+		sprite.setOrigin({ sprite.getTextureRect().size.x / 2.f , sprite.getTextureRect().size.y / 2.f });
 
-        const sf::RenderWindow* operator->() const {
-            return &window;
-        }
+		sf::CircleShape& hitbox = reg.emplace<sf::CircleShape>(entity, 10);
+		hitbox.setFillColor(sf::Color::White);
+		hitbox.setOrigin({ hitbox.getRadius(), hitbox.getRadius() });
 
-    private:
-        sf::RenderWindow window;
-        std::unordered_map<sf::Keyboard::Scancode, bool> keys;
-    };
+		using scancode = sf::Keyboard::Scancode;
+		reg.emplace<mg::keyboard_player>(entity,
+			scancode::Up,
+			scancode::Down,
+			scancode::Left,
+			scancode::Right,
+			scancode::Space);
 
-    void add_miku(entt::registry& reg) {
-        static const sf::Texture texture{ "res/miku.png" };
+		reg.emplace<mg::joystick_player>(entity, 0u, 0u);
+	}
 
-        const entt::entity entity = reg.create();
+	void add_bullet(entt::registry& reg, const sf::Vector2f position) {
+		static const sf::Texture texture{ "res/green-onion.png" };
 
-        sf::Sprite& sprite = reg.emplace<sf::Sprite>(entity, texture);
-        sprite.scale({ 0.05, 0.05 });
-        sprite.setOrigin({ sprite.getTextureRect().size.x / 2.f , sprite.getTextureRect().size.y / 2.f });
+		const entt::entity entity = reg.create();
+		sf::Sprite& sprite = reg.emplace<sf::Sprite>(entity, texture);
+		sprite.setOrigin({ sprite.getTextureRect().size.x / 2.f , sprite.getTextureRect().size.y / 2.f });
+		sprite.setPosition(position);
 
-        sf::CircleShape& hitbox = reg.emplace<sf::CircleShape>(entity, 10);
-        hitbox.setFillColor(sf::Color::White);
-        hitbox.setOrigin({ hitbox.getRadius(), hitbox.getRadius() });
+		sf::CircleShape& hitbox = reg.emplace<sf::CircleShape>(entity, 10);
+		hitbox.setOrigin({ hitbox.getRadius(), hitbox.getRadius() });
+		hitbox.setPosition(position);
 
-        using scancode = sf::Keyboard::Scancode;
-        reg.emplace<mg::keyboard_control>(entity,
-            scancode::Up,
-            scancode::Down,
-            scancode::Left,
-            scancode::Right,
-            scancode::Space);
-    }
+		reg.emplace<mg::projectile>(entity, 10.f, sf::Vector2f{ 0, -1 });
+	}
 
-    void add_bullet(entt::registry& reg, const sf::Vector2f position) {
-        static const sf::Texture texture{ "res/green-onion.png" };
-
-        const entt::entity entity = reg.create();
-        sf::Sprite& sprite = reg.emplace<sf::Sprite>(entity, texture);
-        sprite.setOrigin({ sprite.getTextureRect().size.x / 2.f , sprite.getTextureRect().size.y / 2.f });
-        sprite.setPosition(position);
-
-        sf::CircleShape& hitbox = reg.emplace<sf::CircleShape>(entity, 10);
-        hitbox.setOrigin({ hitbox.getRadius(), hitbox.getRadius() });
-        hitbox.setPosition(position);
-
-        reg.emplace<mg::bullet_control>(entity, 10.f, sf::Vector2f{ 0, -1 });
-    }
+	void handle_events(sf::RenderWindow& window) {
+		while (const std::optional event = window.pollEvent())
+		{
+			if (event->is<sf::Event::Closed>()) {
+				window.close();
+			}
+		}
+	}
 }
 
-int scene1(mg::window_manager& window) {
-    const sf::Texture bg_texture{ "res/teto_pear.jpg" };
-    sf::Sprite background{ bg_texture };
+int scene1(sf::RenderWindow& window) {
+	const sf::Texture bg_texture{ "res/teto_pear.jpg" };
+	sf::Sprite background{ bg_texture };
 
-    background.setOrigin({
-        background.getTextureRect().size.x / 2.f,
-        background.getTextureRect().size.y / 2.f });
-    background.setPosition({
-            window->getSize().x / 2.f,
-            window->getSize().y / 2.f });
-    background.setScale({
-            static_cast<float>(window->getSize().x) / background.getTextureRect().size.x,
-            static_cast<float>(window->getSize().y) / background.getTextureRect().size.y });
+	background.setOrigin({
+		background.getTextureRect().size.x / 2.f,
+		background.getTextureRect().size.y / 2.f });
+	background.setPosition({
+		window.getSize().x / 2.f,
+		window.getSize().y / 2.f });
+	background.setScale({
+		static_cast<float>(window.getSize().x) / background.getTextureRect().size.x,
+		static_cast<float>(window.getSize().y) / background.getTextureRect().size.y });
 
-    sf::Music music{ "res/Kasane Teto - Teto territory.mp3" };
-    //music.play();
+	sf::Music music{ "res/Kasane Teto - Teto territory.mp3" };
+	music.play();
+	music.setLooping(true);
+	music.setVolume(20.f);
 
-    entt::registry registry;
-    mg::add_miku(registry);
+	entt::registry registry;
+	mg::add_miku(registry);
 
-    while (window->isOpen())
-    {
-        window.handle_events();
+	while (window.isOpen())
+	{
+		mg::handle_events(window);
 
-        registry.view<mg::keyboard_control, sf::Sprite, sf::CircleShape>().each(
-            [&window, &registry](const mg::keyboard_control& control, sf::Sprite& sprite, sf::CircleShape& hitbox) {
-                sf::Vector2f delta{ 0, 0 };
-                if (window.key_pressed(control.up) && sprite.getPosition().y > 0)
-                    delta += sf::Vector2f{ 0, -1 };
-                if (window.key_pressed(control.down) && sprite.getPosition().y < window->getSize().y)
-                    delta += sf::Vector2f{ 0, 1 };
-                if (window.key_pressed(control.left) && sprite.getPosition().x > 0)
-                    delta += sf::Vector2f{ -1, 0 };
-                if (window.key_pressed(control.right) && sprite.getPosition().x < window->getSize().x)
-                    delta += sf::Vector2f{ 1, 0 };
-                if (window.key_pressed(control.fire))
-                    mg::add_bullet(registry, hitbox.getPosition());
-                if (delta.length() > 0) {
-                    const sf::Vector2f BASE_SPEED = { window->getSize().y / 120.f, window->getSize().y / 120.f };
-                    delta = delta.normalized().componentWiseMul(BASE_SPEED);
-                    sprite.move(delta);
-                    hitbox.move(delta);
-                }
-            }
-        );
+		for (auto [entity, keyboard, sprite, hitbox] : registry.view<const mg::keyboard_player, sf::Sprite, sf::CircleShape>().each()) {
+			sf::Vector2f delta{ 0, 0 };
+			if (sf::Keyboard::isKeyPressed(keyboard.up) && sprite.getPosition().y > 0)
+				delta += sf::Vector2f{ 0, -1 };
+			if (sf::Keyboard::isKeyPressed(keyboard.down) && sprite.getPosition().y < window.getSize().y)
+				delta += sf::Vector2f{ 0, 1 };
+			if (sf::Keyboard::isKeyPressed(keyboard.left) && sprite.getPosition().x > 0)
+				delta += sf::Vector2f{ -1, 0 };
+			if (sf::Keyboard::isKeyPressed(keyboard.right) && sprite.getPosition().x < window.getSize().x)
+				delta += sf::Vector2f{ 1, 0 };
 
-        registry.view<mg::bullet_control, sf::Sprite, sf::CircleShape>().each(
-            [&window, &registry](const entt::entity& entity, const mg::bullet_control& control, sf::Sprite& sprite, sf::CircleShape& hitbox) {
-                const sf::Rect<float> window_rect{ {0, 0}, { static_cast<float>(window->getSize().x), static_cast<float>(window->getSize().y) } };
-                const sf::Rect<float> sprite_rect = sprite.getGlobalBounds();
-                if (!window_rect.findIntersection(sprite_rect)) {
-                    registry.destroy(entity);
-                    return;
-                }
+			if (delta.length() > 0) {
+				const sf::Vector2f BASE_SPEED = { window.getSize().y / 120.f, window.getSize().y / 120.f };
+				delta = delta.normalized().componentWiseMul(BASE_SPEED);
+				sprite.move(delta);
+				hitbox.move(delta);
+			}
 
-                sf::Vector2f delta = control.direction.normalized().componentWiseMul({ control.speed, control.speed });
-                sprite.move(delta);
-                hitbox.move(delta);
-            }
-        );
+			if (sf::Keyboard::isKeyPressed(keyboard.fire))
+				mg::add_bullet(registry, hitbox.getPosition());
+		}
 
-        window->clear();
-        window->draw(background);
+		for (auto [entity, joystick, sprite, hitbox] : registry.view<const mg::joystick_player, sf::Sprite, sf::CircleShape>().each()) {
+			sf::Vector2f delta{
+				sf::Joystick::getAxisPosition(joystick.id, sf::Joystick::Axis::X),
+				sf::Joystick::getAxisPosition(joystick.id, sf::Joystick::Axis::Y)
+			};
 
-        registry.view<sf::Sprite>().each(
-            [&window](const sf::Sprite& sprite) { window->draw(sprite); }
-        );
+			if (delta.length() > 5) {
+				const sf::Vector2f BASE_SPEED = { window.getSize().y / 120.f, window.getSize().y / 120.f };
+				delta = delta.normalized().componentWiseMul(BASE_SPEED);
+				sprite.move(delta);
+				hitbox.move(delta);
+			}
 
-        registry.view<mg::keyboard_control, sf::CircleShape>().each(
-            [&window](const mg::keyboard_control& control, const sf::CircleShape& hitbox) { window->draw(hitbox); }
-        );
+			if (sf::Joystick::isButtonPressed(joystick.id, joystick.fire))
+				mg::add_bullet(registry, hitbox.getPosition());
+		}
 
-        window->display();
-    }
+		for (auto [entity, projectile, sprite, hitbox] : registry.view<const mg::projectile, sf::Sprite, sf::CircleShape>().each()) {
+			const sf::Rect<float> window_rect{ {0, 0}, { static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y) } };
+			const sf::Rect<float> sprite_rect = sprite.getGlobalBounds();
+			if (!window_rect.findIntersection(sprite_rect)) {
+				registry.destroy(entity);
+				continue;
+			}
 
-    return 0;
+			sf::Vector2f delta = projectile.direction.normalized().componentWiseMul({ projectile.speed, projectile.speed });
+			sprite.move(delta);
+			hitbox.move(delta);
+		}
+
+		window.clear();
+		window.draw(background);
+
+		for (auto [entity, sprite] : registry.view<const sf::Sprite>().each()) {
+			window.draw(sprite);
+		}
+
+		for (auto [entity, keyboard, hitbox] : registry.view<const mg::keyboard_player, const sf::CircleShape>().each()) {
+			window.draw(hitbox);
+		}
+
+		for (auto [entity, keyboard, hitbox] : registry.view<const mg::joystick_player, const sf::CircleShape>().each()) {
+			window.draw(hitbox);
+		}
+
+		window.display();
+	}
+
+	return 0;
 }
 
 int main() {
-    mg::window_manager window{
-        sf::RenderWindow{
-            sf::VideoMode::getDesktopMode(),
-            "Teto Pear",
-            //sf::State::Fullscreen
-        }
-    };
+	sf::RenderWindow window{
+		sf::VideoMode::getDesktopMode(),
+			"Teto Pear",
+			sf::State::Fullscreen
+	};
 
-    if (scene1(window)) return 1;
+	window.setFramerateLimit(60);
+
+	if (scene1(window)) return 1;
 }
