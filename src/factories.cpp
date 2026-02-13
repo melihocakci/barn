@@ -77,11 +77,7 @@ entt::entity barn::create_player(entt::registry& reg, SDL_Renderer* renderer, MI
 
 	add_assets(entity, reg, renderer, mixer, def.assets);
 
-	barn::skillset& skillset = reg.emplace<barn::skillset>(entity);
-	for (auto [skill_def, skill] : std::views::zip(def.skillset, skillset)) {
-		skill.cooldown = skill_def.cooldown;
-		skill.action = skill_def.action;
-	}
+	reg.emplace<barn::skillset>(entity, def.skillset);
 
 	reg.emplace<barn::properties>(entity, def.properties);
 
@@ -109,9 +105,9 @@ entt::entity barn::create_enemy(entt::registry& reg, SDL_Renderer* renderer, b2W
 entt::entity barn::create_bullet(entt::registry& reg, SDL_Renderer* renderer, b2WorldId world_id, const barn::bullet_def& def) {
 	const entt::entity entity = reg.create();
 
-	add_sprite(entity, reg, renderer, def.sprite);
-
 	add_body(entity, reg, world_id, def.body);
+
+	reg.emplace<barn::sprite>(entity, def.sprite);
 
 	reg.emplace<barn::properties>(entity, def.properties);
 

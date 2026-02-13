@@ -27,7 +27,7 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 
 	create_borders(registry, world);
 
-	const barn::audio bg_music = get_audio(audios::kasane_territory);
+	barn::audio bg_music = get_audio(audios::kasane_territory);
 	MIX_Track* track = MIX_CreateTrack(mixer);
 	MIX_SetTrackAudio(track, bg_music.get());
 	SDL_PropertiesID props = SDL_CreateProperties();

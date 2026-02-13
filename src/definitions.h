@@ -39,21 +39,12 @@ namespace barn {
 		std::optional<float> height{};
 	};
 
-	struct skill_def {
-		std::chrono::milliseconds cooldown{};
-		std::vector<barn::texture_def> textures{};
-		std::vector<barn::audio_def> audios{};
-		barn::action action = empty_action;
-	};
-
-	using skillset_def = std::array<barn::skill_def, barn::skillset_size>;
-
 	struct player_def {
 		barn::body_def body{};
 		barn::sprite_def sprite{};
 		barn::properties properties{};
 		barn::assets_def assets{};
-		barn::skillset_def skillset{};
+		barn::skillset skillset{};
 	};
 
 	struct enemy_def {
@@ -65,7 +56,7 @@ namespace barn {
 
 	struct bullet_def {
 		barn::body_def body{};
-		barn::sprite_def sprite{};
+		barn::sprite sprite{};
 		barn::properties properties{};
 		barn::category type{};
 	};

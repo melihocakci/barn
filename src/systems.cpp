@@ -7,6 +7,16 @@
 #include <box2d/box2d.h>
 #include <SDL3/SDL.h>
 
+static void execute_skill(barn::skill& skill, ACTION_PARAMETERS) {
+	using namespace std::chrono;
+	const steady_clock::time_point current_time = steady_clock::now();
+	const milliseconds time_span = duration_cast<milliseconds>(current_time - skill.last_used_time);
+	if (time_span >= skill.cooldown) {
+		skill.action(ACTION_VARIABLES);
+		skill.last_used_time = current_time;
+	}
+}
+
 void barn::keyboard_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
 	const auto view = registry.view<barn::keyboard, barn::player, barn::body, barn::skillset, barn::properties>();
 	for (auto [entity, player, body, skillset, properties] : view.each())
@@ -16,13 +26,13 @@ void barn::keyboard_system(entt::registry& registry, SDL_Renderer* renderer, MIX
 		const bool* state = SDL_GetKeyboardState(nullptr);
 
 		if (state[controls.skill1])
-			skillset[0](ACTION_VARIABLES);
+			execute_skill(skillset[0], ACTION_VARIABLES);
 		if (state[controls.skill2])
-			skillset[1](ACTION_VARIABLES);
+			execute_skill(skillset[1], ACTION_VARIABLES);
 		if (state[controls.skill3])
-			skillset[2](ACTION_VARIABLES);
+			execute_skill(skillset[2], ACTION_VARIABLES);
 		if (state[controls.skill4])
-			skillset[3](ACTION_VARIABLES);
+			execute_skill(skillset[3], ACTION_VARIABLES);
 
 		b2Vec2 vec{};
 		if (state[controls.up])
@@ -47,13 +57,13 @@ void barn::gamepad_system(entt::registry& registry, SDL_Renderer* renderer, MIX_
 		const gamepad_controls& controls = barn::config::gamepad_bindings[player];
 
 		if (SDL_GetGamepadButton(gamepad.get(), controls.skill1))
-			skillset[0](ACTION_VARIABLES);
+			execute_skill(skillset[0], ACTION_VARIABLES);
 		if (SDL_GetGamepadButton(gamepad.get(), controls.skill2))
-			skillset[1](ACTION_VARIABLES);
+			execute_skill(skillset[1], ACTION_VARIABLES);
 		if (SDL_GetGamepadButton(gamepad.get(), controls.skill3))
-			skillset[2](ACTION_VARIABLES);
+			execute_skill(skillset[2], ACTION_VARIABLES);
 		if (SDL_GetGamepadButton(gamepad.get(), controls.skill4))
-			skillset[3](ACTION_VARIABLES);
+			execute_skill(skillset[3], ACTION_VARIABLES);
 
 		constexpr auto normalize_axis = [](const Sint16 axis) -> float
 			{

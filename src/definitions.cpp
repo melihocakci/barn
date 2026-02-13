@@ -81,17 +81,20 @@ decltype(barn::character_templates) barn::character_templates
 			},
 		},
 		.skillset{
-			skill_def{
+			skill{
 				.cooldown = 250ms,
 				.action = [](ACTION_PARAMETERS) {
 					auto [player_body, player_prop] = registry.get<barn::body, barn::properties>(entity);
+
+					barn::audio& weiii_sound = registry.get<barn::assets>(entity).audios[0];
+					MIX_PlayAudio(mixer, weiii_sound.get());
 
 					barn::bullet_def def;
 					def.body.def.type = b2_kinematicBody;
 					def.body.def.position = b2Body_GetPosition(player_body.id);
 					def.body.def.linearVelocity = b2Vec2{ 0.f, 20.f };
 					def.body.circles.emplace_back(ally_bullet_shape_def, b2Circle({}, 0.25f));
-					def.sprite.texture = textures::green_onion;
+					def.sprite.texture = registry.get<barn::assets>(entity).textures[0];
 					def.sprite.width = 1.f * PIXELS_PER_METER;
 					def.properties.attack = player_prop.attack;
 					def.type = barn::category::ALLY_BULLET;

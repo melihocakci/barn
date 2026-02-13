@@ -36,13 +36,13 @@ namespace barn {
 	template<typename T>
 	struct asset {
 		std::shared_ptr<std::shared_future<T*>> ptr{};
-		T& operator *() const {
+		T& operator *() {
 			return *ptr->get();
 		}
-		T* operator->() const {
+		T* operator->() {
 			return ptr->get();
 		}
-		T* get() const {
+		T* get() {
 			return ptr->get();
 		}
 		operator bool() const {
@@ -93,25 +93,12 @@ namespace barn {
 	using action = void(*)(ACTION_PARAMETERS);
 
 	struct skill {
-		std::chrono::milliseconds cooldown{};
-		barn::assets assets{};
-		barn::action action{};
+		const std::chrono::milliseconds cooldown{};
+		const barn::action action = [](ACTION_PARAMETERS) {};
 		std::chrono::steady_clock::time_point last_used_time{};
-
-		void operator()(ACTION_PARAMETERS) {
-			using namespace std::chrono;
-			const steady_clock::time_point current_time = steady_clock::now();
-			const milliseconds time_span = duration_cast<milliseconds>(current_time - last_used_time);
-			if (time_span >= cooldown) {
-				action(ACTION_VARIABLES);
-				last_used_time = current_time;
-			}
-		}
 	};
 
-	constexpr size_t skillset_size = 4;
-
-	using skillset = std::array<skill, skillset_size>;
+	using skillset = std::array<skill, 4>;
 
 	struct properties {
 		int health = 1;
