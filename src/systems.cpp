@@ -89,7 +89,7 @@ void barn::action_system(entt::registry& registry, SDL_Renderer* renderer, MIX_M
 	}
 }
 
-void barn::sprite_system(entt::registry& registry, SDL_Renderer* renderer) {
+void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer) {
 	SDL_RenderClear(renderer);
 
 	for (auto [entity, sprite] : registry.view<barn::sprite, barn::background>().each()) {
@@ -140,6 +140,56 @@ void barn::sprite_system(entt::registry& registry, SDL_Renderer* renderer) {
 			sprite.src_rect ? &(*sprite.src_rect) : nullptr,
 			&dest_rect
 		);
+	}
+
+	for (auto [entity, animation, body] : registry.view<barn::animation, barn::body>().each()) {
+		if (!animation.texture) continue;
+
+		const float texture_aspect_ratio = static_cast<float>(animation.texture->w) / animation.texture->h;
+
+		float width{}, height{};
+		if (animation.width && animation.height) {
+			width = *animation.width;
+			height = *animation.height;
+		}
+		else if (!animation.width && animation.height) {
+			height = *animation.height;
+			width = height * texture_aspect_ratio;
+		}
+		else if (animation.width && !animation.height) {
+			width = *animation.width;
+			height = width / texture_aspect_ratio;
+		}
+		else {
+			width = animation.texture->w;
+			height = animation.texture->h;
+		}
+
+		const b2Vec2 pos = b2Body_GetPosition(body.id);
+		SDL_FRect dest_rect = {
+			pos.x * PIXELS_PER_METER - width / 2,
+			VIRTUAL_HEIGHT_PIXELS - pos.y * PIXELS_PER_METER - height / 2,
+			width,
+			height
+		};
+
+		SDL_RenderTexture(
+			renderer,
+			animation.texture.get(),
+			&animation.frames[animation.current_frame_index],
+			&dest_rect
+		);
+
+		using namespace std::chrono;
+		const steady_clock::time_point current_time = steady_clock::now();
+		if (current_time - animation.last_frame_time >= animation.frame_duration) {
+			animation.current_frame_index = (animation.current_frame_index + 1) % animation.frames.size();
+			animation.last_frame_time = current_time;
+			animation.loop_count = (animation.loop_count == -1) ? -1 : animation.loop_count - 1;
+			if (animation.loop_count == 0) {
+				registry.remove<barn::animation>(entity);
+			}
+		}
 	}
 
 	SDL_RenderPresent(renderer);

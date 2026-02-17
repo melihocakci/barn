@@ -6,6 +6,7 @@ namespace barn::textures {
 	constexpr std::string_view bliss = "assets/texture/bliss.jpg";
 	constexpr std::string_view green_onion = "assets/texture/green-onion.png";
 	constexpr std::string_view miku = "assets/texture/miku.png";
+	constexpr std::string_view miku_animation = "assets/texture/miku_sheet.png";
 	constexpr std::string_view pearto = "assets/texture/pearto.png";
 }
 

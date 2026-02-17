@@ -39,9 +39,19 @@ namespace barn {
 		std::optional<float> height{};
 	};
 
+	struct animation_def {
+		barn::texture_def texture{};
+		std::vector<SDL_FRect> frames{};
+		std::optional<float> width{};
+		std::optional<float> height{};
+		std::chrono::milliseconds frame_duration{};
+		int loop_count = 0;
+		int priority = 0;
+	};
+
 	struct player_def {
 		barn::body_def body{};
-		barn::sprite_def sprite{};
+		barn::animation_def idle_animation{};
 		barn::properties properties{};
 		barn::assets_def assets{};
 		barn::skillset skillset{};

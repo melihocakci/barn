@@ -55,10 +55,22 @@ namespace barn {
 	using audio = barn::asset<MIX_Audio>;
 
 	struct sprite {
-		barn::texture texture;
+		barn::texture texture{};
 		std::optional<SDL_FRect> src_rect{};
 		std::optional<float> width{};
 		std::optional<float> height{};
+	};
+
+	struct animation {
+		barn::texture texture{};
+		std::vector<SDL_FRect> frames{};
+		std::optional<float> width{};
+		std::optional<float> height{};
+		std::chrono::milliseconds frame_duration{};
+		int loop_count{};
+		int priority{};
+		std::chrono::steady_clock::time_point last_frame_time{};
+		int current_frame_index{};
 	};
 
 	struct keyboard {};
@@ -93,8 +105,8 @@ namespace barn {
 	using action = void(*)(ACTION_PARAMETERS);
 
 	struct skill {
-		const std::chrono::milliseconds cooldown{};
-		const barn::action action = [](ACTION_PARAMETERS) {};
+		std::chrono::milliseconds cooldown{};
+		barn::action action = [](ACTION_PARAMETERS) {};
 		std::chrono::steady_clock::time_point last_used_time{};
 	};
 

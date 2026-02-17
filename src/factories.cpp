@@ -25,8 +25,22 @@ static void add_sprite(entt::entity entity, entt::registry& reg, SDL_Renderer* r
 	reg.emplace<barn::sprite>(entity, barn::get_texture(renderer, def.texture), def.src_rect, def.width, def.height);
 }
 
-static void add_assets(entt::entity entity, entt::registry& reg, SDL_Renderer* renderer, MIX_Mixer* mixer, const barn::assets_def& def) {
-	barn::assets& assets = reg.emplace<barn::assets>(entity);
+static barn::animation make_animation(SDL_Renderer* renderer, const barn::animation_def& def) {
+	return barn::animation{
+		barn::get_texture(renderer, def.texture),
+		def.frames,
+		def.width,
+		def.height,
+		def.frame_duration,
+		def.loop_count,
+		def.priority,
+		std::chrono::steady_clock::time_point{},
+		0
+	};
+}
+
+static barn::assets make_assets(SDL_Renderer* renderer, const barn::assets_def& def) {
+	barn::assets assets{};
 
 	for (const auto& texture_path : def.textures) {
 		assets.textures.push_back(barn::get_texture(renderer, texture_path));
@@ -35,6 +49,8 @@ static void add_assets(entt::entity entity, entt::registry& reg, SDL_Renderer* r
 	for (const auto& audio_path : def.audios) {
 		assets.audios.push_back(barn::get_audio(audio_path));
 	}
+
+	return assets;
 }
 
 entt::entity barn::create_borders(entt::registry& reg, b2WorldId world_id) {
@@ -71,11 +87,11 @@ entt::entity barn::create_borders(entt::registry& reg, b2WorldId world_id) {
 entt::entity barn::create_player(entt::registry& reg, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world_id, const barn::player_def& def) {
 	const entt::entity entity = reg.create();
 
-	add_sprite(entity, reg, renderer, def.sprite);
-
 	add_body(entity, reg, world_id, def.body);
 
-	add_assets(entity, reg, renderer, mixer, def.assets);
+	reg.emplace<barn::assets>(entity, make_assets(renderer, def.assets));
+
+	reg.emplace<barn::animation>(entity, make_animation(renderer, def.idle_animation));
 
 	reg.emplace<barn::skillset>(entity, def.skillset);
 

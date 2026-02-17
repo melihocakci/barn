@@ -59,7 +59,7 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 			}
 		}
 
-		sprite_system(registry, renderer);
+		draw_system(registry, renderer);
 
 		Uint64 currentTicks = SDL_GetTicks();
 		float deltaTime = (currentTicks - prevTicks) / 1000.0f;

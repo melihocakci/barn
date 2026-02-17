@@ -63,9 +63,18 @@ decltype(barn::character_templates) barn::character_templates
 				{ally_shape_def, b2Circle{{}, 0.25f}}
 			}
 		},
-		.sprite{
-			.texture = textures::miku,
-			.height = 1.58f * PIXELS_PER_METER,
+		.idle_animation{
+			.texture = textures::miku_animation,
+			.frames = []() -> std::vector<SDL_FRect> {
+				std::vector<SDL_FRect> rects;
+				for (int i = 0; i < 20; ++i) {
+					rects.push_back({ i * 59.f, 0.f, 59.f, 64.f });
+				}
+				return rects;
+			}(),
+			.height = .8f * PIXELS_PER_METER,
+			.frame_duration = 100ms,
+			.loop_count = -1,
 		},
 		.properties{
 			.health = 1000,
