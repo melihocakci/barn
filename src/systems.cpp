@@ -89,7 +89,7 @@ void barn::action_system(entt::registry& registry, SDL_Renderer* renderer, MIX_M
 	}
 }
 
-void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer) {
+void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer, float alpha) {
 	SDL_RenderClear(renderer);
 
 	for (auto [entity, sprite] : registry.view<barn::sprite, barn::background>().each()) {
@@ -102,6 +102,34 @@ void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer) {
 			&dest_rect
 		);
 	}
+
+	// helper lambda to compute interpolated position
+	constexpr auto interpolate = [](barn::transform prev, barn::transform curr, float alpha) -> barn::transform {
+		const b2Vec2 pos = prev.p + (curr.p - prev.p) * alpha;
+		
+		float dot = prev.q.c * curr.q.c + prev.q.s * curr.q.s;
+		if (dot < 0.0f) {
+			// Flip curr.q to take the shorter arc
+			curr.q.c = -curr.q.c;
+			curr.q.s = -curr.q.s;
+		}
+
+		// 2. Linearly interpolate the components
+		float c = prev.q.c + alpha * (curr.q.c - prev.q.c);
+		float s = prev.q.s + alpha * (curr.q.s - prev.q.s);
+
+		// 3. Normalize to ensure it remains a valid prev.qtion
+		float mag = std::sqrt(c * c + s * s);
+
+		// Handle the exact opposite edge-case (divide by zero protection)
+		const b2Rot rot = mag < FLT_EPSILON ? prev.q : b2Rot{ c / mag, s / mag };
+
+		// linear interpolate
+		return {
+			pos,
+			rot
+		};
+	};
 
 	for (auto [entity, sprite, body] : registry.view<barn::sprite, barn::body>().each()) {
 		if (!sprite.texture) continue;
@@ -126,19 +154,26 @@ void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer) {
 			height = sprite.texture->h;
 		}
 
-		const b2Vec2 pos = b2Body_GetPosition(body.id);
+		const barn::transform transform = 
+			registry.all_of<barn::transform>(entity) ?
+			interpolate(registry.get<barn::transform>(entity), b2Body_GetTransform(body.id), alpha)
+			: b2Body_GetTransform(body.id);
+
 		SDL_FRect dest_rect = {
-			pos.x * PIXELS_PER_METER - width / 2,
-			VIRTUAL_HEIGHT_PIXELS - pos.y * PIXELS_PER_METER - height / 2,
+			transform.p.x * PIXELS_PER_METER - width / 2,
+			VIRTUAL_HEIGHT_PIXELS - transform.p.y * PIXELS_PER_METER - height / 2,
 			width,
 			height
 		};
 
-		SDL_RenderTexture(
+		SDL_RenderTextureRotated(
 			renderer,
 			sprite.texture.get(),
 			sprite.src_rect ? &(*sprite.src_rect) : nullptr,
-			&dest_rect
+			&dest_rect,
+			b2Rot_GetAngle(transform.q) * 360 / B2_PI,
+			nullptr,
+			SDL_FLIP_NONE
 		);
 	}
 
@@ -165,19 +200,26 @@ void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer) {
 			height = animation.texture->h;
 		}
 
-		const b2Vec2 pos = b2Body_GetPosition(body.id);
+		const barn::transform transform =
+			registry.all_of<barn::transform>(entity) ?
+			interpolate(registry.get<barn::transform>(entity), b2Body_GetTransform(body.id), alpha)
+			: b2Body_GetTransform(body.id);
+
 		SDL_FRect dest_rect = {
-			pos.x * PIXELS_PER_METER - width / 2,
-			VIRTUAL_HEIGHT_PIXELS - pos.y * PIXELS_PER_METER - height / 2,
+			transform.p.x * PIXELS_PER_METER - width / 2,
+			VIRTUAL_HEIGHT_PIXELS - transform.p.y * PIXELS_PER_METER - height / 2,
 			width,
 			height
 		};
 
-		SDL_RenderTexture(
+		SDL_RenderTextureRotated(
 			renderer,
 			animation.texture.get(),
 			&animation.frames[animation.current_frame_index],
-			&dest_rect
+			&dest_rect,
+			b2Rot_GetAngle(transform.q) * 360 / B2_PI,
+			nullptr,
+			SDL_FLIP_NONE
 		);
 
 		using namespace std::chrono;
@@ -196,6 +238,11 @@ void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer) {
 }
 
 void barn::physics_system(entt::registry& registry, b2WorldId world_id) {
+	// Update transforms from physics bodies before the step for interpolation
+	for (auto [entity, body] : registry.view<barn::body>().each()) {
+		registry.emplace_or_replace<barn::transform>(entity, b2Body_GetTransform(body.id));
+	}
+
 	b2World_Step(world_id, PHYSICS_TIMESTEP, BOX2D_SUB_STEP_COUNT);
 
 	for (auto [entity, body] : registry.view<barn::bullet, barn::body>().each()) {

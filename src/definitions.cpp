@@ -101,7 +101,9 @@ decltype(barn::character_templates) barn::character_templates
 					barn::bullet_def def;
 					def.body.def.type = b2_kinematicBody;
 					def.body.def.position = b2Body_GetPosition(player_body.id);
-					def.body.def.linearVelocity = b2Vec2{ 0.f, 20.f };
+					def.body.def.linearVelocity = b2Vec2{ 0.f, 10.f };
+					def.body.def.fixedRotation = false;
+					def.body.def.angularVelocity = B2_PI;
 					def.body.circles.emplace_back(ally_bullet_shape_def, b2Circle({}, 0.25f));
 					def.sprite.texture = registry.get<barn::assets>(entity).textures[0];
 					def.sprite.width = 1.f * PIXELS_PER_METER;

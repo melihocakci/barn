@@ -12,7 +12,7 @@ namespace barn {
 
 	void action_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world);
 
-	void draw_system(entt::registry& registry, SDL_Renderer* renderer);
+	void draw_system(entt::registry& registry, SDL_Renderer* renderer, float alpha);
 
 	void physics_system(entt::registry& registry, b2WorldId world_id);
 }

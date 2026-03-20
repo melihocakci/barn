@@ -136,4 +136,6 @@ namespace barn {
 		P4,
 		COUNT
 	};
+
+	using transform = b2Transform;
 }

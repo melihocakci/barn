@@ -59,10 +59,8 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 			}
 		}
 
-		draw_system(registry, renderer);
-
-		Uint64 currentTicks = SDL_GetTicks();
-		float deltaTime = (currentTicks - prevTicks) / 1000.0f;
+		const Uint64 currentTicks = SDL_GetTicks();
+		const float deltaTime = (currentTicks - prevTicks) / 1000.0f;
 		prevTicks = currentTicks;
 		accumulator += deltaTime;
 
@@ -77,6 +75,12 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 
 			action_system(registry, renderer, mixer, world);
 		}
+
+		// compute alpha for interpolation (clamp to [0,1])
+		const float alpha = std::clamp(accumulator / PHYSICS_TIMESTEP, 0.0f, 1.0f);
+
+		// draw using interpolated positions
+		draw_system(registry, renderer, alpha);
 	}
 
 	return 0;
