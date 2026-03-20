@@ -89,6 +89,75 @@ void barn::action_system(entt::registry& registry, SDL_Renderer* renderer, MIX_M
 	}
 }
 
+// helper lambda to compute interpolated position
+static barn::transform interpolate(barn::transform prev, barn::transform curr, float alpha) {
+	const b2Vec2 pos = prev.p + (curr.p - prev.p) * alpha;
+
+	float dot = prev.q.c * curr.q.c + prev.q.s * curr.q.s;
+	if (dot < 0.0f) {
+		// Flip curr.q to take the shorter arc
+		curr.q.c = -curr.q.c;
+		curr.q.s = -curr.q.s;
+	}
+
+	// 2. Linearly interpolate the components
+	float c = prev.q.c + alpha * (curr.q.c - prev.q.c);
+	float s = prev.q.s + alpha * (curr.q.s - prev.q.s);
+
+	// 3. Normalize to ensure it remains a valid prev.qtion
+	float mag = std::sqrt(c * c + s * s);
+
+	// Handle the exact opposite edge-case (divide by zero protection)
+	const b2Rot rot = mag < FLT_EPSILON ? prev.q : b2Rot{ c / mag, s / mag };
+
+	// linear interpolate
+	return {
+		pos,
+		rot
+	};
+}
+
+static void draw_texture(SDL_Renderer* renderer, barn::texture texture, const SDL_FRect* src_rect, std::optional<float> width, std::optional<float> height, barn::transform transform)
+{
+	if (!texture) return;
+
+	const float texture_aspect_ratio = static_cast<float>(texture->w) / texture->h;
+
+	if (width && height) {
+		width = *width;
+		height = *height;
+	}
+	else if (!width && height) {
+		height = *height;
+		width = *height * texture_aspect_ratio;
+	}
+	else if (width && !height) {
+		width = *width;
+		height = *width / texture_aspect_ratio;
+	}
+	else {
+		width = texture->w;
+		height = texture->h;
+	}
+
+	const SDL_FRect dest_rect = {
+		transform.p.x * barn::PIXELS_PER_METER - *width / 2,
+		barn::VIRTUAL_HEIGHT_PIXELS - transform.p.y * barn::PIXELS_PER_METER - *height / 2,
+		*width,
+		*height
+	};
+
+	SDL_RenderTextureRotated(
+		renderer,
+		texture.get(),
+		src_rect,
+		&dest_rect,
+		b2Rot_GetAngle(transform.q) * 360 / B2_PI,
+		nullptr,
+		SDL_FLIP_NONE
+	);
+}
+
 void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer, float alpha) {
 	SDL_RenderClear(renderer);
 
@@ -103,123 +172,29 @@ void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer, float a
 		);
 	}
 
-	// helper lambda to compute interpolated position
-	constexpr auto interpolate = [](barn::transform prev, barn::transform curr, float alpha) -> barn::transform {
-		const b2Vec2 pos = prev.p + (curr.p - prev.p) * alpha;
-		
-		float dot = prev.q.c * curr.q.c + prev.q.s * curr.q.s;
-		if (dot < 0.0f) {
-			// Flip curr.q to take the shorter arc
-			curr.q.c = -curr.q.c;
-			curr.q.s = -curr.q.s;
-		}
-
-		// 2. Linearly interpolate the components
-		float c = prev.q.c + alpha * (curr.q.c - prev.q.c);
-		float s = prev.q.s + alpha * (curr.q.s - prev.q.s);
-
-		// 3. Normalize to ensure it remains a valid prev.qtion
-		float mag = std::sqrt(c * c + s * s);
-
-		// Handle the exact opposite edge-case (divide by zero protection)
-		const b2Rot rot = mag < FLT_EPSILON ? prev.q : b2Rot{ c / mag, s / mag };
-
-		// linear interpolate
-		return {
-			pos,
-			rot
-		};
-	};
-
 	for (auto [entity, sprite, body] : registry.view<barn::sprite, barn::body>().each()) {
-		if (!sprite.texture) continue;
-
-		const float texture_aspect_ratio = static_cast<float>(sprite.texture->w) / sprite.texture->h;
-
-		float width{}, height{};
-		if (sprite.width && sprite.height) {
-			width = *sprite.width;
-			height = *sprite.height;
-		}
-		else if (!sprite.width && sprite.height) {
-			height = *sprite.height;
-			width = height * texture_aspect_ratio;
-		}
-		else if (sprite.width && !sprite.height) {
-			width = *sprite.width;
-			height = width / texture_aspect_ratio;
-		}
-		else {
-			width = sprite.texture->w;
-			height = sprite.texture->h;
-		}
-
-		const barn::transform transform = 
+		draw_texture(
+			renderer,
+			sprite.texture,
+			sprite.src_rect ? &*sprite.src_rect : nullptr,
+			sprite.width,
+			sprite.height,
 			registry.all_of<barn::transform>(entity) ?
 			interpolate(registry.get<barn::transform>(entity), b2Body_GetTransform(body.id), alpha)
-			: b2Body_GetTransform(body.id);
-
-		SDL_FRect dest_rect = {
-			transform.p.x * PIXELS_PER_METER - width / 2,
-			VIRTUAL_HEIGHT_PIXELS - transform.p.y * PIXELS_PER_METER - height / 2,
-			width,
-			height
-		};
-
-		SDL_RenderTextureRotated(
-			renderer,
-			sprite.texture.get(),
-			sprite.src_rect ? &(*sprite.src_rect) : nullptr,
-			&dest_rect,
-			b2Rot_GetAngle(transform.q) * 360 / B2_PI,
-			nullptr,
-			SDL_FLIP_NONE
+			: b2Body_GetTransform(body.id)
 		);
 	}
 
 	for (auto [entity, animation, body] : registry.view<barn::animation, barn::body>().each()) {
-		if (!animation.texture) continue;
-
-		const float texture_aspect_ratio = static_cast<float>(animation.texture->w) / animation.texture->h;
-
-		float width{}, height{};
-		if (animation.width && animation.height) {
-			width = *animation.width;
-			height = *animation.height;
-		}
-		else if (!animation.width && animation.height) {
-			height = *animation.height;
-			width = height * texture_aspect_ratio;
-		}
-		else if (animation.width && !animation.height) {
-			width = *animation.width;
-			height = width / texture_aspect_ratio;
-		}
-		else {
-			width = animation.texture->w;
-			height = animation.texture->h;
-		}
-
-		const barn::transform transform =
+		draw_texture(
+			renderer,
+			animation.texture,
+			&animation.frames[animation.current_frame_index],
+			animation.width,
+			animation.height,
 			registry.all_of<barn::transform>(entity) ?
 			interpolate(registry.get<barn::transform>(entity), b2Body_GetTransform(body.id), alpha)
-			: b2Body_GetTransform(body.id);
-
-		SDL_FRect dest_rect = {
-			transform.p.x * PIXELS_PER_METER - width / 2,
-			VIRTUAL_HEIGHT_PIXELS - transform.p.y * PIXELS_PER_METER - height / 2,
-			width,
-			height
-		};
-
-		SDL_RenderTextureRotated(
-			renderer,
-			animation.texture.get(),
-			&animation.frames[animation.current_frame_index],
-			&dest_rect,
-			b2Rot_GetAngle(transform.q) * 360 / B2_PI,
-			nullptr,
-			SDL_FLIP_NONE
+			: b2Body_GetTransform(body.id)
 		);
 
 		using namespace std::chrono;
