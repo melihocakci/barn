@@ -73,7 +73,7 @@ add_executable(${PROJECT_NAME} WIN32
     "src/main.cpp"
     "src/scenes.cpp"
     "src/systems.cpp"
-    "src/definitions.cpp"
+    "src/presets.cpp"
     "src/factories.cpp"
     "src/utils.cpp"
     "src/config.cpp"

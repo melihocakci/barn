@@ -1,4 +1,4 @@
-#include "definitions.h"
+#include "presets.h"
 #include "components.h"
 #include "utils.h"
 #include "factories.h"
@@ -54,9 +54,9 @@ static const b2ShapeDef foe_bullet_shape_def = [] {
 ///
 
 
-decltype(barn::character_templates) barn::character_templates
+decltype(barn::character_presets) barn::character_presets
 {
-	player_def{
+	character_preset{
 		.body{
 			.def = default_body_def,
 			.circles{
@@ -73,44 +73,52 @@ decltype(barn::character_templates) barn::character_templates
 				return rects;
 			}(),
 			.height = .8f * PIXELS_PER_METER,
-			.frame_duration = 100ms,
-			.loop_count = -1,
+			.duration = 1000ms,
 		},
 		.properties{
 			.health = 1000,
 			.attack = 10,
 			.speed = 10,
 		},
-		.assets{
-			.textures = {
-				textures::green_onion,
-			},
-			.audios = {
-				audios::weiii,
-			},
-		},
 		.skillset{
-			skill{
+			skill_def{
 				.cooldown = 250ms,
 				.action = [](ACTION_PARAMETERS) {
-					auto [player_body, player_prop] = registry.get<barn::body, barn::properties>(entity);
+					struct local {
+						barn::texture onion;
+						barn::audio weiii;
+					};
 
-					barn::audio& weiii_sound = registry.get<barn::assets>(entity).audios[0];
-					MIX_PlayAudio(mixer, weiii_sound.get());
+					if (state == ACTION_INITIALIZE) {
+						registry.emplace<local>(entity,
+							get_texture(renderer, textures::green_onion),
+							get_audio(audios::weiii)
+						);
+						return;
+					}
+					else if (state == ACTION_CLEANUP) {
+						registry.erase<local>(entity);
+						return;
+					}
 
-					barn::bullet_def def;
+					auto [player_body, player_prop] = registry.get<component::body, component::properties>(entity);
+
+					local& assets = registry.get<local>(entity);
+					MIX_PlayAudio(mixer, assets.weiii.get());
+
+					barn::bullet_preset def;
 					def.body.def.type = b2_kinematicBody;
 					def.body.def.position = b2Body_GetPosition(player_body.id);
 					def.body.def.linearVelocity = b2Vec2{ 0.f, 10.f };
 					def.body.def.fixedRotation = false;
 					def.body.def.angularVelocity = B2_PI;
 					def.body.circles.emplace_back(ally_bullet_shape_def, b2Circle({}, 0.25f));
-					def.sprite.texture = registry.get<barn::assets>(entity).textures[0];
-					def.sprite.width = 1.f * PIXELS_PER_METER;
+					def.idle_animation.texture = textures::green_onion;
+					def.idle_animation.frames = { {.w = 260.f, .h = 280.f} };
+					def.idle_animation.width = 1.f * PIXELS_PER_METER;
 					def.properties.attack = player_prop.attack;
-					def.type = barn::category::ALLY_BULLET;
 
-					barn::create_bullet(registry, renderer, world, def);
+					barn::create_bullet(FACTORY_VARIABLES, def);
 				},
 			},
 		}
@@ -123,18 +131,20 @@ decltype(barn::character_templates) barn::character_templates
 ///
 
 
-decltype(barn::enemy_templates) barn::enemy_templates
+decltype(barn::enemy_presets) barn::enemy_presets
 {
-	enemy_def{
+	enemy_preset{
 		.body{
 			.def = default_body_def,
 			.circles{
 				{foe_shape_def, b2Circle{{}, 0.5f}}
 			}
 		},
-		.sprite{
+		.idle_animation{
 			.texture = textures::pearto,
+			.frames = { SDL_FRect{0.f, 0.f, 270.f, 450.f} },
 			.height = 2.f * PIXELS_PER_METER,
+			.duration = 1000ms,
 		},
 		.properties
 		{
@@ -144,13 +154,13 @@ decltype(barn::enemy_templates) barn::enemy_templates
 		},
 		.action = [](ACTION_PARAMETERS)
 		{
-			auto [enemy_body, enemy_stats] = registry.get<barn::body, barn::properties>(entity);
+			auto [enemy_body, enemy_stats] = registry.get<component::body, component::properties>(entity);
 			b2Vec2 enemy_position = b2Body_GetPosition(enemy_body.id);
 
 			float shortest_distance = -1.f;
 			b2Vec2 closest_target{};
 
-			for (auto [entity, _, player_body] : registry.view<barn::player, barn::body>().each()) {
+			for (auto [entity, _, player_body] : registry.view<component::player, component::body>().each()) {
 				const b2Vec2 player_position = b2Body_GetPosition(player_body.id);
 
 				float distance = length(enemy_position - player_position);

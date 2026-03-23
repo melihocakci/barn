@@ -11,28 +11,40 @@ static void execute_skill(barn::skill& skill, ACTION_PARAMETERS) {
 	using namespace std::chrono;
 	const steady_clock::time_point current_time = steady_clock::now();
 	const milliseconds time_span = duration_cast<milliseconds>(current_time - skill.last_used_time);
-	if (time_span >= skill.cooldown) {
-		skill.action(ACTION_VARIABLES);
+	if (time_span >= skill.def.cooldown) {
+		skill.def.action(ACTION_VARIABLES, barn::ACTION_RUN);
 		skill.last_used_time = current_time;
 	}
 }
 
+void barn::property_system(entt::registry& registry) {
+	for (auto [entity, properties] : registry.view<component::properties>().each()) {
+		properties.health = properties.base.health;
+		properties.attack = properties.base.attack;
+		properties.speed = properties.base.speed;
+
+		if (properties.health <= 0) {
+			registry.destroy(entity);
+		}
+	}
+}
+
 void barn::keyboard_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
-	const auto view = registry.view<barn::keyboard, barn::player, barn::body, barn::skillset, barn::properties>();
+	const auto view = registry.view<component::keyboard, component::player, component::body, component::skillset, component::properties>();
 	for (auto [entity, player, body, skillset, properties] : view.each())
 	{
-		const keyboard_controls& controls = barn::config::keyboard_bindings[player];
+		const config::keyboard_controls& controls = barn::config::keyboard_bindings[static_cast<int>(player)];
 
 		const bool* state = SDL_GetKeyboardState(nullptr);
 
 		if (state[controls.skill1])
-			execute_skill(skillset[0], ACTION_VARIABLES);
+			execute_skill(skillset[0], ACTION_VARIABLES, ACTION_RUN);
 		if (state[controls.skill2])
-			execute_skill(skillset[1], ACTION_VARIABLES);
+			execute_skill(skillset[1], ACTION_VARIABLES, ACTION_RUN);
 		if (state[controls.skill3])
-			execute_skill(skillset[2], ACTION_VARIABLES);
+			execute_skill(skillset[2], ACTION_VARIABLES, ACTION_RUN);
 		if (state[controls.skill4])
-			execute_skill(skillset[3], ACTION_VARIABLES);
+			execute_skill(skillset[3], ACTION_VARIABLES, ACTION_RUN);
 
 		b2Vec2 vec{};
 		if (state[controls.up])
@@ -51,19 +63,19 @@ void barn::keyboard_system(entt::registry& registry, SDL_Renderer* renderer, MIX
 }
 
 void barn::gamepad_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
-	const auto view = registry.view<barn::gamepad, barn::player, barn::body, barn::skillset, barn::properties>();
+	const auto view = registry.view<component::gamepad, component::player, component::body, component::skillset, component::properties>();
 	for (auto [entity, gamepad, player, body, skillset, properties] : view.each())
 	{
-		const gamepad_controls& controls = barn::config::gamepad_bindings[player];
+		const config::gamepad_controls& controls = barn::config::gamepad_bindings[static_cast<int>(player)];
 
 		if (SDL_GetGamepadButton(gamepad.get(), controls.skill1))
-			execute_skill(skillset[0], ACTION_VARIABLES);
+			execute_skill(skillset[0], ACTION_VARIABLES, ACTION_RUN);
 		if (SDL_GetGamepadButton(gamepad.get(), controls.skill2))
-			execute_skill(skillset[1], ACTION_VARIABLES);
+			execute_skill(skillset[1], ACTION_VARIABLES, ACTION_RUN);
 		if (SDL_GetGamepadButton(gamepad.get(), controls.skill3))
-			execute_skill(skillset[2], ACTION_VARIABLES);
+			execute_skill(skillset[2], ACTION_VARIABLES, ACTION_RUN);
 		if (SDL_GetGamepadButton(gamepad.get(), controls.skill4))
-			execute_skill(skillset[3], ACTION_VARIABLES);
+			execute_skill(skillset[3], ACTION_VARIABLES, ACTION_RUN);
 
 		constexpr auto normalize_axis = [](const Sint16 axis) -> float
 			{
@@ -85,12 +97,12 @@ void barn::gamepad_system(entt::registry& registry, SDL_Renderer* renderer, MIX_
 
 void barn::action_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
 	for (auto [entity, action] : registry.view<barn::action>().each()) {
-		action(ACTION_VARIABLES);
+		action(ACTION_VARIABLES, ACTION_RUN);
 	}
 }
 
 // helper lambda to compute interpolated position
-static barn::transform interpolate(barn::transform prev, barn::transform curr, float alpha) {
+static barn::component::transform interpolate(barn::component::transform prev, barn::component::transform curr, float alpha) {
 	const b2Vec2 pos = prev.p + (curr.p - prev.p) * alpha;
 
 	float dot = prev.q.c * curr.q.c + prev.q.s * curr.q.s;
@@ -104,7 +116,7 @@ static barn::transform interpolate(barn::transform prev, barn::transform curr, f
 	float c = prev.q.c + alpha * (curr.q.c - prev.q.c);
 	float s = prev.q.s + alpha * (curr.q.s - prev.q.s);
 
-	// 3. Normalize to ensure it remains a valid prev.qtion
+	// 3. Normalize to ensure it remains a valid prev rotation
 	float mag = std::sqrt(c * c + s * s);
 
 	// Handle the exact opposite edge-case (divide by zero protection)
@@ -117,7 +129,7 @@ static barn::transform interpolate(barn::transform prev, barn::transform curr, f
 	};
 }
 
-static void draw_texture(SDL_Renderer* renderer, barn::texture texture, const SDL_FRect* src_rect, std::optional<float> width, std::optional<float> height, barn::transform transform)
+static void draw_texture(SDL_Renderer* renderer, barn::texture texture, const SDL_FRect* src_rect, std::optional<float> width, std::optional<float> height, barn::component::transform transform)
 {
 	if (!texture) return;
 
@@ -161,7 +173,7 @@ static void draw_texture(SDL_Renderer* renderer, barn::texture texture, const SD
 void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer, float alpha) {
 	SDL_RenderClear(renderer);
 
-	for (auto [entity, sprite] : registry.view<barn::sprite, barn::background>().each()) {
+	for (auto [entity, sprite] : registry.view<component::sprite, component::background>().each()) {
 		SDL_FRect dest_rect = { 0, 0, VIRTUAL_WIDTH_PIXELS, VIRTUAL_HEIGHT_PIXELS };
 
 		SDL_RenderTexture(
@@ -172,41 +184,60 @@ void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer, float a
 		);
 	}
 
-	for (auto [entity, sprite, body] : registry.view<barn::sprite, barn::body>().each()) {
+	for (auto [entity, sprite, body] : registry.view<component::sprite, component::body>().each()) {
 		draw_texture(
 			renderer,
 			sprite.texture,
-			sprite.src_rect ? &*sprite.src_rect : nullptr,
-			sprite.width,
-			sprite.height,
-			registry.all_of<barn::transform>(entity) ?
-			interpolate(registry.get<barn::transform>(entity), b2Body_GetTransform(body.id), alpha)
+			sprite.def.src_rect ? &*sprite.def.src_rect : nullptr,
+			sprite.def.width,
+			sprite.def.height,
+			registry.all_of<component::transform>(entity) ?
+			interpolate(registry.get<component::transform>(entity), b2Body_GetTransform(body.id), alpha)
 			: b2Body_GetTransform(body.id)
 		);
 	}
 
-	for (auto [entity, animation, body] : registry.view<barn::animation, barn::body>().each()) {
-		draw_texture(
-			renderer,
-			animation.texture,
-			&animation.frames[animation.current_frame_index],
-			animation.width,
-			animation.height,
-			registry.all_of<barn::transform>(entity) ?
-			interpolate(registry.get<barn::transform>(entity), b2Body_GetTransform(body.id), alpha)
-			: b2Body_GetTransform(body.id)
-		);
+	for (auto [entity, idle_animation] : registry.view<component::idle_animation>().each()) {
+		if (!registry.all_of<component::animation>(entity)) {
+			component::animation& animation = registry.emplace<component::animation>(entity, idle_animation);
+			animation.start_time = std::chrono::steady_clock::now();
+		}
+	}
+
+	for (auto [entity, animation, body] : registry.view<component::animation, component::body>().each()) {
+		if (animation.def.frames.empty()) continue;
 
 		using namespace std::chrono;
 		const steady_clock::time_point current_time = steady_clock::now();
-		if (current_time - animation.last_frame_time >= animation.frame_duration) {
-			animation.current_frame_index = (animation.current_frame_index + 1) % animation.frames.size();
-			animation.last_frame_time = current_time;
-			animation.loop_count = (animation.loop_count == -1) ? -1 : animation.loop_count - 1;
-			if (animation.loop_count == 0) {
-				registry.remove<barn::animation>(entity);
+		long elapsed = duration_cast<milliseconds>(current_time - animation.start_time).count();
+		long duration = animation.def.duration.count();
+
+		if (elapsed >= duration) {
+			if (registry.all_of<component::idle_animation>(entity)) {
+				animation = registry.get<component::idle_animation>(entity);
+				animation.start_time = current_time;
+				elapsed = 0;
+				duration = animation.def.duration.count();
+			}
+			else {
+				registry.remove<component::animation>(entity);
+				continue;
 			}
 		}
+
+		long size = animation.def.frames.size();
+		int frame_index = static_cast<double>(elapsed) / duration * size;
+
+		draw_texture(
+			renderer,
+			animation.texture,
+			&animation.def.frames[frame_index],
+			animation.def.width,
+			animation.def.height,
+			registry.all_of<component::transform>(entity) ?
+			interpolate(registry.get<component::transform>(entity), b2Body_GetTransform(body.id), alpha)
+			: b2Body_GetTransform(body.id)
+		);
 	}
 
 	SDL_RenderPresent(renderer);
@@ -214,13 +245,14 @@ void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer, float a
 
 void barn::physics_system(entt::registry& registry, b2WorldId world_id) {
 	// Update transforms from physics bodies before the step for interpolation
-	for (auto [entity, body] : registry.view<barn::body>().each()) {
-		registry.emplace_or_replace<barn::transform>(entity, b2Body_GetTransform(body.id));
+	for (auto [entity, body] : registry.view<component::body>().each()) {
+		auto velocity = b2Body_GetLinearVelocity(body.id);
+		registry.emplace_or_replace<component::transform>(entity, b2Body_GetTransform(body.id));
 	}
 
 	b2World_Step(world_id, PHYSICS_TIMESTEP, BOX2D_SUB_STEP_COUNT);
 
-	for (auto [entity, body] : registry.view<barn::bullet, barn::body>().each()) {
+	for (auto [entity, body] : registry.view<component::bullet, component::body>().each()) {
 		constexpr float BULLET_DESTROY_MARGIN = 2.f;
 		const b2Vec2 pos = b2Body_GetPosition(body.id);
 		if (pos.x < -BULLET_DESTROY_MARGIN || pos.x > VIRTUAL_WIDTH_METERS + BULLET_DESTROY_MARGIN ||
@@ -256,16 +288,16 @@ void barn::physics_system(entt::registry& registry, b2WorldId world_id) {
 
 		if (first_type & category::ALLY) {
 			if (second_type & category::FOE) {
-				barn::properties& first_prop = registry.get<barn::properties>(first);
-				barn::properties& second_prop = registry.get<barn::properties>(second);
+				component::properties& first_prop = registry.get<component::properties>(first);
+				component::properties& second_prop = registry.get<component::properties>(second);
 				first_prop.health -= second_prop.attack;
 				if (first_prop.health <= 0) {
 					registry.destroy(first);
 				}
 			}
 			else if (second_type & category::FOE_BULLET) {
-				barn::properties& first_prop = registry.get<barn::properties>(first);
-				barn::properties& second_prop = registry.get<barn::properties>(second);
+				component::properties& first_prop = registry.get<component::properties>(first);
+				component::properties& second_prop = registry.get<component::properties>(second);
 				first_prop.health -= second_prop.attack;
 				registry.destroy(second);
 				if (first_prop.health <= 0) {
@@ -275,8 +307,8 @@ void barn::physics_system(entt::registry& registry, b2WorldId world_id) {
 		}
 		else if (first_type & category::FOE) {
 			if (second_type & category::ALLY_BULLET) {
-				barn::properties& first_prop = registry.get<barn::properties>(first);
-				barn::properties& second_prop = registry.get<barn::properties>(second);
+				component::properties& first_prop = registry.get<component::properties>(first);
+				component::properties& second_prop = registry.get<component::properties>(second);
 				first_prop.health -= second_prop.attack;
 				registry.destroy(second);
 				if (first_prop.health <= 0) {

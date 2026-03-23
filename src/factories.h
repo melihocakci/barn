@@ -1,18 +1,19 @@
 #pragma once
 
-#include "definitions.h"
+#include "presets.h"
 
 #include <box2d/types.h>
 #include <entt/entt.hpp>
 
-#include <variant>
+#define FACTORY_PARAMETERS entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world
+#define FACTORY_VARIABLES registry, renderer, mixer, world
 
 namespace barn {
-	entt::entity create_borders(entt::registry& reg, b2WorldId world_id);
+	entt::entity create_borders(FACTORY_PARAMETERS);
 
-	entt::entity create_player(entt::registry& reg, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world_id, const barn::player_def& def);
+	entt::entity create_player(FACTORY_PARAMETERS, const barn::character_preset& def);
 
-	entt::entity create_enemy(entt::registry& reg, SDL_Renderer* renderer, b2WorldId world_id, const barn::enemy_def& def);
+	entt::entity create_enemy(FACTORY_PARAMETERS, const barn::enemy_preset& def);
 
-	entt::entity create_bullet(entt::registry& reg, SDL_Renderer* renderer, b2WorldId world_id, const barn::bullet_def& def);
+	entt::entity create_bullet(FACTORY_PARAMETERS, const barn::bullet_preset& def);
 }

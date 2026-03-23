@@ -7,8 +7,8 @@
 #include <box2d/types.h>
 #include <box2d/collision.h>
 
-static void add_body(entt::entity entity, entt::registry& reg, b2WorldId world_id, const barn::body_def& def) {
-	const barn::body& body = reg.emplace<barn::body>(entity, b2CreateBody(world_id, &def.def));
+static void add_body(entt::entity entity, FACTORY_PARAMETERS, const barn::body_def& def) {
+	const barn::component::body& body = registry.emplace<barn::component::body>(entity, b2CreateBody(world, &def.def));
 
 	for (const auto& [shape_def, circle] : def.circles) {
 		b2CreateCircleShape(body.id, &shape_def, &circle);
@@ -21,40 +21,16 @@ static void add_body(entt::entity entity, entt::registry& reg, b2WorldId world_i
 	b2Body_SetUserData(body.id, new entt::entity{ entity });
 }
 
-static void add_sprite(entt::entity entity, entt::registry& reg, SDL_Renderer* renderer, const barn::sprite_def& def) {
-	reg.emplace<barn::sprite>(entity, barn::get_texture(renderer, def.texture), def.src_rect, def.width, def.height);
-}
-
-static barn::animation make_animation(SDL_Renderer* renderer, const barn::animation_def& def) {
-	return barn::animation{
+static void add_default_animation(entt::entity entity, FACTORY_PARAMETERS, const barn::animation_def& def) {
+	registry.emplace<barn::component::idle_animation>(entity,
+		def,
 		barn::get_texture(renderer, def.texture),
-		def.frames,
-		def.width,
-		def.height,
-		def.frame_duration,
-		def.loop_count,
-		def.priority,
-		std::chrono::steady_clock::time_point{},
-		0
-	};
+		std::chrono::steady_clock::time_point{}
+	);
 }
 
-static barn::assets make_assets(SDL_Renderer* renderer, const barn::assets_def& def) {
-	barn::assets assets{};
-
-	for (const auto& texture_path : def.textures) {
-		assets.textures.push_back(barn::get_texture(renderer, texture_path));
-	}
-
-	for (const auto& audio_path : def.audios) {
-		assets.audios.push_back(barn::get_audio(audio_path));
-	}
-
-	return assets;
-}
-
-entt::entity barn::create_borders(entt::registry& reg, b2WorldId world_id) {
-	entt::entity entity = reg.create();
+entt::entity barn::create_borders(FACTORY_PARAMETERS) {
+	entt::entity entity = registry.create();
 
 	barn::body_def body_def{};
 	body_def.def.type = b2_staticBody;
@@ -77,59 +53,61 @@ entt::entity barn::create_borders(entt::registry& reg, b2WorldId world_id) {
 		{ shape_def, right_rect }
 	};
 
-	add_body(entity, reg, world_id, body_def);
-
-	reg.emplace<barn::category>(entity, barn::category::OBSTACLE);
+	add_body(entity, FACTORY_VARIABLES, body_def);
 
 	return entity;
 }
 
-entt::entity barn::create_player(entt::registry& reg, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world_id, const barn::player_def& def) {
-	const entt::entity entity = reg.create();
+entt::entity barn::create_player(FACTORY_PARAMETERS, const barn::character_preset& def) {
+	const entt::entity entity = registry.create();
 
-	add_body(entity, reg, world_id, def.body);
+	add_body(entity, FACTORY_VARIABLES, def.body);
 
-	reg.emplace<barn::assets>(entity, make_assets(renderer, def.assets));
+	add_default_animation(entity, FACTORY_VARIABLES, def.idle_animation);
 
-	reg.emplace<barn::animation>(entity, make_animation(renderer, def.idle_animation));
+	registry.emplace<component::properties>(entity, def.properties);
 
-	reg.emplace<barn::skillset>(entity, def.skillset);
+	constexpr std::size_t N = std::tuple_size_v<barn::component::skillset>;
 
-	reg.emplace<barn::properties>(entity, def.properties);
+	component::skillset skillset = [&] <std::size_t... I>(std::index_sequence<I...>) {
+		return barn::component::skillset{ { barn::skill{ def.skillset[I], std::chrono::steady_clock::time_point{} }... } };
+	}(std::make_index_sequence<N>{});
 
-	reg.emplace<barn::category>(entity, barn::category::ALLY);
-
-	return entity;
-}
-
-entt::entity barn::create_enemy(entt::registry& reg, SDL_Renderer* renderer, b2WorldId world_id, const barn::enemy_def& def) {
-	const entt::entity entity = reg.create();
-
-	add_sprite(entity, reg, renderer, def.sprite);
-
-	add_body(entity, reg, world_id, def.body);
-
-	reg.emplace<barn::properties>(entity, def.properties);
-
-	reg.emplace<barn::action>(entity, def.action);
-
-	reg.emplace<barn::category>(entity, barn::category::FOE);
+	component::skillset& skills = registry.emplace<component::skillset>(entity, skillset);
+	for (auto& skill : skills) {
+		skill.def.action(ACTION_VARIABLES, ACTION_INITIALIZE);
+	}
 
 	return entity;
 }
 
-entt::entity barn::create_bullet(entt::registry& reg, SDL_Renderer* renderer, b2WorldId world_id, const barn::bullet_def& def) {
-	const entt::entity entity = reg.create();
+entt::entity barn::create_enemy(FACTORY_PARAMETERS, const barn::enemy_preset& def) {
+	const entt::entity entity = registry.create();
 
-	add_body(entity, reg, world_id, def.body);
+	add_body(entity, FACTORY_VARIABLES, def.body);
 
-	reg.emplace<barn::sprite>(entity, def.sprite);
+	add_default_animation(entity, FACTORY_VARIABLES, def.idle_animation);
 
-	reg.emplace<barn::properties>(entity, def.properties);
+	registry.emplace<component::properties>(entity, def.properties);
 
-	reg.emplace<barn::category>(entity, def.type);
+	component::action& action = registry.emplace<component::action>(entity, def.action);
+	action(ACTION_VARIABLES, ACTION_INITIALIZE);
 
-	reg.emplace<barn::bullet>(entity);
+	registry.emplace<component::enemy>(entity);
+
+	return entity;
+}
+
+entt::entity barn::create_bullet(FACTORY_PARAMETERS, const barn::bullet_preset& def) {
+	const entt::entity entity = registry.create();
+
+	add_body(entity, FACTORY_VARIABLES, def.body);
+
+	add_default_animation(entity, FACTORY_VARIABLES, def.idle_animation);
+
+	registry.emplace<component::properties>(entity, def.properties);
+
+	registry.emplace<component::bullet>(entity);
 
 	return entity;
 }

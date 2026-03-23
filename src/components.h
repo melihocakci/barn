@@ -5,17 +5,119 @@
 #include <entt/entt.hpp>
 #include <box2d/box2d.h>
 
-#include <functional>
 #include <chrono>
 #include <memory>
 #include <future>
 
-#define ACTION_PARAMETERS entt::entity entity, entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world
+#define ACTION_PARAMETERS entt::entity entity, entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world, barn::action_state state
 #define ACTION_VARIABLES entity, registry, renderer, mixer, world
 
 namespace barn {
+	struct circle_def {
+		b2ShapeDef def = b2DefaultShapeDef();
+		b2Circle circle{};
+	};
+
+	struct polygon_def {
+		b2ShapeDef def = b2DefaultShapeDef();
+		b2Polygon polygon{};
+	};
+
+	enum category : std::uint64_t {
+		ALLY = 1,
+		FOE = 1 << 1,
+		ALLY_BULLET = 1 << 2,
+		FOE_BULLET = 1 << 3,
+		OBSTACLE = 1 << 4,
+	};
+
+	struct body_def {
+		b2BodyDef def = b2DefaultBodyDef();
+		std::vector<circle_def> circles{};
+		std::vector<polygon_def> polygons{};
+	};
+
+	using asset_def = std::string_view;
+
+	struct sprite_def {
+		barn::asset_def texture{};
+		std::optional<SDL_FRect> src_rect{};
+		std::optional<float> width{};
+		std::optional<float> height{};
+	};
+
+	using namespace std::chrono_literals;
+
+	struct animation_def {
+		barn::asset_def texture{};
+		std::vector<SDL_FRect> frames{};
+		std::optional<float> width{};
+		std::optional<float> height{};
+		std::chrono::milliseconds duration = 1000ms;
+	};
+
+	struct base_properties {
+		int health = 1;
+		int attack = 0;
+		float speed = 0.f;
+	};
+
+	enum action_state {
+		ACTION_INITIALIZE = 1,
+		ACTION_RUN = 2,
+		ACTION_CLEANUP = 3,
+	};
+
+	using action = void(*)(ACTION_PARAMETERS);
+
+	constexpr action empty_action = [](ACTION_PARAMETERS) {};
+
+	struct skill_def {
+		std::chrono::milliseconds cooldown{};
+		barn::action action = empty_action;
+	};
+
+	using skillset_def = std::array<skill_def, 4>;
+
+	template<typename T>
+	struct asset {
+		std::shared_ptr<std::shared_future<T*>> ptr{};
+
+		T& operator *() {
+			return *ptr->get();
+		}
+		const T& operator *() const {
+			return *ptr->get();
+		}
+		T* operator->() {
+			return ptr->get();
+		}
+		const T* operator->() const {
+			return ptr->get();
+		}
+		T* get() {
+			return ptr->get();
+		}
+		const T* get() const {
+			return ptr->get();
+		}
+		operator bool() const {
+			return ptr->get();
+		}
+	};
+
+	using texture = barn::asset<SDL_Texture>;
+	using audio = barn::asset<MIX_Audio>;
+
+	struct skill {
+		barn::skill_def def{};
+		std::chrono::steady_clock::time_point last_used_time{};
+	};
+}
+
+namespace barn::component {
 	struct body {
-		const b2BodyId id{};
+		b2BodyId id{};
 
 		body(b2BodyId body_id) : id(body_id) {}
 		~body() noexcept {
@@ -29,107 +131,43 @@ namespace barn {
 		body(const body&) = delete;
 		body& operator=(const body&) = delete;
 		body(body&& other) noexcept : id(other.id) {
-			const_cast<b2BodyId&>(other.id) = {};
+			other.id = {};
 		}
 	};
-
-	template<typename T>
-	struct asset {
-		std::shared_ptr<std::shared_future<T*>> ptr{};
-		T& operator *() {
-			return *ptr->get();
-		}
-		T* operator->() {
-			return ptr->get();
-		}
-		T* get() {
-			return ptr->get();
-		}
-		operator bool() const {
-			return ptr->get();
-		}
-	};
-
-	using texture = barn::asset<SDL_Texture>;
-
-	using audio = barn::asset<MIX_Audio>;
 
 	struct sprite {
+		barn::sprite_def def{};
 		barn::texture texture{};
-		std::optional<SDL_FRect> src_rect{};
-		std::optional<float> width{};
-		std::optional<float> height{};
 	};
 
 	struct animation {
+		barn::animation_def def{};
 		barn::texture texture{};
-		std::vector<SDL_FRect> frames{};
-		std::optional<float> width{};
-		std::optional<float> height{};
-		std::chrono::milliseconds frame_duration{};
-		int loop_count{};
-		int priority{};
-		std::chrono::steady_clock::time_point last_frame_time{};
-		int current_frame_index{};
+		std::chrono::steady_clock::time_point start_time{};
 	};
+
+	struct idle_animation : public animation {};
 
 	struct keyboard {};
 
 	using gamepad = std::unique_ptr<SDL_Gamepad, decltype(&SDL_CloseGamepad)>;
 
-	struct keyboard_controls {
-		SDL_Scancode up{};
-		SDL_Scancode down{};
-		SDL_Scancode left{};
-		SDL_Scancode right{};
-		SDL_Scancode skill1{};
-		SDL_Scancode skill2{};
-		SDL_Scancode skill3{};
-		SDL_Scancode skill4{};
-	};
+	using action = barn::action;
 
-	struct gamepad_controls {
-		SDL_GamepadAxis axis_x{};
-		SDL_GamepadAxis axis_y{};
-		SDL_GamepadButton skill1{};
-		SDL_GamepadButton skill2{};
-		SDL_GamepadButton skill3{};
-		SDL_GamepadButton skill4{};
-	};
-
-	struct assets {
-		std::vector<barn::texture> textures{};
-		std::vector<barn::audio> audios{};
-	};
-
-	using action = void(*)(ACTION_PARAMETERS);
-
-	struct skill {
-		std::chrono::milliseconds cooldown{};
-		barn::action action = [](ACTION_PARAMETERS) {};
-		std::chrono::steady_clock::time_point last_used_time{};
-	};
-
-	using skillset = std::array<skill, 4>;
+	using skillset = std::array<skill, sizeof(skillset_def) / sizeof(skillset_def::value_type)>;
 
 	struct properties {
+		barn::base_properties base{};
 		int health = 1;
 		int attack = 0;
 		float speed = 0.f;
 	};
 
-	enum category : std::uint64_t {
-		ALLY = 1,
-		FOE = 1 << 1,
-		ALLY_BULLET = 1 << 2,
-		FOE_BULLET = 1 << 3,
-		OBSTACLE = 1 << 4,
-	};
-
 	struct background {};
 	struct bullet {};
+	struct enemy {};
 
-	enum player {
+	enum class player {
 		P1,
 		P2,
 		P3,
