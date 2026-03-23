@@ -21,11 +21,22 @@ static void add_body(entt::entity entity, FACTORY_PARAMETERS, const barn::body_d
 	b2Body_SetUserData(body.id, new entt::entity{ entity });
 }
 
-static void add_default_animation(entt::entity entity, FACTORY_PARAMETERS, const barn::animation_def& def) {
+static void add_idle_animation(entt::entity entity, FACTORY_PARAMETERS, const barn::animation_def& def) {
 	registry.emplace<barn::component::idle_animation>(entity,
 		def,
 		barn::get_texture(renderer, def.texture),
 		std::chrono::steady_clock::time_point{}
+	);
+}
+
+static void add_properties(entt::entity entity, FACTORY_PARAMETERS, const barn::base_properties& base) {
+	registry.emplace<barn::component::properties>(entity,
+		base,
+		base.health,
+		base.attack,
+		base.defense,
+		base.collide_damage,
+		base.speed
 	);
 }
 
@@ -63,9 +74,9 @@ entt::entity barn::create_player(FACTORY_PARAMETERS, const barn::character_prese
 
 	add_body(entity, FACTORY_VARIABLES, def.body);
 
-	add_default_animation(entity, FACTORY_VARIABLES, def.idle_animation);
+	add_idle_animation(entity, FACTORY_VARIABLES, def.idle_animation);
 
-	registry.emplace<component::properties>(entity, def.properties);
+	add_properties(entity, FACTORY_VARIABLES, def.properties);
 
 	constexpr std::size_t N = std::tuple_size_v<barn::component::skillset>;
 
@@ -86,9 +97,9 @@ entt::entity barn::create_enemy(FACTORY_PARAMETERS, const barn::enemy_preset& de
 
 	add_body(entity, FACTORY_VARIABLES, def.body);
 
-	add_default_animation(entity, FACTORY_VARIABLES, def.idle_animation);
+	add_idle_animation(entity, FACTORY_VARIABLES, def.idle_animation);
 
-	registry.emplace<component::properties>(entity, def.properties);
+	add_properties(entity, FACTORY_VARIABLES, def.properties);
 
 	component::action& action = registry.emplace<component::action>(entity, def.action);
 	action(ACTION_VARIABLES, ACTION_INITIALIZE);
@@ -103,9 +114,9 @@ entt::entity barn::create_bullet(FACTORY_PARAMETERS, const barn::bullet_preset& 
 
 	add_body(entity, FACTORY_VARIABLES, def.body);
 
-	add_default_animation(entity, FACTORY_VARIABLES, def.idle_animation);
+	add_idle_animation(entity, FACTORY_VARIABLES, def.idle_animation);
 
-	registry.emplace<component::properties>(entity, def.properties);
+	add_properties(entity, FACTORY_VARIABLES, def.properties);
 
 	registry.emplace<component::bullet>(entity);
 

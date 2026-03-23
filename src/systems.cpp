@@ -19,9 +19,7 @@ static void execute_skill(barn::skill& skill, ACTION_PARAMETERS) {
 
 void barn::property_system(entt::registry& registry) {
 	for (auto [entity, properties] : registry.view<component::properties>().each()) {
-		properties.health = properties.base.health;
-		properties.attack = properties.base.attack;
-		properties.speed = properties.base.speed;
+		// affects will be applied here
 
 		if (properties.health <= 0) {
 			registry.destroy(entity);
@@ -135,28 +133,29 @@ static void draw_texture(SDL_Renderer* renderer, barn::texture texture, const SD
 
 	const float texture_aspect_ratio = static_cast<float>(texture->w) / texture->h;
 
+	float dest_width, dest_height;
 	if (width && height) {
-		width = *width;
-		height = *height;
+		dest_width = *width;
+		dest_height = *height;
 	}
 	else if (!width && height) {
-		height = *height;
-		width = *height * texture_aspect_ratio;
+		dest_width = *height * texture_aspect_ratio;
+		dest_height = *height;
 	}
 	else if (width && !height) {
-		width = *width;
-		height = *width / texture_aspect_ratio;
+		dest_width = *width;
+		dest_height = *width / texture_aspect_ratio;
 	}
 	else {
-		width = texture->w;
-		height = texture->h;
+		dest_width = texture->w;
+		dest_height = texture->h;
 	}
 
 	const SDL_FRect dest_rect = {
-		transform.p.x * barn::PIXELS_PER_METER - *width / 2,
-		barn::VIRTUAL_HEIGHT_PIXELS - transform.p.y * barn::PIXELS_PER_METER - *height / 2,
-		*width,
-		*height
+		transform.p.x * barn::PIXELS_PER_METER - dest_width / 2,
+		barn::VIRTUAL_HEIGHT_PIXELS - transform.p.y * barn::PIXELS_PER_METER - dest_height / 2,
+		dest_width,
+		dest_height
 	};
 
 	SDL_RenderTextureRotated(
@@ -276,45 +275,21 @@ void barn::physics_system(entt::registry& registry, b2WorldId world_id) {
 		const b2BodyId bodyB = b2Shape_GetBody(begin_event.shapeIdB);
 		const entt::entity enttB = *static_cast<entt::entity*>(b2Body_GetUserData(bodyB));
 
-		if (!registry.all_of<barn::category>(enttA) || !registry.all_of<barn::category>(enttB)) {
+		if (!registry.all_of<component::properties>(enttA) || !registry.all_of<component::properties>(enttB)) {
 			continue;
 		}
 
-		const barn::category typeA = registry.get<barn::category>(enttA);
-		const barn::category typeB = registry.get<barn::category>(enttB);
+		component::properties& propA = registry.get<component::properties>(enttA);
+		component::properties& propB = registry.get<component::properties>(enttB);
+		propA.health -= propB.collide_damage;
+		propB.health -= propA.collide_damage;
 
-		const auto [first, first_type] = typeA < typeB ? std::pair{ enttA, typeA } : std::pair{ enttB, typeB };
-		const auto [second, second_type] = typeA < typeB ? std::pair{ enttB, typeB } : std::pair{ enttA, typeA };
-
-		if (first_type & category::ALLY) {
-			if (second_type & category::FOE) {
-				component::properties& first_prop = registry.get<component::properties>(first);
-				component::properties& second_prop = registry.get<component::properties>(second);
-				first_prop.health -= second_prop.attack;
-				if (first_prop.health <= 0) {
-					registry.destroy(first);
-				}
-			}
-			else if (second_type & category::FOE_BULLET) {
-				component::properties& first_prop = registry.get<component::properties>(first);
-				component::properties& second_prop = registry.get<component::properties>(second);
-				first_prop.health -= second_prop.attack;
-				registry.destroy(second);
-				if (first_prop.health <= 0) {
-					registry.destroy(first);
-				}
-			}
+		if (propA.health <= 0) {
+			registry.destroy(enttA);
 		}
-		else if (first_type & category::FOE) {
-			if (second_type & category::ALLY_BULLET) {
-				component::properties& first_prop = registry.get<component::properties>(first);
-				component::properties& second_prop = registry.get<component::properties>(second);
-				first_prop.health -= second_prop.attack;
-				registry.destroy(second);
-				if (first_prop.health <= 0) {
-					registry.destroy(first);
-				}
-			}
+
+		if (propB.health <= 0) {
+			registry.destroy(enttB);
 		}
 	}
 
@@ -331,20 +306,11 @@ void barn::physics_system(entt::registry& registry, b2WorldId world_id) {
 		const b2BodyId bodyB = b2Shape_GetBody(end_event.shapeIdB);
 		const entt::entity enttB = *static_cast<entt::entity*>(b2Body_GetUserData(bodyB));
 
-		if (!registry.all_of<barn::category>(enttA) || !registry.all_of<barn::category>(enttB)) {
-			continue;
-		}
-
-		const auto typeA = registry.get<barn::category>(enttA);
-		const auto typeB = registry.get<barn::category>(enttB);
-
-		const auto [first, first_type] = typeA < typeB ? std::pair{ enttA, typeA } : std::pair{ enttB, typeB };
-		const auto [second, second_type] = typeA < typeB ? std::pair{ enttB, typeB } : std::pair{ enttA, typeA };
-
-		if (first_type & (category::ALLY_BULLET | category::FOE_BULLET)) {
-			if (second_type & category::OBSTACLE) {
-				registry.destroy(first);
-			}
+		if (registry.any_of<component::bullet, component::obstacle>(enttA)
+			&& registry.any_of<component::bullet, component::obstacle>(enttB))
+		{
+			entt::entity bullet_entity = registry.any_of<component::bullet>(enttA) ? enttA : enttB;
+			registry.destroy(bullet_entity);
 		}
 	}
 }

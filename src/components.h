@@ -59,7 +59,9 @@ namespace barn {
 	struct base_properties {
 		int health = 1;
 		int attack = 0;
-		float speed = 0.f;
+		int defense = 0;
+		int collide_damage = 0;
+		int speed = 1;
 	};
 
 	enum action_state {
@@ -160,12 +162,12 @@ namespace barn::component {
 		barn::base_properties base{};
 		int health = 1;
 		int attack = 0;
-		float speed = 0.f;
+		int defense = 0;
+		int collide_damage = 0;
+		int speed = 0;
 	};
 
-	struct background {};
-	struct bullet {};
-	struct enemy {};
+	using transform = b2Transform;
 
 	enum class player {
 		P1,
@@ -175,5 +177,8 @@ namespace barn::component {
 		COUNT
 	};
 
-	using transform = b2Transform;
+	struct enemy {};
+	struct bullet {};
+	struct obstacle {};
+	struct background {};
 }

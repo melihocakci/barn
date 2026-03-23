@@ -116,7 +116,7 @@ decltype(barn::character_presets) barn::character_presets
 					def.idle_animation.texture = textures::green_onion;
 					def.idle_animation.frames = { {.w = 260.f, .h = 280.f} };
 					def.idle_animation.width = 1.f * PIXELS_PER_METER;
-					def.properties.attack = player_prop.attack;
+					def.properties.collide_damage = player_prop.attack;
 
 					barn::create_bullet(FACTORY_VARIABLES, def);
 				},
@@ -149,7 +149,7 @@ decltype(barn::enemy_presets) barn::enemy_presets
 		.properties
 		{
 			.health = 100,
-			.attack = 10,
+			.collide_damage = 10,
 			.speed = 5,
 		},
 		.action = [](ACTION_PARAMETERS)
