@@ -115,6 +115,15 @@ namespace barn {
 		barn::skill_def def{};
 		std::chrono::steady_clock::time_point last_used_time{};
 	};
+
+	struct input {
+		float axis_x = 0.f;
+		float axis_y = 0.f;
+		bool skill1 = false;
+		bool skill2 = false;
+		bool skill3 = false;
+		bool skill4 = false;
+	};
 }
 
 namespace barn::component {

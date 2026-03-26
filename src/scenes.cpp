@@ -71,15 +71,9 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 
 	barn::entity_def character_preset = character_presets[0];
 	character_preset.body->def.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS / 4 };
+	character_preset.player = component::player::P1;
 	entt::entity player_entity = create_entity(FACTORY_VARIABLES, character_preset);
-	registry.emplace<component::player>(player_entity, component::player::P1);
 	registry.emplace<component::keyboard>(player_entity);
-	int count;
-	SDL_JoystickID* ids = SDL_GetGamepads(&count);
-	if (count > 0) {
-		registry.emplace<component::gamepad>(player_entity, SDL_OpenGamepad(ids[0]), SDL_CloseGamepad);
-		SDL_free(ids);
-	}
 
 	barn::entity_def enemy_preset = enemy_presets[0];
 	enemy_preset.body->def.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS * 3 / 4 };
@@ -94,6 +88,22 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 			if (event.type == SDL_EVENT_QUIT) {
 				return 0;
 			}
+			else if (event.type == SDL_EventType::SDL_EVENT_GAMEPAD_ADDED) {
+				for (auto [entity, player] : registry.view<component::player>().each()) {
+					if (!registry.any_of<component::gamepad>(entity)) {
+						registry.emplace<component::gamepad>(player_entity, SDL_OpenGamepad(event.gdevice.which), SDL_CloseGamepad);
+						break;
+					}
+				}
+			}
+			else if (event.type == SDL_EventType::SDL_EVENT_GAMEPAD_REMOVED) {
+				for (auto [entity, gamepad] : registry.view<component::gamepad>().each()) {
+					if (SDL_GetGamepadID(gamepad.get()) == event.gdevice.which) {
+						registry.remove<component::gamepad>(entity);
+						break;
+					}
+				}
+			}
 		}
 
 		const Uint64 currentTicks = SDL_GetTicks();
@@ -105,8 +115,7 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 			property_system(registry);
 
 			if (SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS) {
-				keyboard_system(registry, renderer, mixer, world);
-				gamepad_system(registry, renderer, mixer, world);
+				input_system(registry, renderer, mixer, world);
 			}
 
 			action_system(registry, renderer, mixer, world);

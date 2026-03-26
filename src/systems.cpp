@@ -7,16 +7,6 @@
 #include <box2d/box2d.h>
 #include <SDL3/SDL.h>
 
-static void execute_skill(barn::skill& skill, ACTION_PARAMETERS) {
-	using namespace std::chrono;
-	const steady_clock::time_point current_time = steady_clock::now();
-	const milliseconds time_span = duration_cast<milliseconds>(current_time - skill.last_used_time);
-	if (time_span >= skill.def.cooldown) {
-		skill.def.action(ACTION_VARIABLES, state);
-		skill.last_used_time = current_time;
-	}
-}
-
 void barn::property_system(entt::registry& registry) {
 	for (auto [entity, properties] : registry.view<component::properties>().each()) {
 		// affects will be applied here
@@ -27,69 +17,93 @@ void barn::property_system(entt::registry& registry) {
 	}
 }
 
-void barn::keyboard_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
-	const auto view = registry.view<component::keyboard, component::player, component::body, component::skillset, component::properties>();
-	for (auto [entity, player, body, skillset, properties] : view.each())
-	{
-		const config::keyboard_controls& controls = barn::config::keyboard_bindings[static_cast<int>(player)];
+static barn::input get_keyboard_input(barn::component::player player) {
+	const barn::config::keyboard_controls& controls = barn::config::keyboard_bindings[static_cast<int>(player)];
 
-		const bool* state = SDL_GetKeyboardState(nullptr);
+	const bool* state = SDL_GetKeyboardState(nullptr);
 
-		if (state[controls.skill1])
-			execute_skill(skillset[0], ACTION_VARIABLES, ACTION_RUN);
-		if (state[controls.skill2])
-			execute_skill(skillset[1], ACTION_VARIABLES, ACTION_RUN);
-		if (state[controls.skill3])
-			execute_skill(skillset[2], ACTION_VARIABLES, ACTION_RUN);
-		if (state[controls.skill4])
-			execute_skill(skillset[3], ACTION_VARIABLES, ACTION_RUN);
+	float axis_x = 0.f, axis_y = 0.f;
+	if (state[controls.up])
+		axis_y += 1.f;
+	if (state[controls.down])
+		axis_y += -1.f;
+	if (state[controls.left])
+		axis_x += -1.f;
+	if (state[controls.right])
+		axis_x += 1.f;
 
-		b2Vec2 vec{};
-		if (state[controls.up])
-			vec += { 0, 1 };
-		if (state[controls.down])
-			vec += { 0, -1 };
-		if (state[controls.left])
-			vec += { -1, 0 };
-		if (state[controls.right])
-			vec += { 1, 0 };
+	return barn::input{
+		.axis_x = axis_x,
+		.axis_y = axis_y,
+		.skill1 = state[controls.skill1],
+		.skill2 = state[controls.skill2],
+		.skill3 = state[controls.skill3],
+		.skill4 = state[controls.skill4],
+	};
+}
 
-		if (length(vec) > 1.f) vec = normalize(vec);
+static barn::input get_gamepad_input(barn::component::player player, const barn::component::gamepad& gamepad) {
+	const barn::config::gamepad_controls& controls = barn::config::gamepad_bindings[static_cast<int>(player)];
 
-		b2Body_SetLinearVelocity(body.id, vec * properties.speed);
+	constexpr auto normalize_axis = [](const Sint16 axis) -> float
+		{
+			constexpr Sint16 DEAD_ZONE = 8000;
+			if (abs(axis) < DEAD_ZONE) return 0.f;
+			return static_cast<float>(axis > 0 ? axis - DEAD_ZONE : axis + DEAD_ZONE) / (axis > 0 ? 32767 - DEAD_ZONE : 32768 - DEAD_ZONE);
+		};
+
+	return barn::input{
+		.axis_x = normalize_axis(SDL_GetGamepadAxis(gamepad.get(), controls.axis_x)),
+		.axis_y = -normalize_axis(SDL_GetGamepadAxis(gamepad.get(), controls.axis_y)),
+		.skill1 = SDL_GetGamepadButton(gamepad.get(), controls.skill1),
+		.skill2 = SDL_GetGamepadButton(gamepad.get(), controls.skill2),
+		.skill3 = SDL_GetGamepadButton(gamepad.get(), controls.skill3),
+		.skill4 = SDL_GetGamepadButton(gamepad.get(), controls.skill4),
+	};
+}
+
+static void execute_skill(barn::skill& skill, ACTION_PARAMETERS) {
+	using namespace std::chrono;
+	const steady_clock::time_point current_time = steady_clock::now();
+	const milliseconds time_span = duration_cast<milliseconds>(current_time - skill.last_used_time);
+	if (time_span >= skill.def.cooldown) {
+		skill.def.action(ACTION_VARIABLES, state);
+		skill.last_used_time = current_time;
 	}
 }
 
-void barn::gamepad_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
-	const auto view = registry.view<component::gamepad, component::player, component::body, component::skillset, component::properties>();
-	for (auto [entity, gamepad, player, body, skillset, properties] : view.each())
-	{
-		const config::gamepad_controls& controls = barn::config::gamepad_bindings[static_cast<int>(player)];
+void barn::input_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
+	const auto view = registry.view<component::player, component::keyboard, component::body, component::skillset, component::properties>();
+	for (auto [entity, player, body, skillset, properties] : view.each()) {
+		barn::input keyboard_input{}, gamepad_input{};
 
-		if (SDL_GetGamepadButton(gamepad.get(), controls.skill1))
-			execute_skill(skillset[0], ACTION_VARIABLES, ACTION_RUN);
-		if (SDL_GetGamepadButton(gamepad.get(), controls.skill2))
-			execute_skill(skillset[1], ACTION_VARIABLES, ACTION_RUN);
-		if (SDL_GetGamepadButton(gamepad.get(), controls.skill3))
-			execute_skill(skillset[2], ACTION_VARIABLES, ACTION_RUN);
-		if (SDL_GetGamepadButton(gamepad.get(), controls.skill4))
-			execute_skill(skillset[3], ACTION_VARIABLES, ACTION_RUN);
+		if (registry.all_of<barn::component::keyboard>(entity)) {
+			keyboard_input = get_keyboard_input(player);
+		}
 
-		constexpr auto normalize_axis = [](const Sint16 axis) -> float
-			{
-				constexpr Sint16 DEAD_ZONE = 8000;
-				if (abs(axis) < DEAD_ZONE) return 0.f;
-				return static_cast<float>(axis > 0 ? axis - DEAD_ZONE : axis + DEAD_ZONE) / (axis > 0 ? 32767 - DEAD_ZONE : 32768 - DEAD_ZONE);
-			};
+		if (registry.all_of<barn::component::gamepad>(entity)) {
+			const barn::component::gamepad& gamepad = registry.get<barn::component::gamepad>(entity);
+			gamepad_input = get_gamepad_input(player, gamepad);
+		}
 
-		b2Vec2 vec = {
-			normalize_axis(SDL_GetGamepadAxis(gamepad.get(), controls.axis_x)),
-			-normalize_axis(SDL_GetGamepadAxis(gamepad.get(), controls.axis_y))
+		b2Vec2 vec{
+			std::fabs(keyboard_input.axis_x) > std::fabs(gamepad_input.axis_x) ? keyboard_input.axis_x : gamepad_input.axis_x,
+			std::fabs(keyboard_input.axis_y) > std::fabs(gamepad_input.axis_y) ? keyboard_input.axis_y : gamepad_input.axis_y
 		};
 
-		if (length(vec) > 1.f) vec = normalize(vec);
+		if (length(vec) > 1.f)
+			vec = normalize(vec);
 
 		b2Body_SetLinearVelocity(body.id, vec * properties.speed);
+
+		if (keyboard_input.skill1 || gamepad_input.skill1)
+			execute_skill(skillset[0], ACTION_VARIABLES, ACTION_RUN);
+		if (keyboard_input.skill2 || gamepad_input.skill2)
+			execute_skill(skillset[1], ACTION_VARIABLES, ACTION_RUN);
+		if (keyboard_input.skill3 || gamepad_input.skill3)
+			execute_skill(skillset[2], ACTION_VARIABLES, ACTION_RUN);
+		if (keyboard_input.skill4 || gamepad_input.skill4)
+			execute_skill(skillset[3], ACTION_VARIABLES, ACTION_RUN);
 	}
 }
 
