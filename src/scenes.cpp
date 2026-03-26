@@ -17,6 +17,38 @@ int barn::main_menu(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mixer
 	return barn::combat_scene(window, renderer, mixer, world_id);
 }
 
+static entt::entity create_borders(FACTORY_PARAMETERS) {
+	using namespace barn;
+
+	barn::body_def body_def{};
+	body_def.def.type = b2_staticBody;
+	body_def.def.position = { 0, 0 };
+
+	b2ShapeDef shape_def = b2DefaultShapeDef();
+	shape_def.filter.categoryBits = barn::category::OBSTACLE;
+
+	constexpr float half_width = 2.f;
+
+	b2Polygon top_rect = b2MakeOffsetBox(VIRTUAL_WIDTH_METERS, half_width, { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS + half_width }, b2Rot_identity);
+	b2Polygon bottom_rect = b2MakeOffsetBox(VIRTUAL_WIDTH_METERS, half_width, { VIRTUAL_WIDTH_METERS / 2, -half_width }, b2Rot_identity);
+	b2Polygon left_rect = b2MakeOffsetBox(half_width, VIRTUAL_HEIGHT_METERS, { -half_width, VIRTUAL_HEIGHT_METERS / 2 }, b2Rot_identity);
+	b2Polygon right_rect = b2MakeOffsetBox(half_width, VIRTUAL_HEIGHT_METERS, { VIRTUAL_WIDTH_METERS + half_width, VIRTUAL_HEIGHT_METERS / 2 }, b2Rot_identity);
+
+	body_def.polygons = {
+		{ shape_def, top_rect },
+		{ shape_def, bottom_rect },
+		{ shape_def, left_rect },
+		{ shape_def, right_rect }
+	};
+
+	barn::entity_def entity_def{
+		.body = body_def,
+		.obstacle = component::obstacle{},
+	};
+
+	return create_entity(FACTORY_VARIABLES, entity_def);
+}
+
 int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
 	entt::registry registry;
 
@@ -37,19 +69,21 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 	SDL_SetNumberProperty(props, MIX_PROP_PLAY_LOOPS_NUMBER, -1);
 	MIX_PlayTrack(track, props);
 
-	barn::character_preset character_preset = character_presets[0];
-	character_preset.body.def.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS / 4 };
-	entt::entity player_entity = create_player(registry, renderer, mixer, world, character_preset);
+	barn::entity_def character_preset = character_presets[0];
+	character_preset.body->def.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS / 4 };
+	entt::entity player_entity = create_entity(FACTORY_VARIABLES, character_preset);
 	registry.emplace<component::player>(player_entity, component::player::P1);
 	registry.emplace<component::keyboard>(player_entity);
-	//int count;
-	//SDL_JoystickID* ids = SDL_GetGamepads(&count);
-	//registry.emplace<gamepad>(player_entity, SDL_OpenGamepad(ids[0]), SDL_CloseGamepad);
-	//SDL_free(ids);
+	int count;
+	SDL_JoystickID* ids = SDL_GetGamepads(&count);
+	if (count > 0) {
+		registry.emplace<component::gamepad>(player_entity, SDL_OpenGamepad(ids[0]), SDL_CloseGamepad);
+		SDL_free(ids);
+	}
 
-	barn::enemy_preset enemy_preset = enemy_presets[0];
-	enemy_preset.body.def.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS * 3 / 4 };
-	create_enemy(FACTORY_VARIABLES, enemy_preset);
+	barn::entity_def enemy_preset = enemy_presets[0];
+	enemy_preset.body->def.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS * 3 / 4 };
+	create_entity(FACTORY_VARIABLES, enemy_preset);
 
 	float accumulator = 0.0f;
 	Uint64 prevTicks = SDL_GetTicks();

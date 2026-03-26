@@ -25,9 +25,9 @@ namespace barn {
 
 	enum category : std::uint64_t {
 		ALLY = 1,
-		FOE = 1 << 1,
+		ENEMY = 1 << 1,
 		ALLY_BULLET = 1 << 2,
-		FOE_BULLET = 1 << 3,
+		ENEMY_BULLET = 1 << 3,
 		OBSTACLE = 1 << 4,
 	};
 
@@ -158,13 +158,8 @@ namespace barn::component {
 
 	using skillset = std::array<skill, sizeof(skillset_def) / sizeof(skillset_def::value_type)>;
 
-	struct properties {
-		barn::base_properties base{};
-		int health = 1;
-		int attack = 0;
-		int defense = 0;
-		int collide_damage = 0;
-		int speed = 0;
+	struct properties : public base_properties {
+		base_properties base{};
 	};
 
 	using transform = b2Transform;

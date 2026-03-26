@@ -40,85 +40,62 @@ static void add_properties(entt::entity entity, FACTORY_PARAMETERS, const barn::
 	);
 }
 
-entt::entity barn::create_borders(FACTORY_PARAMETERS) {
-	entt::entity entity = registry.create();
-
-	barn::body_def body_def{};
-	body_def.def.type = b2_staticBody;
-	body_def.def.position = { 0, 0 };
-
-	b2ShapeDef shape_def = b2DefaultShapeDef();
-	shape_def.filter.categoryBits = barn::category::OBSTACLE;
-
-	constexpr float half_width = 2.f;
-
-	b2Polygon top_rect = b2MakeOffsetBox(VIRTUAL_WIDTH_METERS, half_width, { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS + half_width }, b2Rot_identity);
-	b2Polygon bottom_rect = b2MakeOffsetBox(VIRTUAL_WIDTH_METERS, half_width, { VIRTUAL_WIDTH_METERS / 2, -half_width }, b2Rot_identity);
-	b2Polygon left_rect = b2MakeOffsetBox(half_width, VIRTUAL_HEIGHT_METERS, { -half_width, VIRTUAL_HEIGHT_METERS / 2 }, b2Rot_identity);
-	b2Polygon right_rect = b2MakeOffsetBox(half_width, VIRTUAL_HEIGHT_METERS, { VIRTUAL_WIDTH_METERS + half_width, VIRTUAL_HEIGHT_METERS / 2 }, b2Rot_identity);
-
-	body_def.polygons = {
-		{ shape_def, top_rect },
-		{ shape_def, bottom_rect },
-		{ shape_def, left_rect },
-		{ shape_def, right_rect }
-	};
-
-	add_body(entity, FACTORY_VARIABLES, body_def);
-
-	return entity;
-}
-
-entt::entity barn::create_player(FACTORY_PARAMETERS, const barn::character_preset& def) {
-	const entt::entity entity = registry.create();
-
-	add_body(entity, FACTORY_VARIABLES, def.body);
-
-	add_idle_animation(entity, FACTORY_VARIABLES, def.idle_animation);
-
-	add_properties(entity, FACTORY_VARIABLES, def.properties);
-
+static void add_skillset(entt::entity entity, FACTORY_PARAMETERS, const barn::skillset_def& def) {
 	constexpr std::size_t N = std::tuple_size_v<barn::component::skillset>;
 
-	component::skillset skillset = [&] <std::size_t... I>(std::index_sequence<I...>) {
-		return barn::component::skillset{ { barn::skill{ def.skillset[I], std::chrono::steady_clock::time_point{} }... } };
+	barn::component::skillset skillset = [&] <std::size_t... I>(std::index_sequence<I...>) {
+		return barn::component::skillset{ { barn::skill{ def[I], std::chrono::steady_clock::time_point{} }... } };
 	}(std::make_index_sequence<N>{});
 
-	component::skillset& skills = registry.emplace<component::skillset>(entity, skillset);
+	barn::component::skillset& skills = registry.emplace<barn::component::skillset>(entity, skillset);
 	for (auto& skill : skills) {
-		skill.def.action(ACTION_VARIABLES, ACTION_INITIALIZE);
+		skill.def.action(ACTION_VARIABLES, barn::action_state::ACTION_INITIALIZE);
+	}
+}
+
+entt::entity barn::create_entity(FACTORY_PARAMETERS, const barn::entity_def& def) {
+	const entt::entity entity = registry.create();
+
+	if (def.body) {
+		add_body(entity, FACTORY_VARIABLES, *def.body);
 	}
 
-	return entity;
-}
+	if (def.idle_animation) {
+		add_idle_animation(entity, FACTORY_VARIABLES, *def.idle_animation);
+	}
 
-entt::entity barn::create_enemy(FACTORY_PARAMETERS, const barn::enemy_preset& def) {
-	const entt::entity entity = registry.create();
+	if (def.properties) {
+		add_properties(entity, FACTORY_VARIABLES, *def.properties);
+	}
 
-	add_body(entity, FACTORY_VARIABLES, def.body);
+	if (def.skillset) {
+		add_skillset(entity, FACTORY_VARIABLES, *def.skillset);
+	}
 
-	add_idle_animation(entity, FACTORY_VARIABLES, def.idle_animation);
+	if (def.action) {
+		component::action& action = registry.emplace<component::action>(entity, *def.action);
+		action(ACTION_VARIABLES, ACTION_INITIALIZE);
+	}
 
-	add_properties(entity, FACTORY_VARIABLES, def.properties);
+	if (def.player) {
+		registry.emplace<component::player>(entity, *def.player);
+	}
 
-	component::action& action = registry.emplace<component::action>(entity, def.action);
-	action(ACTION_VARIABLES, ACTION_INITIALIZE);
+	if (def.enemy) {
+		registry.emplace<component::enemy>(entity);
+	}
 
-	registry.emplace<component::enemy>(entity);
+	if (def.bullet) {
+		registry.emplace<component::bullet>(entity);
+	}
 
-	return entity;
-}
+	if (def.obstacle) {
+		registry.emplace<component::obstacle>(entity);
+	}
 
-entt::entity barn::create_bullet(FACTORY_PARAMETERS, const barn::bullet_preset& def) {
-	const entt::entity entity = registry.create();
-
-	add_body(entity, FACTORY_VARIABLES, def.body);
-
-	add_idle_animation(entity, FACTORY_VARIABLES, def.idle_animation);
-
-	add_properties(entity, FACTORY_VARIABLES, def.properties);
-
-	registry.emplace<component::bullet>(entity);
+	if (def.background) {
+		registry.emplace<component::background>(entity);
+	}
 
 	return entity;
 }

@@ -22,14 +22,14 @@ static const b2ShapeDef ally_shape_def = [] {
 	b2ShapeDef def = b2DefaultShapeDef();
 	def.enableContactEvents = true;
 	def.filter.categoryBits = barn::category::ALLY;
-	def.filter.maskBits = barn::category::FOE | barn::category::FOE_BULLET | barn::category::OBSTACLE;
+	def.filter.maskBits = barn::category::ENEMY | barn::category::ENEMY_BULLET | barn::category::OBSTACLE;
 	return def;
 	}();
 
-static const b2ShapeDef foe_shape_def = [] {
+static const b2ShapeDef enemy_shape_def = [] {
 	b2ShapeDef def = b2DefaultShapeDef();
 	def.enableContactEvents = true;
-	def.filter.categoryBits = barn::category::FOE;
+	def.filter.categoryBits = barn::category::ENEMY;
 	def.filter.maskBits = barn::category::ALLY | barn::category::ALLY_BULLET | barn::category::OBSTACLE;
 	return def;
 	}();
@@ -37,13 +37,13 @@ static const b2ShapeDef foe_shape_def = [] {
 static const b2ShapeDef ally_bullet_shape_def = [] {
 	b2ShapeDef def = b2DefaultShapeDef();
 	def.filter.categoryBits = barn::category::ALLY_BULLET;
-	def.filter.maskBits = barn::category::FOE | barn::category::OBSTACLE;
+	def.filter.maskBits = barn::category::ENEMY | barn::category::OBSTACLE;
 	return def;
 	}();
 
-static const b2ShapeDef foe_bullet_shape_def = [] {
+static const b2ShapeDef enemy_bullet_shape_def = [] {
 	b2ShapeDef def = b2DefaultShapeDef();
-	def.filter.categoryBits = barn::category::FOE_BULLET;
+	def.filter.categoryBits = barn::category::ENEMY_BULLET;
 	def.filter.maskBits = barn::category::ALLY | barn::category::OBSTACLE;
 	return def;
 	}();
@@ -56,31 +56,31 @@ static const b2ShapeDef foe_bullet_shape_def = [] {
 
 decltype(barn::character_presets) barn::character_presets
 {
-	character_preset{
-		.body{
+	entity_def{
+		.body = body_def{
 			.def = default_body_def,
 			.circles{
 				{ally_shape_def, b2Circle{{}, 0.25f}}
 			}
 		},
-		.idle_animation{
+		.idle_animation = animation_def{
 			.texture = textures::miku_animation,
 			.frames = []() -> std::vector<SDL_FRect> {
 				std::vector<SDL_FRect> rects;
 				for (int i = 0; i < 20; ++i) {
-					rects.push_back({ i * 59.f, 0.f, 59.f, 64.f });
+					rects.emplace_back(i * 59.f, 0.f, 59.f, 64.f);
 				}
 				return rects;
 			}(),
 			.height = .8f * PIXELS_PER_METER,
 			.duration = 1000ms,
 		},
-		.properties{
+		.properties = base_properties{
 			.health = 1000,
 			.attack = 10,
 			.speed = 10,
 		},
-		.skillset{
+		.skillset = skillset_def{
 			skill_def{
 				.cooldown = 250ms,
 				.action = [](ACTION_PARAMETERS) {
@@ -106,19 +106,31 @@ decltype(barn::character_presets) barn::character_presets
 					local& assets = registry.get<local>(entity);
 					MIX_PlayAudio(mixer, assets.weiii.get());
 
-					barn::bullet_preset def;
-					def.body.def.type = b2_kinematicBody;
-					def.body.def.position = b2Body_GetPosition(player_body.id);
-					def.body.def.linearVelocity = b2Vec2{ 0.f, 10.f };
-					def.body.def.fixedRotation = false;
-					def.body.def.angularVelocity = B2_PI;
-					def.body.circles.emplace_back(ally_bullet_shape_def, b2Circle({}, 0.25f));
-					def.idle_animation.texture = textures::green_onion;
-					def.idle_animation.frames = { {.w = 260.f, .h = 280.f} };
-					def.idle_animation.width = 1.f * PIXELS_PER_METER;
-					def.properties.collide_damage = player_prop.attack;
+					b2BodyDef body_def = default_body_def;
+					body_def.type = b2_kinematicBody;
+					body_def.position = b2Body_GetPosition(player_body.id);
+					body_def.linearVelocity = { 0.f, 10.f };
+					body_def.angularVelocity = B2_PI;
 
-					barn::create_bullet(FACTORY_VARIABLES, def);
+					barn::entity_def def{
+						.body = barn::body_def{
+							.def = body_def,
+							.circles{
+								{ally_bullet_shape_def, b2Circle{{}, 0.25f}}
+							}
+						},
+						.idle_animation = animation_def{
+							.texture = textures::green_onion,
+							.frames = { SDL_FRect{0.f, 0.f, 260.f, 280.f} },
+							.width = 1.f * PIXELS_PER_METER,
+						},
+						.properties = base_properties{
+							.collide_damage = player_prop.attack,
+						},
+					};
+
+
+					barn::create_entity(FACTORY_VARIABLES, def);
 				},
 			},
 		}
@@ -133,21 +145,20 @@ decltype(barn::character_presets) barn::character_presets
 
 decltype(barn::enemy_presets) barn::enemy_presets
 {
-	enemy_preset{
-		.body{
+	entity_def{
+		.body = body_def{
 			.def = default_body_def,
 			.circles{
-				{foe_shape_def, b2Circle{{}, 0.5f}}
+				{enemy_shape_def, b2Circle{{}, 0.5f}}
 			}
 		},
-		.idle_animation{
+		.idle_animation = animation_def{
 			.texture = textures::pearto,
 			.frames = { SDL_FRect{0.f, 0.f, 270.f, 450.f} },
 			.height = 2.f * PIXELS_PER_METER,
 			.duration = 1000ms,
 		},
-		.properties
-		{
+		.properties = base_properties{
 			.health = 100,
 			.collide_damage = 10,
 			.speed = 5,

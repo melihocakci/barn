@@ -12,7 +12,7 @@ static void execute_skill(barn::skill& skill, ACTION_PARAMETERS) {
 	const steady_clock::time_point current_time = steady_clock::now();
 	const milliseconds time_span = duration_cast<milliseconds>(current_time - skill.last_used_time);
 	if (time_span >= skill.def.cooldown) {
-		skill.def.action(ACTION_VARIABLES, barn::ACTION_RUN);
+		skill.def.action(ACTION_VARIABLES, state);
 		skill.last_used_time = current_time;
 	}
 }
