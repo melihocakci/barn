@@ -69,6 +69,22 @@ elseif(APPLE)
     )
 endif()
 
+set(IMGUI_PATH "lib/imgui")
+add_library(imgui INTERFACE
+    "${IMGUI_PATH}/imgui.cpp"
+    "${IMGUI_PATH}/imgui_draw.cpp"
+    "${IMGUI_PATH}/imgui_tables.cpp"
+    "${IMGUI_PATH}/imgui_widgets.cpp"
+    "${IMGUI_PATH}/backends/imgui_impl_sdl3.cpp"
+    "${IMGUI_PATH}/backends/imgui_impl_sdlrenderer3.cpp"
+)
+
+target_include_directories(imgui
+    INTERFACE
+        "${IMGUI_PATH}"
+        "${IMGUI_PATH}/backends"
+)
+
 add_executable(${PROJECT_NAME} WIN32
     "src/main.cpp"
     "src/scenes.cpp"
@@ -86,6 +102,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     "EnTT::EnTT"
     "box2d"
     "steamworks_sdk"
+    "imgui"
 )
 
 get_target_property(STEAM_LIB steamworks_sdk IMPORTED_LOCATION)
