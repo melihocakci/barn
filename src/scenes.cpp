@@ -12,6 +12,7 @@
 #include <box2d/box2d.h>
 #include <SDL3/SDL.h>
 #include <SDL3_mixer/SDL_mixer.h>
+#include <imgui_impl_sdl3.h>
 
 int barn::main_menu(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world_id) {
 	return barn::combat_scene(window, renderer, mixer, world_id);
@@ -85,6 +86,8 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 	while (true) {
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
+			ImGui_ImplSDL3_ProcessEvent(&event);
+
 			if (event.type == SDL_EVENT_QUIT) {
 				return 0;
 			}

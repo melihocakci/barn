@@ -5,6 +5,9 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3_mixer/SDL_mixer.h>
 #include <box2d/box2d.h>
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
+#include <imgui_impl_sdlrenderer3.h>
 
 struct sdl_guard {
 	SDL_Window* window{};
@@ -27,18 +30,25 @@ struct sdl_guard {
 		success = SDL_SetRenderVSync(renderer, 1);
 		if (!success) throw std::runtime_error(SDL_GetError());
 
-		success = SDL_SetRenderLogicalPresentation(
-			renderer,
-			barn::VIRTUAL_WIDTH_PIXELS,
-			barn::VIRTUAL_HEIGHT_PIXELS,
-			SDL_LOGICAL_PRESENTATION_LETTERBOX
-		);
-		if (!success) throw std::runtime_error(SDL_GetError());
-
 		mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
 		if (!mixer) throw std::runtime_error(SDL_GetError());
+
+		IMGUI_CHECKVERSION();
+		ImGui::CreateContext();
+		ImGuiIO& io = ImGui::GetIO();
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
+
+		ImGui::StyleColorsDark();
+
+		ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
+		ImGui_ImplSDLRenderer3_Init(renderer);
 	}
 	~sdl_guard() {
+		ImGui_ImplSDLRenderer3_Shutdown();
+		ImGui_ImplSDL3_Shutdown();
+		ImGui::DestroyContext();
+
 		if (mixer) MIX_DestroyMixer(mixer);
 		if (renderer) SDL_DestroyRenderer(renderer);
 		if (window) SDL_DestroyWindow(window);

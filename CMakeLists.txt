@@ -70,7 +70,7 @@ elseif(APPLE)
 endif()
 
 set(IMGUI_PATH "lib/imgui")
-add_library(imgui INTERFACE
+add_library(imgui STATIC
     "${IMGUI_PATH}/imgui.cpp"
     "${IMGUI_PATH}/imgui_draw.cpp"
     "${IMGUI_PATH}/imgui_tables.cpp"
@@ -79,10 +79,13 @@ add_library(imgui INTERFACE
     "${IMGUI_PATH}/backends/imgui_impl_sdlrenderer3.cpp"
 )
 
-target_include_directories(imgui
-    INTERFACE
-        "${IMGUI_PATH}"
-        "${IMGUI_PATH}/backends"
+target_include_directories(imgui PUBLIC
+    "${IMGUI_PATH}"
+    "${IMGUI_PATH}/backends"
+)
+
+target_link_libraries(imgui PRIVATE
+    "SDL3::SDL3-static"
 )
 
 add_executable(${PROJECT_NAME} WIN32

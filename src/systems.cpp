@@ -8,6 +8,9 @@
 
 #include <box2d/box2d.h>
 #include <SDL3/SDL.h>
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
+#include <imgui_impl_sdlrenderer3.h>
 
 void barn::property_system(entt::registry& registry) {
 	for (auto [entity, properties] : registry.view<component::properties>().each()) {
@@ -330,6 +333,36 @@ void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer, float a
 			: b2Body_GetTransform(body.id)
 		);
 	}
+
+	// 2. Start the Dear ImGui frame
+	ImGui_ImplSDLRenderer3_NewFrame();
+	ImGui_ImplSDL3_NewFrame();
+	ImGui::NewFrame();
+
+	// 3. Build your UI here
+	ImGui::Begin("Debug Menu");
+	ImGui::Text("Hello, SDL3 Renderer!");
+	if (ImGui::Button("Quit Game")) {
+		std::exit(0);
+	}
+	ImGui::End();
+
+	// 4. Render ImGui
+	ImGui::Render();
+
+	bool success = SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+	if (!success) throw std::runtime_error(SDL_GetError());
+
+	// Draw ImGui over your game
+	ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
+
+	success = SDL_SetRenderLogicalPresentation(
+		renderer,
+		barn::VIRTUAL_WIDTH_PIXELS,
+		barn::VIRTUAL_HEIGHT_PIXELS,
+		SDL_LOGICAL_PRESENTATION_LETTERBOX
+	);
+	if (!success) throw std::runtime_error(SDL_GetError());
 
 	SDL_RenderPresent(renderer);
 }
