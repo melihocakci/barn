@@ -41,15 +41,10 @@ static void add_properties(entt::entity entity, FACTORY_PARAMETERS, const barn::
 }
 
 static void add_skillset(entt::entity entity, FACTORY_PARAMETERS, const barn::skillset_def& def) {
-	constexpr std::size_t N = std::tuple_size_v<barn::component::skillset>;
+	barn::component::skillset& skillset = registry.emplace<barn::component::skillset>(entity);
 
-	barn::component::skillset skillset = [&] <std::size_t... I>(std::index_sequence<I...>) {
-		return barn::component::skillset{ { barn::skill{ def[I], std::chrono::steady_clock::time_point{} }... } };
-	}(std::make_index_sequence<N>{});
-
-	barn::component::skillset& skills = registry.emplace<barn::component::skillset>(entity, skillset);
-	for (auto& skill : skills) {
-		skill.def.action(ACTION_VARIABLES, barn::action_state::ACTION_INITIALIZE);
+	for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
+		skillset[i] = barn::skill{ def[i], std::chrono::steady_clock::time_point{} };
 	}
 }
 
@@ -72,9 +67,8 @@ entt::entity barn::create_entity(FACTORY_PARAMETERS, const barn::entity_def& def
 		add_skillset(entity, FACTORY_VARIABLES, *def.skillset);
 	}
 
-	if (def.action) {
-		component::action& action = registry.emplace<component::action>(entity, *def.action);
-		action(ACTION_VARIABLES, ACTION_INITIALIZE);
+	if (def.ai_code) {
+		registry.emplace<component::ai_code>(entity, *def.ai_code);
 	}
 
 	if (def.player) {

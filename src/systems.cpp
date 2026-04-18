@@ -3,6 +3,8 @@
 #include "constants.h"
 #include "utils.h"
 #include "config.h"
+#include "factories.h"
+#include "assets.h"
 
 #include <box2d/box2d.h>
 #include <SDL3/SDL.h>
@@ -35,10 +37,12 @@ static barn::input get_keyboard_input(barn::component::player player) {
 	return barn::input{
 		.axis_x = axis_x,
 		.axis_y = axis_y,
-		.skill1 = state[controls.skill1],
-		.skill2 = state[controls.skill2],
-		.skill3 = state[controls.skill3],
-		.skill4 = state[controls.skill4],
+		.skills = {
+			state[controls.skill1],
+			state[controls.skill2],
+			state[controls.skill3],
+			state[controls.skill4],
+		}
 	};
 }
 
@@ -55,20 +59,70 @@ static barn::input get_gamepad_input(barn::component::player player, const barn:
 	return barn::input{
 		.axis_x = normalize_axis(SDL_GetGamepadAxis(gamepad.get(), controls.axis_x)),
 		.axis_y = -normalize_axis(SDL_GetGamepadAxis(gamepad.get(), controls.axis_y)),
-		.skill1 = SDL_GetGamepadButton(gamepad.get(), controls.skill1),
-		.skill2 = SDL_GetGamepadButton(gamepad.get(), controls.skill2),
-		.skill3 = SDL_GetGamepadButton(gamepad.get(), controls.skill3),
-		.skill4 = SDL_GetGamepadButton(gamepad.get(), controls.skill4),
+		.skills = {
+			SDL_GetGamepadButton(gamepad.get(), controls.skill1),
+			SDL_GetGamepadButton(gamepad.get(), controls.skill2),
+			SDL_GetGamepadButton(gamepad.get(), controls.skill3),
+			SDL_GetGamepadButton(gamepad.get(), controls.skill4),
+		}
 	};
 }
 
-static void execute_skill(barn::skill& skill, ACTION_PARAMETERS) {
+static void execute_skill(barn::skill& skill, entt::entity entity, entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
 	using namespace std::chrono;
 	const steady_clock::time_point current_time = steady_clock::now();
 	const milliseconds time_span = duration_cast<milliseconds>(current_time - skill.last_used_time);
-	if (time_span >= skill.def.cooldown) {
-		skill.def.action(ACTION_VARIABLES, state);
-		skill.last_used_time = current_time;
+	if (time_span < skill.def.cooldown) {
+		return;
+	}
+	skill.last_used_time = current_time;
+
+	using namespace barn;
+
+	static const b2BodyDef default_body_def = [] {
+		b2BodyDef def = b2DefaultBodyDef();
+		def.type = b2_dynamicBody;
+		def.fixedRotation = true;
+		return def;
+		}();
+
+	static const b2ShapeDef bullet_shape_def = [] {
+		b2ShapeDef def = b2DefaultShapeDef();
+		def.filter.categoryBits = barn::category::ALLY_BULLET;
+		def.filter.maskBits = barn::category::ENEMY | barn::category::OBSTACLE;
+		return def;
+		}();
+
+	switch (skill.def.code) {
+	case barn::skill_code::GREEN_ONION:
+		auto [player_body, player_prop] = registry.get<component::body, component::properties>(entity);
+
+		MIX_PlayAudio(mixer, get_audio(audios::weiii).get());
+
+		b2BodyDef body_def = default_body_def;
+		body_def.type = b2_kinematicBody;
+		body_def.position = b2Body_GetPosition(player_body.id);
+		body_def.linearVelocity = { 0.f, 10.f };
+		body_def.angularVelocity = B2_PI;
+
+		barn::entity_def def{
+			.body = barn::body_def{
+				.def = body_def,
+				.circles{
+					{bullet_shape_def, b2Circle{{}, 0.25f}}
+				}
+			},
+			.idle_animation = animation_def{
+				.texture = textures::green_onion,
+				.frames = { SDL_FRect{0.f, 0.f, 260.f, 280.f} },
+				.width = 1.f * PIXELS_PER_METER,
+			},
+			.properties = base_properties{
+				.collide_damage = player_prop.attack,
+			},
+		};
+
+		barn::create_entity(FACTORY_VARIABLES, def);
 	}
 }
 
@@ -96,20 +150,44 @@ void barn::input_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mi
 
 		b2Body_SetLinearVelocity(body.id, vec * properties.speed);
 
-		if (keyboard_input.skill1 || gamepad_input.skill1)
-			execute_skill(skillset[0], ACTION_VARIABLES, ACTION_RUN);
-		if (keyboard_input.skill2 || gamepad_input.skill2)
-			execute_skill(skillset[1], ACTION_VARIABLES, ACTION_RUN);
-		if (keyboard_input.skill3 || gamepad_input.skill3)
-			execute_skill(skillset[2], ACTION_VARIABLES, ACTION_RUN);
-		if (keyboard_input.skill4 || gamepad_input.skill4)
-			execute_skill(skillset[3], ACTION_VARIABLES, ACTION_RUN);
+		for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
+			if (keyboard_input.skills[i] || gamepad_input.skills[i]) {
+				execute_skill(skillset[i], entity, registry, renderer, mixer, world);
+			}
+		}
 	}
 }
 
-void barn::action_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
-	for (auto [entity, action] : registry.view<barn::action>().each()) {
-		action(ACTION_VARIABLES, ACTION_RUN);
+void barn::ai_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
+	for (auto [entity, ai_code] : registry.view<component::ai_code>().each()) {
+		switch (ai_code) {
+		case component::ai_code::CHASER:
+			auto [enemy_body, enemy_stats] = registry.get<component::body, component::properties>(entity);
+			b2Vec2 enemy_position = b2Body_GetPosition(enemy_body.id);
+
+			float shortest_distance = -1.f;
+			b2Vec2 closest_target{};
+
+			for (auto [entity, _, player_body] : registry.view<component::player, component::body>().each()) {
+				const b2Vec2 player_position = b2Body_GetPosition(player_body.id);
+
+				float distance = length(enemy_position - player_position);
+
+				if (distance < shortest_distance || shortest_distance < 0)
+				{
+					shortest_distance = distance;
+					closest_target = player_position;
+				}
+			}
+
+			if (shortest_distance < 0) {
+				b2Body_SetLinearVelocity(enemy_body.id, { 0, 0 });
+				return;
+			}
+
+			b2Vec2 vel = normalize(closest_target - enemy_position) * enemy_stats.speed;
+			b2Body_SetLinearVelocity(enemy_body.id, vel);
+		}
 	}
 }
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "constants.h"
+
 #include <SDL3/SDL.h>
 #include <SDL3_mixer/SDL_mixer.h>
 #include <entt/entt.hpp>
@@ -8,9 +10,6 @@
 #include <chrono>
 #include <memory>
 #include <future>
-
-#define ACTION_PARAMETERS entt::entity entity, entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world, barn::action_state state
-#define ACTION_VARIABLES entity, registry, renderer, mixer, world
 
 namespace barn {
 	struct circle_def {
@@ -23,37 +22,18 @@ namespace barn {
 		b2Polygon polygon{};
 	};
 
-	enum category : std::uint64_t {
-		ALLY = 1,
-		ENEMY = 1 << 1,
-		ALLY_BULLET = 1 << 2,
-		ENEMY_BULLET = 1 << 3,
-		OBSTACLE = 1 << 4,
-	};
-
 	struct body_def {
 		b2BodyDef def = b2DefaultBodyDef();
 		std::vector<circle_def> circles{};
 		std::vector<polygon_def> polygons{};
 	};
 
-	using asset_def = std::string_view;
-
-	struct sprite_def {
-		barn::asset_def texture{};
-		std::optional<SDL_FRect> src_rect{};
-		std::optional<float> width{};
-		std::optional<float> height{};
-	};
-
-	using namespace std::chrono_literals;
-
-	struct animation_def {
-		barn::asset_def texture{};
-		std::vector<SDL_FRect> frames{};
-		std::optional<float> width{};
-		std::optional<float> height{};
-		std::chrono::milliseconds duration = 1000ms;
+	enum category : std::uint64_t {
+		ALLY = 1,
+		ENEMY = 1 << 1,
+		ALLY_BULLET = 1 << 2,
+		ENEMY_BULLET = 1 << 3,
+		OBSTACLE = 1 << 4,
 	};
 
 	struct base_properties {
@@ -64,22 +44,11 @@ namespace barn {
 		int speed = 1;
 	};
 
-	enum action_state {
-		ACTION_INITIALIZE = 1,
-		ACTION_RUN = 2,
-		ACTION_CLEANUP = 3,
+	struct input {
+		float axis_x = 0.f;
+		float axis_y = 0.f;
+		bool skills[SKILLSET_SIZE] = { false };
 	};
-
-	using action = void(*)(ACTION_PARAMETERS);
-
-	constexpr action empty_action = [](ACTION_PARAMETERS) {};
-
-	struct skill_def {
-		std::chrono::milliseconds cooldown{};
-		barn::action action = empty_action;
-	};
-
-	using skillset_def = std::array<skill_def, 4>;
 
 	template<typename T>
 	struct asset {
@@ -111,18 +80,40 @@ namespace barn {
 	using texture = barn::asset<SDL_Texture>;
 	using audio = barn::asset<MIX_Audio>;
 
+	using asset_def = std::string_view;
+
+	struct sprite_def {
+		barn::asset_def texture{};
+		std::optional<SDL_FRect> src_rect{};
+		std::optional<float> width{};
+		std::optional<float> height{};
+	};
+
+	using namespace std::chrono_literals;
+
+	struct animation_def {
+		barn::asset_def texture{};
+		std::vector<SDL_FRect> frames{};
+		std::optional<float> width{};
+		std::optional<float> height{};
+		std::chrono::milliseconds duration = 1000ms;
+	};
+
+	enum class skill_code {
+		NONE,
+		GREEN_ONION,
+	};
+
+	struct skill_def {
+		barn::skill_code code{};
+		std::chrono::milliseconds cooldown{};
+	};
+
+	using skillset_def = std::array<skill_def, SKILLSET_SIZE>;
+
 	struct skill {
 		barn::skill_def def{};
 		std::chrono::steady_clock::time_point last_used_time{};
-	};
-
-	struct input {
-		float axis_x = 0.f;
-		float axis_y = 0.f;
-		bool skill1 = false;
-		bool skill2 = false;
-		bool skill3 = false;
-		bool skill4 = false;
 	};
 }
 
@@ -163,9 +154,7 @@ namespace barn::component {
 
 	using gamepad = std::unique_ptr<SDL_Gamepad, decltype(&SDL_CloseGamepad)>;
 
-	using action = barn::action;
-
-	using skillset = std::array<skill, sizeof(skillset_def) / sizeof(skillset_def::value_type)>;
+	using skillset = std::array<skill, SKILLSET_SIZE>;
 
 	struct properties : public base_properties {
 		base_properties base{};
@@ -179,6 +168,11 @@ namespace barn::component {
 		P3,
 		P4,
 		COUNT
+	};
+
+	enum class ai_code {
+		NONE,
+		CHASER,
 	};
 
 	struct enemy {};
