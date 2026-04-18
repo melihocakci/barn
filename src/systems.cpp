@@ -158,10 +158,10 @@ void barn::input_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mi
 	}
 }
 
-void barn::ai_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
-	for (auto [entity, ai_code] : registry.view<component::ai_code>().each()) {
-		switch (ai_code) {
-		case component::ai_code::CHASER:
+void barn::AI_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
+	for (auto [entity, AI_code] : registry.view<component::AI_code>().each()) {
+		switch (AI_code) {
+		case component::AI_code::CHASER:
 			auto [enemy_body, enemy_stats] = registry.get<component::body, component::properties>(entity);
 			b2Vec2 enemy_position = b2Body_GetPosition(enemy_body.id);
 

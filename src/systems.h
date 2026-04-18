@@ -10,7 +10,7 @@ namespace barn {
 
 	void input_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world);
 
-	void ai_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world);
+	void AI_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world);
 
 	void draw_system(entt::registry& registry, SDL_Renderer* renderer, float alpha);
 

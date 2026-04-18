@@ -118,7 +118,7 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 				input_system(registry, renderer, mixer, world);
 			}
 
-			ai_system(registry, renderer, mixer, world);
+			AI_system(registry, renderer, mixer, world);
 
 			physics_system(registry, world);
 			accumulator -= PHYSICS_TIMESTEP;

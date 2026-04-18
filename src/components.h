@@ -99,6 +99,16 @@ namespace barn {
 		std::chrono::milliseconds duration = 1000ms;
 	};
 
+	struct assets_def {
+		std::vector<barn::asset_def> textures{};
+		std::vector<barn::asset_def> audios{};
+	};
+
+	struct assets {
+		std::vector<barn::texture> textures{};
+		std::vector<barn::audio> audios{};
+	};
+
 	enum class skill_code {
 		NONE,
 		GREEN_ONION,
@@ -106,6 +116,7 @@ namespace barn {
 
 	struct skill_def {
 		barn::skill_code code{};
+		barn::assets_def assets{};
 		std::chrono::milliseconds cooldown{};
 	};
 
@@ -113,6 +124,7 @@ namespace barn {
 
 	struct skill {
 		barn::skill_def def{};
+		barn::assets assets{};
 		std::chrono::steady_clock::time_point last_used_time{};
 	};
 }
@@ -170,7 +182,7 @@ namespace barn::component {
 		COUNT
 	};
 
-	enum class ai_code {
+	enum class AI_code {
 		NONE,
 		CHASER,
 	};

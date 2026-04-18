@@ -68,6 +68,10 @@ decltype(barn::character_presets) barn::character_presets
 		.skillset = skillset_def{
 			skill_def{
 				.code = skill_code::GREEN_ONION,
+				.assets = assets_def{
+					.textures{ textures::green_onion },
+					.audios{ audios::weiii },
+				},
 				.cooldown = 250ms,
 			},
 		}
@@ -100,6 +104,6 @@ decltype(barn::enemy_presets) barn::enemy_presets
 			.collide_damage = 10,
 			.speed = 5,
 		},
-		.ai_code = component::ai_code::CHASER,
+		.AI_code = component::AI_code::CHASER,
 	},
 };

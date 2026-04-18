@@ -11,7 +11,7 @@ namespace barn {
 		std::optional<barn::animation_def> idle_animation{};
 		std::optional<barn::base_properties> properties{};
 		std::optional<barn::skillset_def> skillset{};
-		std::optional<component::ai_code> ai_code{};
+		std::optional<component::AI_code> AI_code{};
 		std::optional<component::player> player{};
 		std::optional<component::enemy> enemy{};
 		std::optional<component::bullet> bullet{};

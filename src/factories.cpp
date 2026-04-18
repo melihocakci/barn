@@ -44,7 +44,13 @@ static void add_skillset(entt::entity entity, FACTORY_PARAMETERS, const barn::sk
 	barn::component::skillset& skillset = registry.emplace<barn::component::skillset>(entity);
 
 	for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
-		skillset[i] = barn::skill{ def[i], std::chrono::steady_clock::time_point{} };
+		skillset[i].def = def[i];
+		for (const auto& texture_def : def[i].assets.textures) {
+			skillset[i].assets.textures.push_back(barn::get_texture(renderer, texture_def));
+		}
+		for (const auto& audio_def : def[i].assets.audios) {
+			skillset[i].assets.audios.push_back(barn::get_audio(audio_def));
+		}
 	}
 }
 
@@ -67,8 +73,8 @@ entt::entity barn::create_entity(FACTORY_PARAMETERS, const barn::entity_def& def
 		add_skillset(entity, FACTORY_VARIABLES, *def.skillset);
 	}
 
-	if (def.ai_code) {
-		registry.emplace<component::ai_code>(entity, *def.ai_code);
+	if (def.AI_code) {
+		registry.emplace<component::AI_code>(entity, *def.AI_code);
 	}
 
 	if (def.player) {
