@@ -8,19 +8,13 @@ namespace barn::config {
 		SDL_Scancode down{};
 		SDL_Scancode left{};
 		SDL_Scancode right{};
-		SDL_Scancode skill1{};
-		SDL_Scancode skill2{};
-		SDL_Scancode skill3{};
-		SDL_Scancode skill4{};
+		SDL_Scancode skills[barn::SKILLSET_SIZE]{};
 	};
 
 	struct gamepad_controls {
 		SDL_GamepadAxis axis_x{};
 		SDL_GamepadAxis axis_y{};
-		SDL_GamepadButton skill1{};
-		SDL_GamepadButton skill2{};
-		SDL_GamepadButton skill3{};
-		SDL_GamepadButton skill4{};
+		SDL_GamepadButton skills[barn::SKILLSET_SIZE]{};
 	};
 
 	extern std::array<keyboard_controls, static_cast<int>(component::player::COUNT)> keyboard_bindings;

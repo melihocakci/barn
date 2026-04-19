@@ -44,12 +44,6 @@ namespace barn {
 		int speed = 1;
 	};
 
-	struct input {
-		float axis_x = 0.f;
-		float axis_y = 0.f;
-		bool skills[SKILLSET_SIZE] = { false };
-	};
-
 	template<typename T>
 	struct asset {
 		std::shared_ptr<std::shared_future<T*>> ptr{};
@@ -147,6 +141,12 @@ namespace barn::component {
 		body(body&& other) noexcept : id(other.id) {
 			other.id = {};
 		}
+	};
+
+	struct input {
+		float axis_x = 0.f;
+		float axis_y = 0.f;
+		bool skills[SKILLSET_SIZE] = { false };
 	};
 
 	struct sprite {

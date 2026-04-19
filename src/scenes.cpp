@@ -82,6 +82,7 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 
 	float accumulator = 0.0f;
 	Uint64 prevTicks = SDL_GetTicks();
+	bool settings_open = false;
 
 	while (true) {
 		SDL_Event event;
@@ -107,6 +108,9 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 					}
 				}
 			}
+			else if (event.type == SDL_EVENT_KEY_DOWN && event.key.scancode == SDL_Scancode::SDL_SCANCODE_ESCAPE) {
+				settings_open = !settings_open;
+			}
 		}
 
 		const Uint64 currentTicks = SDL_GetTicks();
@@ -117,9 +121,12 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 		while (accumulator >= PHYSICS_TIMESTEP) {
 			property_system(registry);
 
-			if (SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS) {
-				input_system(registry, renderer, mixer, world);
+			if (SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS && !settings_open) {
+				keyboard_system(registry);
+				gamepad_system(registry);
 			}
+
+			input_system(registry, renderer, mixer, world);
 
 			AI_system(registry, renderer, mixer, world);
 
@@ -131,7 +138,7 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 		const float alpha = std::clamp(accumulator / PHYSICS_TIMESTEP, 0.0f, 1.0f);
 
 		// draw using interpolated positions
-		draw_system(registry, renderer, alpha);
+		draw_system(registry, renderer, alpha, settings_open);
 	}
 
 	return 0;

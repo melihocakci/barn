@@ -22,64 +22,55 @@ void barn::property_system(entt::registry& registry) {
 	}
 }
 
-static barn::input get_keyboard_input(barn::component::player player) {
-	const barn::config::keyboard_controls& controls = barn::config::keyboard_bindings[static_cast<int>(player)];
+void barn::keyboard_system(entt::registry& registry) {
+	for (auto [entity, player] : registry.view<component::player, component::keyboard>().each()) {
+		const barn::config::keyboard_controls& controls = barn::config::keyboard_bindings[static_cast<int>(player)];
 
-	const bool* state = SDL_GetKeyboardState(nullptr);
+		const bool* state = SDL_GetKeyboardState(nullptr);
 
-	float axis_x = 0.f, axis_y = 0.f;
-	if (state[controls.up])
-		axis_y += 1.f;
-	if (state[controls.down])
-		axis_y += -1.f;
-	if (state[controls.left])
-		axis_x += -1.f;
-	if (state[controls.right])
-		axis_x += 1.f;
+		float axis_x = 0.f, axis_y = 0.f;
+		if (state[controls.up])
+			axis_y += 1.f;
+		if (state[controls.down])
+			axis_y += -1.f;
+		if (state[controls.left])
+			axis_x += -1.f;
+		if (state[controls.right])
+			axis_x += 1.f;
 
-	return barn::input{
-		.axis_x = axis_x,
-		.axis_y = axis_y,
-		.skills = {
-			state[controls.skill1],
-			state[controls.skill2],
-			state[controls.skill3],
-			state[controls.skill4],
+		component::input& input = registry.emplace_or_replace<component::input>(entity);
+		input.axis_x = std::fabs(input.axis_x) > std::fabs(axis_x) ? input.axis_x : axis_x;
+		input.axis_y = std::fabs(input.axis_y) > std::fabs(axis_y) ? input.axis_y : axis_y;
+		for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
+			input.skills[i] |= state[controls.skills[i]];
 		}
-	};
-}
-
-static barn::input get_gamepad_input(barn::component::player player, const barn::component::gamepad& gamepad) {
-	const barn::config::gamepad_controls& controls = barn::config::gamepad_bindings[static_cast<int>(player)];
-
-	constexpr auto normalize_axis = [](const Sint16 axis) -> float
-		{
-			constexpr Sint16 DEAD_ZONE = 8000;
-			if (abs(axis) < DEAD_ZONE) return 0.f;
-			return static_cast<float>(axis > 0 ? axis - DEAD_ZONE : axis + DEAD_ZONE) / (axis > 0 ? 32767 - DEAD_ZONE : 32768 - DEAD_ZONE);
-		};
-
-	return barn::input{
-		.axis_x = normalize_axis(SDL_GetGamepadAxis(gamepad.get(), controls.axis_x)),
-		.axis_y = -normalize_axis(SDL_GetGamepadAxis(gamepad.get(), controls.axis_y)),
-		.skills = {
-			SDL_GetGamepadButton(gamepad.get(), controls.skill1),
-			SDL_GetGamepadButton(gamepad.get(), controls.skill2),
-			SDL_GetGamepadButton(gamepad.get(), controls.skill3),
-			SDL_GetGamepadButton(gamepad.get(), controls.skill4),
-		}
-	};
-}
-
-static void execute_skill(barn::skill& skill, entt::entity entity, entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
-	using namespace std::chrono;
-	const steady_clock::time_point current_time = steady_clock::now();
-	const milliseconds time_span = duration_cast<milliseconds>(current_time - skill.last_used_time);
-	if (time_span < skill.def.cooldown) {
-		return;
 	}
-	skill.last_used_time = current_time;
+}
 
+void barn::gamepad_system(entt::registry& registry) {
+	for (auto [entity, player, gamepad] : registry.view<component::player, component::gamepad>().each()) {
+		const barn::config::gamepad_controls& controls = barn::config::gamepad_bindings[static_cast<int>(player)];
+
+		constexpr auto normalize_axis = [](const Sint16 axis) -> float
+			{
+				constexpr Sint16 DEAD_ZONE = 8000;
+				if (abs(axis) < DEAD_ZONE) return 0.f;
+				return static_cast<float>(axis > 0 ? axis - DEAD_ZONE : axis + DEAD_ZONE) / (axis > 0 ? 32767 - DEAD_ZONE : 32768 - DEAD_ZONE);
+			};
+
+		float axis_x = normalize_axis(SDL_GetGamepadAxis(gamepad.get(), controls.axis_x));
+		float axis_y = -normalize_axis(SDL_GetGamepadAxis(gamepad.get(), controls.axis_y));
+
+		component::input& input = registry.emplace_or_replace<component::input>(entity);
+		input.axis_x = std::fabs(input.axis_x) > std::fabs(axis_x) ? input.axis_x : axis_x;
+		input.axis_y = std::fabs(input.axis_y) > std::fabs(axis_y) ? input.axis_y : axis_y;
+		for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
+			input.skills[i] |= SDL_GetGamepadButton(gamepad.get(), controls.skills[i]);
+		}
+	}
+}
+
+static void execute_skill(barn::skill_code skill_code, entt::entity entity, entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
 	using namespace barn;
 
 	static const b2BodyDef default_body_def = [] {
@@ -96,7 +87,7 @@ static void execute_skill(barn::skill& skill, entt::entity entity, entt::registr
 		return def;
 		}();
 
-	switch (skill.def.code) {
+	switch (skill_code) {
 	case barn::skill_code::GREEN_ONION:
 		auto [player_body, player_prop] = registry.get<component::body, component::properties>(entity);
 
@@ -123,6 +114,7 @@ static void execute_skill(barn::skill& skill, entt::entity entity, entt::registr
 			.properties = base_properties{
 				.collide_damage = player_prop.attack,
 			},
+			.bullet = component::bullet{}
 		};
 
 		barn::create_entity(FACTORY_VARIABLES, def);
@@ -130,34 +122,35 @@ static void execute_skill(barn::skill& skill, entt::entity entity, entt::registr
 }
 
 void barn::input_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
-	const auto view = registry.view<component::player, component::keyboard, component::body, component::skillset, component::properties>();
-	for (auto [entity, player, body, skillset, properties] : view.each()) {
-		barn::input keyboard_input{}, gamepad_input{};
-
-		if (registry.all_of<barn::component::keyboard>(entity)) {
-			keyboard_input = get_keyboard_input(player);
+	for (auto [entity, input] : registry.view<component::input>().each()) {
+		if (registry.all_of<component::body, component::properties>(entity)) {
+			auto [body, properties] = registry.get<component::body, component::properties>(entity);
+			b2Vec2 vec{
+				std::fabs(input.axis_x) > std::fabs(input.axis_x) ? input.axis_x : input.axis_x,
+				std::fabs(input.axis_y) > std::fabs(input.axis_y) ? input.axis_y : input.axis_y
+			};
+			if (length(vec) > 1.f)
+				vec = normalize(vec);
+			b2Body_SetLinearVelocity(body.id, vec * properties.speed);
 		}
 
-		if (registry.all_of<barn::component::gamepad>(entity)) {
-			const barn::component::gamepad& gamepad = registry.get<barn::component::gamepad>(entity);
-			gamepad_input = get_gamepad_input(player, gamepad);
-		}
-
-		b2Vec2 vec{
-			std::fabs(keyboard_input.axis_x) > std::fabs(gamepad_input.axis_x) ? keyboard_input.axis_x : gamepad_input.axis_x,
-			std::fabs(keyboard_input.axis_y) > std::fabs(gamepad_input.axis_y) ? keyboard_input.axis_y : gamepad_input.axis_y
-		};
-
-		if (length(vec) > 1.f)
-			vec = normalize(vec);
-
-		b2Body_SetLinearVelocity(body.id, vec * properties.speed);
-
-		for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
-			if (keyboard_input.skills[i] || gamepad_input.skills[i]) {
-				execute_skill(skillset[i], entity, registry, renderer, mixer, world);
+		if (registry.any_of<component::skillset>(entity)) {
+			component::skillset& skillset = registry.get<component::skillset>(entity);
+			for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
+				if (input.skills[i]) {
+					using namespace std::chrono;
+					const steady_clock::time_point current_time = steady_clock::now();
+					const milliseconds time_span = duration_cast<milliseconds>(current_time - skillset[i].last_used_time);
+					if (time_span < skillset[i].def.cooldown) {
+						continue;
+					}
+					execute_skill(skillset[i].def.code, entity, registry, renderer, mixer, world);
+					skillset[i].last_used_time = current_time;
+				}
 			}
 		}
+
+		input = {};
 	}
 }
 
@@ -264,7 +257,7 @@ static void draw_texture(SDL_Renderer* renderer, barn::texture texture, const SD
 	);
 }
 
-void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer, float alpha) {
+void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer, float alpha, bool& settings_open) {
 	SDL_RenderClear(renderer);
 
 	for (auto [entity, sprite] : registry.view<component::sprite, component::background>().each()) {
@@ -334,29 +327,28 @@ void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer, float a
 		);
 	}
 
-	// 2. Start the Dear ImGui frame
-	ImGui_ImplSDLRenderer3_NewFrame();
-	ImGui_ImplSDL3_NewFrame();
-	ImGui::NewFrame();
+	if (settings_open) {
+		ImGui_ImplSDLRenderer3_NewFrame();
+		ImGui_ImplSDL3_NewFrame();
+		ImGui::NewFrame();
 
-	// 3. Build your UI here
-	ImGui::Begin("Debug Menu");
-	ImGui::Text("Hello, SDL3 Renderer!");
-	if (ImGui::Button("Quit Game")) {
-		std::exit(0);
+		ImGui::Begin("Debug Menu");
+		ImGui::Text("Hello, SDL3 Renderer!");
+		if (ImGui::Button("Quit Game")) {
+			std::exit(0);
+		}
+		ImGui::End();
+
+		ImGui::Render();
+
+		bool success = SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+		if (!success) throw std::runtime_error(SDL_GetError());
+
+		// Draw ImGui over your game
+		ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
 	}
-	ImGui::End();
 
-	// 4. Render ImGui
-	ImGui::Render();
-
-	bool success = SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
-	if (!success) throw std::runtime_error(SDL_GetError());
-
-	// Draw ImGui over your game
-	ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
-
-	success = SDL_SetRenderLogicalPresentation(
+	bool success = SDL_SetRenderLogicalPresentation(
 		renderer,
 		barn::VIRTUAL_WIDTH_PIXELS,
 		barn::VIRTUAL_HEIGHT_PIXELS,
@@ -418,24 +410,17 @@ void barn::physics_system(entt::registry& registry, b2WorldId world_id) {
 		}
 	}
 
-	for (int i = 0; i < contact_events.endCount; ++i)
-	{
-		b2ContactEndTouchEvent& end_event = contact_events.endEvents[i];
+	//for (int i = 0; i < contact_events.endCount; ++i)
+	//{
+	//	b2ContactEndTouchEvent& end_event = contact_events.endEvents[i];
 
-		if (!b2Shape_IsValid(end_event.shapeIdA) || !b2Shape_IsValid(end_event.shapeIdB)) {
-			continue;
-		}
+	//	if (!b2Shape_IsValid(end_event.shapeIdA) || !b2Shape_IsValid(end_event.shapeIdB)) {
+	//		continue;
+	//	}
 
-		const b2BodyId bodyA = b2Shape_GetBody(end_event.shapeIdA);
-		const entt::entity enttA = *static_cast<entt::entity*>(b2Body_GetUserData(bodyA));
-		const b2BodyId bodyB = b2Shape_GetBody(end_event.shapeIdB);
-		const entt::entity enttB = *static_cast<entt::entity*>(b2Body_GetUserData(bodyB));
-
-		if (registry.any_of<component::bullet, component::obstacle>(enttA)
-			&& registry.any_of<component::bullet, component::obstacle>(enttB))
-		{
-			entt::entity bullet_entity = registry.any_of<component::bullet>(enttA) ? enttA : enttB;
-			registry.destroy(bullet_entity);
-		}
-	}
+	//	const b2BodyId bodyA = b2Shape_GetBody(end_event.shapeIdA);
+	//	const entt::entity enttA = *static_cast<entt::entity*>(b2Body_GetUserData(bodyA));
+	//	const b2BodyId bodyB = b2Shape_GetBody(end_event.shapeIdB);
+	//	const entt::entity enttB = *static_cast<entt::entity*>(b2Body_GetUserData(bodyB));
+	//}
 }
