@@ -8,9 +8,6 @@
 
 #include <box2d/box2d.h>
 #include <SDL3/SDL.h>
-#include <imgui.h>
-#include <imgui_impl_sdl3.h>
-#include <imgui_impl_sdlrenderer3.h>
 
 void barn::property_system(entt::registry& registry) {
 	for (auto [entity, properties] : registry.view<component::properties>().each()) {
@@ -257,12 +254,9 @@ static void draw_texture(SDL_Renderer* renderer, barn::texture texture, const SD
 	);
 }
 
-void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer, float alpha, bool& settings_open) {
-	SDL_RenderClear(renderer);
-
+void barn::sprite_system(entt::registry& registry, SDL_Renderer* renderer, float alpha) {
 	for (auto [entity, sprite] : registry.view<component::sprite, component::background>().each()) {
-		SDL_FRect dest_rect = { 0, 0, VIRTUAL_WIDTH_PIXELS, VIRTUAL_HEIGHT_PIXELS };
-
+		SDL_FRect dest_rect{ 0, 0, VIRTUAL_WIDTH_PIXELS, VIRTUAL_HEIGHT_PIXELS };
 		SDL_RenderTexture(
 			renderer,
 			sprite.texture.get(),
@@ -283,7 +277,9 @@ void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer, float a
 			: b2Body_GetTransform(body.id)
 		);
 	}
+}
 
+void barn::animation_system(entt::registry& registry, SDL_Renderer* renderer, float alpha) {
 	for (auto [entity, idle_animation] : registry.view<component::idle_animation>().each()) {
 		if (!registry.all_of<component::animation>(entity)) {
 			component::animation& animation = registry.emplace<component::animation>(entity, idle_animation);
@@ -326,40 +322,9 @@ void barn::draw_system(entt::registry& registry, SDL_Renderer* renderer, float a
 			: b2Body_GetTransform(body.id)
 		);
 	}
-
-	if (settings_open) {
-		ImGui_ImplSDLRenderer3_NewFrame();
-		ImGui_ImplSDL3_NewFrame();
-		ImGui::NewFrame();
-
-		ImGui::Begin("Debug Menu");
-		ImGui::Text("Hello, SDL3 Renderer!");
-		if (ImGui::Button("Quit Game")) {
-			std::exit(0);
-		}
-		ImGui::End();
-
-		ImGui::Render();
-
-		bool success = SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
-		if (!success) throw std::runtime_error(SDL_GetError());
-
-		// Draw ImGui over your game
-		ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
-	}
-
-	bool success = SDL_SetRenderLogicalPresentation(
-		renderer,
-		barn::VIRTUAL_WIDTH_PIXELS,
-		barn::VIRTUAL_HEIGHT_PIXELS,
-		SDL_LOGICAL_PRESENTATION_LETTERBOX
-	);
-	if (!success) throw std::runtime_error(SDL_GetError());
-
-	SDL_RenderPresent(renderer);
 }
 
-void barn::physics_system(entt::registry& registry, b2WorldId world_id) {
+void barn::body_system(entt::registry& registry, b2WorldId world_id) {
 	// Update transforms from physics bodies before the step for interpolation
 	for (auto [entity, body] : registry.view<component::body>().each()) {
 		auto velocity = b2Body_GetLinearVelocity(body.id);

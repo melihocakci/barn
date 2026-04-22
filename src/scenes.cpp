@@ -12,7 +12,9 @@
 #include <box2d/box2d.h>
 #include <SDL3/SDL.h>
 #include <SDL3_mixer/SDL_mixer.h>
+#include <imgui.h>
 #include <imgui_impl_sdl3.h>
+#include <imgui_impl_sdlrenderer3.h>
 
 int barn::main_menu(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world_id) {
 	return barn::combat_scene(window, renderer, mixer, world_id);
@@ -48,6 +50,27 @@ static entt::entity create_borders(FACTORY_PARAMETERS) {
 	};
 
 	return create_entity(FACTORY_VARIABLES, entity_def);
+}
+
+static void draw_settings(SDL_Renderer* renderer) {
+	ImGui_ImplSDLRenderer3_NewFrame();
+	ImGui_ImplSDL3_NewFrame();
+	ImGui::NewFrame();
+
+	ImGui::Begin("Debug Menu");
+	ImGui::Text("Hello, SDL3 Renderer!");
+	if (ImGui::Button("Quit Game")) {
+		std::exit(0);
+	}
+	ImGui::End();
+
+	ImGui::Render();
+
+	bool success = SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+	if (!success) throw std::runtime_error(SDL_GetError());
+
+	// Draw ImGui over your game
+	ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
 }
 
 int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
@@ -130,15 +153,29 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 
 			AI_system(registry, renderer, mixer, world);
 
-			physics_system(registry, world);
+			body_system(registry, world);
 			accumulator -= PHYSICS_TIMESTEP;
 		}
 
+		SDL_RenderClear(renderer);
+
 		// compute alpha for interpolation (clamp to [0,1])
 		const float alpha = std::clamp(accumulator / PHYSICS_TIMESTEP, 0.0f, 1.0f);
+		sprite_system(registry, renderer, alpha);
+		animation_system(registry, renderer, alpha);
 
-		// draw using interpolated positions
-		draw_system(registry, renderer, alpha, settings_open);
+		if (settings_open) {
+			draw_settings(renderer);
+		}
+
+		bool success = SDL_SetRenderLogicalPresentation(
+			renderer,
+			barn::VIRTUAL_WIDTH_PIXELS,
+			barn::VIRTUAL_HEIGHT_PIXELS,
+			SDL_LOGICAL_PRESENTATION_LETTERBOX
+		);
+		if (!success) throw std::runtime_error(SDL_GetError());
+		SDL_RenderPresent(renderer);
 	}
 
 	return 0;

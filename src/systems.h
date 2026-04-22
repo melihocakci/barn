@@ -16,7 +16,9 @@ namespace barn {
 
 	void AI_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world);
 
-	void draw_system(entt::registry& registry, SDL_Renderer* renderer, float alpha, bool& settings_open);
+	void sprite_system(entt::registry& registry, SDL_Renderer* renderer, float alpha);
 
-	void physics_system(entt::registry& registry, b2WorldId world_id);
+	void animation_system(entt::registry& registry, SDL_Renderer* renderer, float alpha);
+
+	void body_system(entt::registry& registry, b2WorldId world_id);
 }
