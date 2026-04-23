@@ -52,25 +52,85 @@ static entt::entity create_borders(FACTORY_PARAMETERS) {
 	return create_entity(FACTORY_VARIABLES, entity_def);
 }
 
-static void draw_settings(SDL_Renderer* renderer) {
-	ImGui_ImplSDLRenderer3_NewFrame();
-	ImGui_ImplSDL3_NewFrame();
-	ImGui::NewFrame();
+static void draw_ui(SDL_Renderer* renderer) {}
 
-	ImGui::Begin("Debug Menu");
-	ImGui::Text("Hello, SDL3 Renderer!");
-	if (ImGui::Button("Quit Game")) {
-		std::exit(0);
+enum class game_state {
+	COMBAT,
+	MENU,
+	OPTIONS,
+	EXIT,
+};
+
+static void draw_menu(SDL_Renderer* renderer, MIX_Mixer* mixer, game_state& current_menu) {
+	if (current_menu == game_state::COMBAT) {
+		return;
 	}
-	ImGui::End();
 
-	ImGui::Render();
+	ImVec2 screenSize = ImGui::GetIO().DisplaySize;
+	ImU32 tintColor = IM_COL32(0, 0, 0, 150);
+	ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2{ 0.0f, 0.0f }, screenSize, tintColor);
 
-	bool success = SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
-	if (!success) throw std::runtime_error(SDL_GetError());
+	ImVec2 center{ screenSize.x * 0.5f, screenSize.y * 0.5f };
+	ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_AlwaysAutoResize;
+	const ImVec2 buttonSize{ 200.0f, 40.0f };
 
-	// Draw ImGui over your game
-	ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
+	static float volume = 100.0f;
+
+	switch (current_menu) {
+	case game_state::MENU:
+		ImGui::Begin("Main Menu", nullptr, windowFlags);
+
+		if (ImGui::Button("Resume", buttonSize)) {
+			current_menu = game_state::COMBAT;
+		}
+
+		ImGui::Spacing();
+
+		if (ImGui::Button("Options", buttonSize)) {
+			current_menu = game_state::OPTIONS;
+		}
+
+		ImGui::Spacing();
+
+		if (ImGui::Button("Exit", buttonSize)) {
+			current_menu = game_state::EXIT;
+		}
+
+		ImGui::End();
+		break;
+	case game_state::OPTIONS:
+		// We use the same windowFlags so it looks identical to the main menu
+		ImGui::Begin("Options", nullptr, windowFlags);
+
+		ImGui::Text("Audio Settings");
+		ImGui::Spacing();
+
+		// Set the width of the slider to match your buttons for a clean look
+		ImGui::PushItemWidth(200.0f);
+
+		// The slider modifies 'volume' directly. 
+		// Ranges from 0.0f to 100.0f, and displays with a '%' sign.
+		ImGui::SliderFloat("Volume", &volume, 0.0f, 100.0f, "%.0f%%");
+		MIX_SetMixerGain(mixer, volume / 100.0f);
+
+		ImGui::PopItemWidth();
+
+		ImGui::Spacing();
+		ImGui::Spacing();
+
+		// Return to the main menu
+		if (ImGui::Button("Back", buttonSize)) {
+			current_menu = game_state::MENU;
+		}
+
+		ImGui::End();
+		break;
+	}
 }
 
 int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
@@ -105,15 +165,15 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 
 	float accumulator = 0.0f;
 	Uint64 prevTicks = SDL_GetTicks();
-	bool settings_open = false;
+	game_state state = game_state::COMBAT;
 
-	while (true) {
+	while (state != game_state::EXIT) {
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
 			ImGui_ImplSDL3_ProcessEvent(&event);
 
 			if (event.type == SDL_EVENT_QUIT) {
-				return 0;
+				state = game_state::EXIT;
 			}
 			else if (event.type == SDL_EventType::SDL_EVENT_GAMEPAD_ADDED) {
 				for (auto [entity, player] : registry.view<component::player>().each()) {
@@ -131,20 +191,21 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 					}
 				}
 			}
-			else if (event.type == SDL_EVENT_KEY_DOWN && event.key.scancode == SDL_Scancode::SDL_SCANCODE_ESCAPE) {
-				settings_open = !settings_open;
+			else if ((event.type == SDL_EVENT_KEY_DOWN && event.key.scancode == SDL_Scancode::SDL_SCANCODE_ESCAPE)
+				|| (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN && event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK)) {
+				state = state == game_state::COMBAT ? game_state::MENU : game_state::COMBAT;
 			}
 		}
 
 		const Uint64 currentTicks = SDL_GetTicks();
-		const float deltaTime = (currentTicks - prevTicks) / 1000.0f;
+		const float deltaTime = state == game_state::COMBAT ? (currentTicks - prevTicks) / 1000.0f : 0.f;
 		prevTicks = currentTicks;
 		accumulator += deltaTime;
 
 		while (accumulator >= PHYSICS_TIMESTEP) {
 			property_system(registry);
 
-			if (SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS && !settings_open) {
+			if (SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS) {
 				keyboard_system(registry);
 				gamepad_system(registry);
 			}
@@ -164,11 +225,20 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 		sprite_system(registry, renderer, alpha);
 		animation_system(registry, renderer, alpha);
 
-		if (settings_open) {
-			draw_settings(renderer);
-		}
+		ImGui_ImplSDLRenderer3_NewFrame();
+		ImGui_ImplSDL3_NewFrame();
+		ImGui::NewFrame();
 
-		bool success = SDL_SetRenderLogicalPresentation(
+		draw_ui(renderer);
+		draw_menu(renderer, mixer, state);
+
+		ImGui::Render();
+
+		bool success = SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+		if (!success) throw std::runtime_error(SDL_GetError());
+		ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
+
+		success = SDL_SetRenderLogicalPresentation(
 			renderer,
 			barn::VIRTUAL_WIDTH_PIXELS,
 			barn::VIRTUAL_HEIGHT_PIXELS,
