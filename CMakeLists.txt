@@ -51,6 +51,8 @@ add_subdirectory(lib/entt EXCLUDE_FROM_ALL)
 
 add_subdirectory(lib/box2d EXCLUDE_FROM_ALL)
 
+add_subdirectory(lib/glaze EXCLUDE_FROM_ALL)
+
 add_library(steamworks_sdk SHARED IMPORTED)
 target_include_directories(steamworks_sdk INTERFACE "lib/steamworks_sdk/public")
 set(STEAM_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/steamworks_sdk/redistributable_bin")
@@ -106,6 +108,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     "box2d"
     "steamworks_sdk"
     "imgui"
+    "glaze::glaze"
 )
 
 get_target_property(STEAM_LIB steamworks_sdk IMPORTED_LOCATION)

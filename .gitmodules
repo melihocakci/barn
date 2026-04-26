@@ -16,3 +16,6 @@
 [submodule "lib/imgui"]
 	path = lib/imgui
 	url = git@github.com:ocornut/imgui.git
+[submodule "lib/glaze"]
+	path = lib/glaze
+	url = https://github.com/stephenberry/glaze.git
