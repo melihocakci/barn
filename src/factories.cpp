@@ -7,7 +7,7 @@
 #include <box2d/types.h>
 #include <box2d/collision.h>
 
-static void add_body(entt::entity entity, FACTORY_PARAMETERS, const barn::body_def& def) {
+static void add_body(entt::entity entity, entt::registry& registry, b2WorldId world, const barn::body_def& def) {
 	const barn::component::body& body = registry.emplace<barn::component::body>(entity, b2CreateBody(world, &def.def));
 
 	for (const auto& [shape_def, circle] : def.circles) {
@@ -21,7 +21,7 @@ static void add_body(entt::entity entity, FACTORY_PARAMETERS, const barn::body_d
 	b2Body_SetUserData(body.id, new entt::entity{ entity });
 }
 
-static void add_idle_animation(entt::entity entity, FACTORY_PARAMETERS, const barn::animation_def& def) {
+static void add_idle_animation(entt::entity entity, entt::registry& registry, SDL_Renderer* renderer, const barn::animation_def& def) {
 	registry.emplace<barn::component::idle_animation>(entity,
 		def,
 		barn::get_texture(renderer, def.texture),
@@ -29,7 +29,7 @@ static void add_idle_animation(entt::entity entity, FACTORY_PARAMETERS, const ba
 	);
 }
 
-static void add_properties(entt::entity entity, FACTORY_PARAMETERS, const barn::base_properties& base) {
+static void add_properties(entt::entity entity, entt::registry& registry, const barn::base_properties& base) {
 	registry.emplace<barn::component::properties>(entity,
 		base,
 		base.health,
@@ -40,7 +40,7 @@ static void add_properties(entt::entity entity, FACTORY_PARAMETERS, const barn::
 	);
 }
 
-static void add_skillset(entt::entity entity, FACTORY_PARAMETERS, const barn::skillset_def& def) {
+static void add_skillset(entt::entity entity, entt::registry& registry, SDL_Renderer* renderer, const barn::skillset_def& def) {
 	barn::component::skillset& skillset = registry.emplace<barn::component::skillset>(entity);
 
 	for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
@@ -54,23 +54,23 @@ static void add_skillset(entt::entity entity, FACTORY_PARAMETERS, const barn::sk
 	}
 }
 
-entt::entity barn::create_entity(FACTORY_PARAMETERS, const barn::entity_def& def) {
+entt::entity barn::create_entity(entt::registry& registry, barn::context& context, const barn::entity_def& def) {
 	const entt::entity entity = registry.create();
 
 	if (def.body) {
-		add_body(entity, FACTORY_VARIABLES, *def.body);
+		add_body(entity, registry, context.world_id, *def.body);
 	}
 
 	if (def.idle_animation) {
-		add_idle_animation(entity, FACTORY_VARIABLES, *def.idle_animation);
+		add_idle_animation(entity, registry, context.renderer, *def.idle_animation);
 	}
 
 	if (def.properties) {
-		add_properties(entity, FACTORY_VARIABLES, *def.properties);
+		add_properties(entity, registry, *def.properties);
 	}
 
 	if (def.skillset) {
-		add_skillset(entity, FACTORY_VARIABLES, *def.skillset);
+		add_skillset(entity, registry, context.renderer, *def.skillset);
 	}
 
 	if (def.AI_code) {

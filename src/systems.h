@@ -1,5 +1,7 @@
 #pragma once
 
+#include "types.h"
+
 #include <entt/entt.hpp>
 #include <box2d/types.h>
 #include <SDL3/SDL.h>
@@ -12,13 +14,13 @@ namespace barn {
 
 	void gamepad_system(entt::registry& registry);
 
-	void input_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world);
+	void input_system(entt::registry& registry, barn::context& context);
 
-	void AI_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world);
+	void AI_system(entt::registry& registry, barn::context& context);
 
-	void sprite_system(entt::registry& registry, SDL_Renderer* renderer, float alpha);
+	void sprite_system(entt::registry& registry, barn::context& context, float alpha);
 
-	void animation_system(entt::registry& registry, SDL_Renderer* renderer, float alpha);
+	void animation_system(entt::registry& registry, barn::context& context, float alpha);
 
-	void body_system(entt::registry& registry, b2WorldId world_id);
+	void body_system(entt::registry& registry, barn::context& context);
 }

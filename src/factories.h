@@ -1,9 +1,6 @@
 #pragma once
 
-#include "components.h"
-
-#define FACTORY_PARAMETERS entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world
-#define FACTORY_VARIABLES registry, renderer, mixer, world
+#include "types.h"
 
 namespace barn {
 	struct entity_def {
@@ -19,5 +16,5 @@ namespace barn {
 		std::optional<component::background> background{};
 	};
 
-	entt::entity create_entity(FACTORY_PARAMETERS, const barn::entity_def& def);
+	entt::entity create_entity(entt::registry& registry, barn::context& context, const barn::entity_def& def);
 }

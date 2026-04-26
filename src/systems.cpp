@@ -67,7 +67,7 @@ void barn::gamepad_system(entt::registry& registry) {
 	}
 }
 
-static void execute_skill(barn::skill_code skill_code, entt::entity entity, entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
+static void execute_skill(barn::skill_code skill_code, entt::entity entity, entt::registry& registry, barn::context& context) {
 	using namespace barn;
 
 	static const b2BodyDef default_body_def = [] {
@@ -88,7 +88,7 @@ static void execute_skill(barn::skill_code skill_code, entt::entity entity, entt
 	case barn::skill_code::GREEN_ONION:
 		auto [player_body, player_prop] = registry.get<component::body, component::properties>(entity);
 
-		MIX_PlayAudio(mixer, get_audio(audios::weiii).get());
+		MIX_PlayAudio(context.mixer, get_audio(audios::weiii).get());
 
 		b2BodyDef body_def = default_body_def;
 		body_def.type = b2_kinematicBody;
@@ -114,11 +114,11 @@ static void execute_skill(barn::skill_code skill_code, entt::entity entity, entt
 			.bullet = component::bullet{}
 		};
 
-		barn::create_entity(FACTORY_VARIABLES, def);
+		barn::create_entity(registry, context, def);
 	}
 }
 
-void barn::input_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
+void barn::input_system(entt::registry& registry, barn::context& context) {
 	for (auto [entity, input] : registry.view<component::input>().each()) {
 		if (registry.all_of<component::body, component::properties>(entity)) {
 			auto [body, properties] = registry.get<component::body, component::properties>(entity);
@@ -141,7 +141,7 @@ void barn::input_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mi
 					if (time_span < skillset[i].def.cooldown) {
 						continue;
 					}
-					execute_skill(skillset[i].def.code, entity, registry, renderer, mixer, world);
+					execute_skill(skillset[i].def.code, entity, registry, context);
 					skillset[i].last_used_time = current_time;
 				}
 			}
@@ -151,7 +151,7 @@ void barn::input_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mi
 	}
 }
 
-void barn::AI_system(entt::registry& registry, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
+void barn::AI_system(entt::registry& registry, barn::context& context) {
 	for (auto [entity, AI_code] : registry.view<component::AI_code>().each()) {
 		switch (AI_code) {
 		case component::AI_code::CHASER:
@@ -254,11 +254,11 @@ static void draw_texture(SDL_Renderer* renderer, barn::texture texture, const SD
 	);
 }
 
-void barn::sprite_system(entt::registry& registry, SDL_Renderer* renderer, float alpha) {
+void barn::sprite_system(entt::registry& registry, barn::context& context, float alpha) {
 	for (auto [entity, sprite] : registry.view<component::sprite, component::background>().each()) {
 		SDL_FRect dest_rect{ 0, 0, VIRTUAL_WIDTH_PIXELS, VIRTUAL_HEIGHT_PIXELS };
 		SDL_RenderTexture(
-			renderer,
+			context.renderer,
 			sprite.texture.get(),
 			nullptr,
 			&dest_rect
@@ -267,7 +267,7 @@ void barn::sprite_system(entt::registry& registry, SDL_Renderer* renderer, float
 
 	for (auto [entity, sprite, body] : registry.view<component::sprite, component::body>().each()) {
 		draw_texture(
-			renderer,
+			context.renderer,
 			sprite.texture,
 			sprite.def.src_rect ? &*sprite.def.src_rect : nullptr,
 			sprite.def.width,
@@ -279,7 +279,7 @@ void barn::sprite_system(entt::registry& registry, SDL_Renderer* renderer, float
 	}
 }
 
-void barn::animation_system(entt::registry& registry, SDL_Renderer* renderer, float alpha) {
+void barn::animation_system(entt::registry& registry, barn::context& context, float alpha) {
 	for (auto [entity, idle_animation] : registry.view<component::idle_animation>().each()) {
 		if (!registry.all_of<component::animation>(entity)) {
 			component::animation& animation = registry.emplace<component::animation>(entity, idle_animation);
@@ -312,7 +312,7 @@ void barn::animation_system(entt::registry& registry, SDL_Renderer* renderer, fl
 		int frame_index = static_cast<double>(elapsed) / duration * size;
 
 		draw_texture(
-			renderer,
+			context.renderer,
 			animation.texture,
 			&animation.def.frames[frame_index],
 			animation.def.width,
@@ -324,14 +324,14 @@ void barn::animation_system(entt::registry& registry, SDL_Renderer* renderer, fl
 	}
 }
 
-void barn::body_system(entt::registry& registry, b2WorldId world_id) {
+void barn::body_system(entt::registry& registry, barn::context& context) {
 	// Update transforms from physics bodies before the step for interpolation
 	for (auto [entity, body] : registry.view<component::body>().each()) {
 		auto velocity = b2Body_GetLinearVelocity(body.id);
 		registry.emplace_or_replace<component::transform>(entity, b2Body_GetTransform(body.id));
 	}
 
-	b2World_Step(world_id, PHYSICS_TIMESTEP, BOX2D_SUB_STEP_COUNT);
+	b2World_Step(context.world_id, PHYSICS_TIMESTEP, BOX2D_SUB_STEP_COUNT);
 
 	for (auto [entity, body] : registry.view<component::bullet, component::body>().each()) {
 		constexpr float BULLET_DESTROY_MARGIN = 2.f;
@@ -342,7 +342,7 @@ void barn::body_system(entt::registry& registry, b2WorldId world_id) {
 		}
 	}
 
-	const b2ContactEvents contact_events = b2World_GetContactEvents(world_id);
+	const b2ContactEvents contact_events = b2World_GetContactEvents(context.world_id);
 
 	for (int i = 0; i < contact_events.beginCount; ++i)
 	{

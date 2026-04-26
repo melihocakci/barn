@@ -1,5 +1,5 @@
 #include "scenes.h"
-#include "components.h"
+#include "types.h"
 #include "systems.h"
 #include "presets.h"
 #include "constants.h"
@@ -16,11 +16,11 @@
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
 
-int barn::main_menu(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world_id) {
-	return barn::combat_scene(window, renderer, mixer, world_id);
+int barn::main_menu(barn::context& context) {
+	return barn::combat_scene(context);
 }
 
-static entt::entity create_borders(FACTORY_PARAMETERS) {
+static entt::entity create_borders(entt::registry& registry, barn::context& context) {
 	using namespace barn;
 
 	barn::body_def body_def{};
@@ -49,10 +49,10 @@ static entt::entity create_borders(FACTORY_PARAMETERS) {
 		.obstacle = component::obstacle{},
 	};
 
-	return create_entity(FACTORY_VARIABLES, entity_def);
+	return create_entity(registry, context, entity_def);
 }
 
-static void draw_ui(SDL_Renderer* renderer) {}
+static void draw_ui(barn::context& context) {}
 
 enum class game_state {
 	COMBAT,
@@ -61,7 +61,7 @@ enum class game_state {
 	EXIT,
 };
 
-static void draw_menu(SDL_Renderer* renderer, MIX_Mixer* mixer, game_state& current_menu) {
+static void draw_menu(barn::context& context, game_state& current_menu) {
 	if (current_menu == game_state::COMBAT) {
 		return;
 	}
@@ -116,7 +116,7 @@ static void draw_menu(SDL_Renderer* renderer, MIX_Mixer* mixer, game_state& curr
 		// The slider modifies 'volume' directly. 
 		// Ranges from 0.0f to 100.0f, and displays with a '%' sign.
 		ImGui::SliderFloat("Volume", &volume, 0.0f, 100.0f, "%.0f%%");
-		MIX_SetMixerGain(mixer, volume / 100.0f);
+		MIX_SetMixerGain(context.mixer, volume / 100.0f);
 
 		ImGui::PopItemWidth();
 
@@ -133,21 +133,21 @@ static void draw_menu(SDL_Renderer* renderer, MIX_Mixer* mixer, game_state& curr
 	}
 }
 
-int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mixer, b2WorldId world) {
+int barn::combat_scene(barn::context& context) {
 	entt::registry registry;
 
 	entt::entity background = registry.create();
 	barn::sprite_def background_def{
 		.texture = textures::bliss,
 	};
-	const auto bliss_texture = get_texture(renderer, textures::bliss);
-	registry.emplace<component::sprite>(background, background_def, get_texture(renderer, background_def.texture));
+	const auto bliss_texture = get_texture(context.renderer, textures::bliss);
+	registry.emplace<component::sprite>(background, background_def, get_texture(context.renderer, background_def.texture));
 	registry.emplace<component::background>(background);
 
-	create_borders(FACTORY_VARIABLES);
+	create_borders(registry, context);
 
 	barn::audio bg_music = get_audio(audios::kasane_territory);
-	MIX_Track* track = MIX_CreateTrack(mixer);
+	MIX_Track* track = MIX_CreateTrack(context.mixer);
 	MIX_SetTrackAudio(track, bg_music.get());
 	SDL_PropertiesID props = SDL_CreateProperties();
 	SDL_SetNumberProperty(props, MIX_PROP_PLAY_LOOPS_NUMBER, -1);
@@ -156,12 +156,12 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 	barn::entity_def character_preset = character_presets[0];
 	character_preset.body->def.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS / 4 };
 	character_preset.player = component::player::P1;
-	entt::entity player_entity = create_entity(FACTORY_VARIABLES, character_preset);
+	entt::entity player_entity = create_entity(registry, context, character_preset);
 	registry.emplace<component::keyboard>(player_entity);
 
 	barn::entity_def enemy_preset = enemy_presets[0];
 	enemy_preset.body->def.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS * 3 / 4 };
-	create_entity(FACTORY_VARIABLES, enemy_preset);
+	create_entity(registry, context, enemy_preset);
 
 	float accumulator = 0.0f;
 	Uint64 prevTicks = SDL_GetTicks();
@@ -205,47 +205,46 @@ int barn::combat_scene(SDL_Window* window, SDL_Renderer* renderer, MIX_Mixer* mi
 		while (accumulator >= PHYSICS_TIMESTEP) {
 			property_system(registry);
 
-			if (SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS) {
+			if (SDL_GetWindowFlags(context.window) & SDL_WINDOW_INPUT_FOCUS) {
 				keyboard_system(registry);
 				gamepad_system(registry);
 			}
 
-			input_system(registry, renderer, mixer, world);
+			input_system(registry, context);
 
-			AI_system(registry, renderer, mixer, world);
+			AI_system(registry, context);
 
-			body_system(registry, world);
+			body_system(registry, context);
 			accumulator -= PHYSICS_TIMESTEP;
 		}
 
-		SDL_RenderClear(renderer);
-
+		SDL_RenderClear(context.renderer);
 		// compute alpha for interpolation (clamp to [0,1])
 		const float alpha = std::clamp(accumulator / PHYSICS_TIMESTEP, 0.0f, 1.0f);
-		sprite_system(registry, renderer, alpha);
-		animation_system(registry, renderer, alpha);
+		sprite_system(registry, context, alpha);
+		animation_system(registry, context, alpha);
 
 		ImGui_ImplSDLRenderer3_NewFrame();
 		ImGui_ImplSDL3_NewFrame();
 		ImGui::NewFrame();
 
-		draw_ui(renderer);
-		draw_menu(renderer, mixer, state);
+		draw_ui(context);
+		draw_menu(context, state);
 
 		ImGui::Render();
 
-		bool success = SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+		bool success = SDL_SetRenderLogicalPresentation(context.renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
 		if (!success) throw std::runtime_error(SDL_GetError());
-		ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
+		ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), context.renderer);
 
 		success = SDL_SetRenderLogicalPresentation(
-			renderer,
+			context.renderer,
 			barn::VIRTUAL_WIDTH_PIXELS,
 			barn::VIRTUAL_HEIGHT_PIXELS,
 			SDL_LOGICAL_PRESENTATION_LETTERBOX
 		);
 		if (!success) throw std::runtime_error(SDL_GetError());
-		SDL_RenderPresent(renderer);
+		SDL_RenderPresent(context.renderer);
 	}
 
 	return 0;
