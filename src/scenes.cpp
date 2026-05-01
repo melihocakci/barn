@@ -79,8 +79,6 @@ static void draw_menu(barn::context& context, game_state& current_menu) {
 		ImGuiWindowFlags_AlwaysAutoResize;
 	const ImVec2 buttonSize{ 200.0f, 40.0f };
 
-	static float volume = 100.0f;
-
 	switch (current_menu) {
 	case game_state::MENU:
 		ImGui::Begin("Main Menu", nullptr, windowFlags);
@@ -115,8 +113,8 @@ static void draw_menu(barn::context& context, game_state& current_menu) {
 
 		// The slider modifies 'volume' directly. 
 		// Ranges from 0.0f to 100.0f, and displays with a '%' sign.
-		ImGui::SliderFloat("Volume", &volume, 0.0f, 100.0f, "%.0f%%");
-		MIX_SetMixerGain(context.mixer, volume / 100.0f);
+		ImGui::SliderFloat("Volume", &context.settings.master_volume, 0.0f, 100.0f, "%.0f%%");
+		barn::apply_settings(context);
 
 		ImGui::PopItemWidth();
 

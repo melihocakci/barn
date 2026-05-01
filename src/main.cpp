@@ -1,6 +1,7 @@
 #include "types.h"
 #include "scenes.h"
 #include "constants.h"
+#include "utils.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -9,6 +10,7 @@
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
+#include <glaze/json.hpp>
 
 struct context_guard {
 	barn::context context{};
@@ -74,9 +76,15 @@ struct context_guard {
 		world_def.gravity = b2Vec2{ 0.0f, 0.0f };
 		world_def.workerCount = 4;
 		const_cast<b2WorldId&>(context.world_id) = b2CreateWorld(&world_def);
+
+		std::string buffer;
+		[[maybe_unused]] auto parse_error = glz::read_file_json(context.settings, "settings.json", buffer);
 	}
 
 	~context_guard() {
+		std::string buffer;
+		[[maybe_unused]] auto parse_error = glz::write_file_json(context.settings, "settings.json", buffer);
+
 		if (b2World_IsValid(context.world_id)) b2DestroyWorld(context.world_id);
 
 		ImGui_ImplSDLRenderer3_Shutdown();
@@ -101,6 +109,7 @@ int main(int argc, char* argv[]) {
 		);
 		return errno;
 	}
+	barn::apply_settings(guard.context);
 
 	return barn::main_menu(guard.context);
 }

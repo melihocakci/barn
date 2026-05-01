@@ -1,6 +1,6 @@
 #pragma once
 
-#include "components.h"
+#include "types.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3_mixer/SDL_mixer.h>
@@ -23,4 +23,6 @@ namespace barn {
 	barn::texture get_texture(SDL_Renderer* renderer, std::string_view path);
 
 	barn::audio get_audio(std::string_view path);
+
+	void apply_settings(barn::context& context);
 }

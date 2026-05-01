@@ -86,3 +86,7 @@ barn::audio barn::get_audio(std::string_view path) {
 	audios[path] = audio;
 	return { audio };
 }
+
+void barn::apply_settings(barn::context& context) {
+	MIX_SetMixerGain(context.mixer, context.settings.master_volume / 100.0f);
+}
