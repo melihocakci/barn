@@ -5,6 +5,7 @@
 namespace barn {
 	struct game_settings {
 		float master_volume = 100.f;
+		bool show_fps = false;
 	};
 
 	struct context {

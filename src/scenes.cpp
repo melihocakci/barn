@@ -52,7 +52,40 @@ static entt::entity create_borders(entt::registry& registry, barn::context& cont
 	return create_entity(registry, context, entity_def);
 }
 
-static void draw_ui(barn::context& context) {}
+static void draw_ui(barn::context& context, entt::registry& registry) {
+	constexpr ImGuiWindowFlags window_flags =
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_AlwaysAutoResize;
+
+	if (context.settings.show_fps) {
+		ImGui::SetNextWindowBgAlpha(0.5f);
+		ImGui::Begin("FPS", nullptr, window_flags);
+		ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+		ImGui::End();
+	}
+
+	ImVec2 screen_size = ImGui::GetIO().DisplaySize;
+	ImVec2 center{ screen_size.x * 0.5f, screen_size.y * 0.9f };
+	ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+
+	ImGui::Begin("Health", nullptr, window_flags);
+	for (auto [entity, player, properties] : registry.view<barn::component::player, barn::component::properties>().each()) {
+		float progress = static_cast<float>(properties.health) / properties.base.health;
+
+		const ImVec4 red{ 1.0f, 0.0f, 0.0f, 1.0f };
+		const ImVec4 green{ 0.0f, 1.0f, 0.0f, 1.0f };
+		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, progress < 0.2f ? ImVec4{ 1.0f, 0.0f, 0.0f, 1.0f } : ImVec4{ 0.0f, 1.0f, 0.0f, 1.0f });
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
+
+		ImGui::ProgressBar(progress, ImVec2{ screen_size.x * 0.5f, 20.0f }, std::format("HP: {}/{}", properties.health, properties.base.health).c_str());
+
+		ImGui::PopStyleColor(2);
+	}
+	ImGui::End();
+}
 
 enum class game_state {
 	COMBAT,
@@ -66,36 +99,37 @@ static void draw_menu(barn::context& context, game_state& current_menu) {
 		return;
 	}
 
-	ImVec2 screenSize = ImGui::GetIO().DisplaySize;
-	ImU32 tintColor = IM_COL32(0, 0, 0, 150);
-	ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2{ 0.0f, 0.0f }, screenSize, tintColor);
+	ImVec2 screen_size = ImGui::GetIO().DisplaySize;
+	ImU32 tint_color = IM_COL32(0, 0, 0, 150);
+	ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2{ 0.0f, 0.0f }, screen_size, tint_color);
 
-	ImVec2 center{ screenSize.x * 0.5f, screenSize.y * 0.5f };
+	ImVec2 center{ screen_size.x * 0.5f, screen_size.y * 0.5f };
 	ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar |
+	constexpr ImGuiWindowFlags window_flags =
+		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoCollapse |
 		ImGuiWindowFlags_NoResize |
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_AlwaysAutoResize;
-	const ImVec2 buttonSize{ 200.0f, 40.0f };
+	const ImVec2 button_size{ 200.0f, 40.0f };
 
 	switch (current_menu) {
 	case game_state::MENU:
-		ImGui::Begin("Main Menu", nullptr, windowFlags);
+		ImGui::Begin("Main Menu", nullptr, window_flags);
 
-		if (ImGui::Button("Resume", buttonSize)) {
+		if (ImGui::Button("Resume", button_size)) {
 			current_menu = game_state::COMBAT;
 		}
 
 		ImGui::Spacing();
 
-		if (ImGui::Button("Options", buttonSize)) {
+		if (ImGui::Button("Options", button_size)) {
 			current_menu = game_state::OPTIONS;
 		}
 
 		ImGui::Spacing();
 
-		if (ImGui::Button("Exit", buttonSize)) {
+		if (ImGui::Button("Exit", button_size)) {
 			current_menu = game_state::EXIT;
 		}
 
@@ -103,7 +137,7 @@ static void draw_menu(barn::context& context, game_state& current_menu) {
 		break;
 	case game_state::OPTIONS:
 		// We use the same windowFlags so it looks identical to the main menu
-		ImGui::Begin("Options", nullptr, windowFlags);
+		ImGui::Begin("Options", nullptr, window_flags);
 
 		ImGui::Text("Audio Settings");
 		ImGui::Spacing();
@@ -113,16 +147,21 @@ static void draw_menu(barn::context& context, game_state& current_menu) {
 
 		// The slider modifies 'volume' directly. 
 		// Ranges from 0.0f to 100.0f, and displays with a '%' sign.
-		ImGui::SliderFloat("Volume", &context.settings.master_volume, 0.0f, 100.0f, "%.0f%%");
-		barn::apply_settings(context);
+		if (ImGui::SliderFloat("Volume", &context.settings.master_volume, 0.0f, 100.0f, "%.0f%%")) {
+			barn::apply_settings(context);
+		}
 
 		ImGui::PopItemWidth();
+
+		ImGui::Spacing();
+
+		ImGui::Checkbox("Show FPS", &context.settings.show_fps);
 
 		ImGui::Spacing();
 		ImGui::Spacing();
 
 		// Return to the main menu
-		if (ImGui::Button("Back", buttonSize)) {
+		if (ImGui::Button("Back", button_size)) {
 			current_menu = game_state::MENU;
 		}
 
@@ -226,7 +265,7 @@ int barn::combat_scene(barn::context& context) {
 		ImGui_ImplSDL3_NewFrame();
 		ImGui::NewFrame();
 
-		draw_ui(context);
+		draw_ui(context, registry);
 		draw_menu(context, state);
 
 		ImGui::Render();
