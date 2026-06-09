@@ -1,5 +1,9 @@
 #pragma once
 
+#include "components.h"
+
+#include <SDL3/SDL.h>
+
 #include <string_view>
 
 namespace barn::textures {
@@ -13,4 +17,10 @@ namespace barn::textures {
 namespace barn::audios {
 	constexpr std::string_view kasane_territory = "assets/audio/kasane_territory.ogg";
 	constexpr std::string_view weiii = "assets/audio/weiii-daitaku-helios.ogg";
+}
+
+namespace barn {
+	barn::texture get_texture(SDL_Renderer* renderer, std::string_view path);
+
+	barn::audio get_audio(std::string_view path);
 }

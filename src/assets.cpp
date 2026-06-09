@@ -1,9 +1,9 @@
-#include "utils.h"
+#include "assets.h"
+#include "components.h"
 
+#include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_mixer/SDL_mixer.h>
-
-#include <future>
 
 barn::texture barn::get_texture(SDL_Renderer* renderer, std::string_view path) {
 	using element_t = SDL_Texture*;
@@ -85,8 +85,4 @@ barn::audio barn::get_audio(std::string_view path) {
 
 	audios[path] = audio;
 	return { audio };
-}
-
-void barn::apply_settings(barn::context& context) {
-	MIX_SetMixerGain(context.mixer, context.settings.master_volume / 100.0f);
 }

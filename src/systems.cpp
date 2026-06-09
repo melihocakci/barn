@@ -2,7 +2,6 @@
 #include "components.h"
 #include "constants.h"
 #include "utils.h"
-#include "config.h"
 #include "factories.h"
 #include "assets.h"
 
@@ -19,9 +18,9 @@ void barn::property_system(entt::registry& registry) {
 	}
 }
 
-void barn::keyboard_system(entt::registry& registry) {
+void barn::keyboard_system(entt::registry& registry, barn::context& context) {
 	for (auto [entity, player] : registry.view<component::player, component::keyboard>().each()) {
-		const barn::config::keyboard_controls& controls = barn::config::keyboard_bindings[static_cast<int>(player)];
+		const barn::keyboard_controls& controls = context.settings.keyboard_bindings[static_cast<int>(player)];
 
 		const bool* state = SDL_GetKeyboardState(nullptr);
 
@@ -44,9 +43,9 @@ void barn::keyboard_system(entt::registry& registry) {
 	}
 }
 
-void barn::gamepad_system(entt::registry& registry) {
+void barn::gamepad_system(entt::registry& registry, barn::context& context) {
 	for (auto [entity, player, gamepad] : registry.view<component::player, component::gamepad>().each()) {
-		const barn::config::gamepad_controls& controls = barn::config::gamepad_bindings[static_cast<int>(player)];
+		const barn::gamepad_controls& controls = context.settings.gamepad_bindings[static_cast<int>(player)];
 
 		constexpr auto normalize_axis = [](const Sint16 axis) -> float
 			{
@@ -374,18 +373,4 @@ void barn::body_system(entt::registry& registry, barn::context& context) {
 			registry.destroy(enttB);
 		}
 	}
-
-	//for (int i = 0; i < contact_events.endCount; ++i)
-	//{
-	//	b2ContactEndTouchEvent& end_event = contact_events.endEvents[i];
-
-	//	if (!b2Shape_IsValid(end_event.shapeIdA) || !b2Shape_IsValid(end_event.shapeIdB)) {
-	//		continue;
-	//	}
-
-	//	const b2BodyId bodyA = b2Shape_GetBody(end_event.shapeIdA);
-	//	const entt::entity enttA = *static_cast<entt::entity*>(b2Body_GetUserData(bodyA));
-	//	const b2BodyId bodyB = b2Shape_GetBody(end_event.shapeIdB);
-	//	const entt::entity enttB = *static_cast<entt::entity*>(b2Body_GetUserData(bodyB));
-	//}
 }

@@ -10,4 +10,5 @@ namespace barn {
 	constexpr int BOX2D_SUB_STEP_COUNT = 4;
 	constexpr float PHYSICS_TIMESTEP = 1.0f / 60.0f;
 	constexpr int SKILLSET_SIZE = 4;
+	constexpr int PLAYER_COUNT = 4;
 }

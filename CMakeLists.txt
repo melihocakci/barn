@@ -96,8 +96,9 @@ add_executable(${PROJECT_NAME} WIN32
     "src/systems.cpp"
     "src/presets.cpp"
     "src/factories.cpp"
-    "src/utils.cpp"
-    "src/config.cpp"
+    "src/levels.cpp"
+    "src/settings.cpp"
+    "src/assets.cpp"
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

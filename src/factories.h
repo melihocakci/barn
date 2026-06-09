@@ -1,11 +1,13 @@
 #pragma once
 
-#include "types.h"
+#include "context.h"
+#include "components.h"
 
 namespace barn {
 	struct entity_def {
 		std::optional<barn::body_def> body{};
 		std::optional<barn::animation_def> idle_animation{};
+		std::optional<barn::sprite_def> sprite{};
 		std::optional<barn::base_properties> properties{};
 		std::optional<barn::skillset_def> skillset{};
 		std::optional<component::AI_code> AI_code{};

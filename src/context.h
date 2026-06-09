@@ -1,18 +1,19 @@
 #pragma once
 
-#include "components.h"
+#include "settings.h"
+
+#include <SDL3/SDL.h>
+#include <SDL3_mixer/SDL_mixer.h>
+#include <box2d/box2d.h>
 
 namespace barn {
-	struct game_settings {
-		float master_volume = 100.f;
-		bool show_fps = false;
-	};
+	struct settings;
 
 	struct context {
 		SDL_Window* const window{};
 		SDL_Renderer* const renderer{};
 		MIX_Mixer* const mixer{};
 		b2WorldId const world_id{};
-		barn::game_settings settings{};
+		barn::settings settings{};
 	};
 }

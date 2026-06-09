@@ -1,7 +1,7 @@
 #include "factories.h"
 #include "components.h"
 #include "constants.h"
-#include "utils.h"
+#include "assets.h"
 
 #include <box2d/box2d.h>
 #include <box2d/types.h>
@@ -26,6 +26,13 @@ static void add_idle_animation(entt::entity entity, entt::registry& registry, SD
 		def,
 		barn::get_texture(renderer, def.texture),
 		std::chrono::steady_clock::time_point{}
+	);
+}
+
+static void add_sprite(entt::entity entity, entt::registry& registry, SDL_Renderer* renderer, const barn::sprite_def& def) {
+	registry.emplace<barn::component::sprite>(entity,
+		def,
+		barn::get_texture(renderer, def.texture)
 	);
 }
 
@@ -63,6 +70,10 @@ entt::entity barn::create_entity(entt::registry& registry, barn::context& contex
 
 	if (def.idle_animation) {
 		add_idle_animation(entity, registry, context.renderer, *def.idle_animation);
+	}
+
+	if (def.sprite) {
+		add_sprite(entity, registry, context.renderer, *def.sprite);
 	}
 
 	if (def.properties) {

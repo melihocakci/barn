@@ -1,12 +1,11 @@
 #include "scenes.h"
-#include "types.h"
 #include "systems.h"
 #include "presets.h"
 #include "constants.h"
 #include "factories.h"
-#include "config.h"
 #include "utils.h"
 #include "assets.h"
+#include "levels.h"
 
 #include <entt/entt.hpp>
 #include <box2d/box2d.h>
@@ -17,7 +16,26 @@
 #include <imgui_impl_sdlrenderer3.h>
 
 int barn::main_menu(barn::context& context) {
-	return barn::combat_scene(context);
+	barn::session session{
+		.players = {
+			character_presets[0],
+		},
+		.level{
+			.bg_music = audios::kasane_territory,
+			.elements{
+				entity_def{
+					.sprite{textures::bliss},
+					.background = component::background{}
+				}
+			},
+			.enemies{
+				enemy_presets[0],
+			}
+		}
+	};
+	session.players[0].player = component::player::P1;
+
+	return barn::combat_scene(context, session);
 }
 
 static entt::entity create_borders(entt::registry& registry, barn::context& context) {
@@ -148,7 +166,7 @@ static void draw_menu(barn::context& context, game_state& current_menu) {
 		// The slider modifies 'volume' directly. 
 		// Ranges from 0.0f to 100.0f, and displays with a '%' sign.
 		if (ImGui::SliderFloat("Volume", &context.settings.master_volume, 0.0f, 100.0f, "%.0f%%")) {
-			barn::apply_settings(context);
+			barn::apply_settings(context.settings, context.renderer, context.mixer);
 		}
 
 		ImGui::PopItemWidth();
@@ -170,35 +188,33 @@ static void draw_menu(barn::context& context, game_state& current_menu) {
 	}
 }
 
-int barn::combat_scene(barn::context& context) {
-	entt::registry registry;
-
-	entt::entity background = registry.create();
-	barn::sprite_def background_def{
-		.texture = textures::bliss,
-	};
-	const auto bliss_texture = get_texture(context.renderer, textures::bliss);
-	registry.emplace<component::sprite>(background, background_def, get_texture(context.renderer, background_def.texture));
-	registry.emplace<component::background>(background);
-
-	create_borders(registry, context);
-
-	barn::audio bg_music = get_audio(audios::kasane_territory);
+int barn::combat_scene(barn::context& context, barn::session& session) {
+	barn::audio bg_music = barn::get_audio(session.level.bg_music);
 	MIX_Track* track = MIX_CreateTrack(context.mixer);
 	MIX_SetTrackAudio(track, bg_music.get());
 	SDL_PropertiesID props = SDL_CreateProperties();
 	SDL_SetNumberProperty(props, MIX_PROP_PLAY_LOOPS_NUMBER, -1);
 	MIX_PlayTrack(track, props);
 
-	barn::entity_def character_preset = character_presets[0];
-	character_preset.body->def.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS / 4 };
-	character_preset.player = component::player::P1;
-	entt::entity player_entity = create_entity(registry, context, character_preset);
-	registry.emplace<component::keyboard>(player_entity);
+	entt::registry registry;
 
-	barn::entity_def enemy_preset = enemy_presets[0];
-	enemy_preset.body->def.position = { VIRTUAL_WIDTH_METERS / 2, VIRTUAL_HEIGHT_METERS * 3 / 4 };
-	create_entity(registry, context, enemy_preset);
+	create_borders(registry, context);
+
+	for (auto element_def : session.level.elements) {
+		entt::entity element_entity = create_entity(registry, context, element_def);
+	}
+
+	for (int i = 0; i < session.players.size(); ++i) {
+		barn::entity_def player_def = session.players[i];
+		player_def.body->def.position = { static_cast<float>(VIRTUAL_WIDTH_METERS) / (session.players.size() + 1) * (i + 1), VIRTUAL_HEIGHT_METERS / 4 };
+		player_def.player = session.players[i].player;
+		entt::entity player_entity = create_entity(registry, context, player_def);
+		registry.emplace<component::keyboard>(player_entity);
+	}
+
+	for (auto enemy_def : session.level.enemies) {
+		entt::entity enemy_entity = create_entity(registry, context, enemy_def);
+	}
 
 	float accumulator = 0.0f;
 	Uint64 prevTicks = SDL_GetTicks();
@@ -215,7 +231,7 @@ int barn::combat_scene(barn::context& context) {
 			else if (event.type == SDL_EventType::SDL_EVENT_GAMEPAD_ADDED) {
 				for (auto [entity, player] : registry.view<component::player>().each()) {
 					if (!registry.any_of<component::gamepad>(entity)) {
-						registry.emplace<component::gamepad>(player_entity, SDL_OpenGamepad(event.gdevice.which), SDL_CloseGamepad);
+						//registry.emplace<component::gamepad>(player_entity, SDL_OpenGamepad(event.gdevice.which), SDL_CloseGamepad);
 						break;
 					}
 				}
@@ -243,8 +259,8 @@ int barn::combat_scene(barn::context& context) {
 			property_system(registry);
 
 			if (SDL_GetWindowFlags(context.window) & SDL_WINDOW_INPUT_FOCUS) {
-				keyboard_system(registry);
-				gamepad_system(registry);
+				keyboard_system(registry, context);
+				gamepad_system(registry, context);
 			}
 
 			input_system(registry, context);

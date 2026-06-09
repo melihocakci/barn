@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include "context.h"
 
 #include <entt/entt.hpp>
 #include <box2d/types.h>
@@ -10,9 +10,9 @@
 namespace barn {
 	void property_system(entt::registry& registry);
 
-	void keyboard_system(entt::registry& registry);
+	void keyboard_system(entt::registry& registry, barn::context& context);
 
-	void gamepad_system(entt::registry& registry);
+	void gamepad_system(entt::registry& registry, barn::context& context);
 
 	void input_system(entt::registry& registry, barn::context& context);
 
