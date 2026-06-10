@@ -3,6 +3,7 @@
 #include "components.h"
 
 #include <SDL3/SDL.h>
+#include <glaze/json.hpp>
 
 namespace barn {
 	struct keyboard_controls {
@@ -36,9 +37,9 @@ namespace barn {
 		bool show_fps = false;
 	};
 
-	barn::settings load_settings();
+	glz::error_ctx load_settings(barn::settings& settings);
 
-	void save_settings(const barn::settings& settings);
+	glz::error_ctx save_settings(const barn::settings& settings);
 
 	void apply_settings(const barn::settings& settings, SDL_Renderer* renderer, MIX_Mixer* mixer);
 }
