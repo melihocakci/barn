@@ -27,6 +27,7 @@ barn::texture barn::get_texture(SDL_Renderer* renderer, std::string_view path) {
 			if (future->get()) {
 				SDL_DestroyTexture(future->get());
 			}
+			delete future;
 		}
 	};
 
@@ -74,6 +75,7 @@ barn::audio barn::get_audio(std::string_view path) {
 			if (future->get()) {
 				MIX_DestroyAudio(future->get());
 			}
+			delete future;
 		}
 	};
 

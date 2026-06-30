@@ -79,7 +79,10 @@ struct context_guard {
 	}
 
 	~context_guard() {
-		barn::save_settings(context.settings);
+		auto error = barn::save_settings(context.settings);
+		if (error) {
+			show_error_and_exit(std::string(error.custom_error_message));
+		}
 
 		if (b2World_IsValid(context.world_id)) b2DestroyWorld(context.world_id);
 

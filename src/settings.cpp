@@ -1,8 +1,12 @@
 #include "settings.h"
 
 #include <glaze/json.hpp>
+#include <filesystem>
 
 glz::error_ctx barn::load_settings(barn::settings& settings) {
+	if (!std::filesystem::exists("settings.json")) {
+		save_settings(barn::settings{});
+	}
 	return glz::read_file_json(settings, "settings.json", std::string{});
 }
 
@@ -11,5 +15,5 @@ glz::error_ctx barn::save_settings(const barn::settings& settings) {
 }
 
 void barn::apply_settings(const barn::settings& settings, SDL_Renderer* renderer, MIX_Mixer* mixer) {
-	MIX_SetMixerGain(mixer, settings.master_volume / 100.0f);
+	MIX_SetMixerGain(mixer, powf(settings.master_volume / 100.0f, 2.0f));
 }
