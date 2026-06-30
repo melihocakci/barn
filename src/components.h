@@ -121,6 +121,8 @@ namespace barn {
 		barn::assets assets{};
 		std::chrono::steady_clock::time_point last_used_time{};
 	};
+
+	using gamepad = std::unique_ptr<SDL_Gamepad, decltype(&SDL_CloseGamepad)>;
 }
 
 namespace barn::component {
@@ -164,7 +166,9 @@ namespace barn::component {
 
 	struct keyboard {};
 
-	using gamepad = std::unique_ptr<SDL_Gamepad, decltype(&SDL_CloseGamepad)>;
+	struct gamepad {
+		int id = -1;
+	};
 
 	using skillset = std::array<skill, SKILLSET_SIZE>;
 
