@@ -211,7 +211,7 @@ static barn::component::transform interpolate(barn::component::transform prev, b
 	};
 }
 
-static void draw_texture(SDL_Renderer* renderer, barn::texture texture, const SDL_FRect* src_rect, std::optional<float> width, std::optional<float> height, barn::component::transform transform)
+static void draw_texture(SDL_Renderer* renderer, barn::texture texture, barn::component::transform transform, const SDL_FRect* src_rect = nullptr, std::optional<float> width = std::nullopt, std::optional<float> height = std::nullopt)
 {
 	if (!texture) return;
 
@@ -254,26 +254,15 @@ static void draw_texture(SDL_Renderer* renderer, barn::texture texture, const SD
 }
 
 void barn::sprite_system(entt::registry& registry, barn::context& context, float alpha) {
-	for (auto [entity, sprite] : registry.view<component::sprite, component::background>().each()) {
-		SDL_FRect dest_rect{ 0, 0, VIRTUAL_WIDTH_PIXELS, VIRTUAL_HEIGHT_PIXELS };
-		SDL_RenderTexture(
-			context.renderer,
-			sprite.texture.get(),
-			nullptr,
-			&dest_rect
-		);
-	}
-
-	for (auto [entity, sprite, body] : registry.view<component::sprite, component::body>().each()) {
+	for (auto [entity, sprite, transform] : registry.view<component::sprite, component::transform>().each()) {
 		draw_texture(
 			context.renderer,
 			sprite.texture,
+			registry.all_of<component::previous_transform>(entity)
+			? interpolate(registry.get<component::previous_transform>(entity), transform, alpha) : transform,
 			sprite.def.src_rect ? &*sprite.def.src_rect : nullptr,
 			sprite.def.width,
-			sprite.def.height,
-			registry.all_of<component::transform>(entity) ?
-			interpolate(registry.get<component::transform>(entity), b2Body_GetTransform(body.id), alpha)
-			: b2Body_GetTransform(body.id)
+			sprite.def.height
 		);
 	}
 }
@@ -286,7 +275,7 @@ void barn::animation_system(entt::registry& registry, barn::context& context, fl
 		}
 	}
 
-	for (auto [entity, animation, body] : registry.view<component::animation, component::body>().each()) {
+	for (auto [entity, animation, transform] : registry.view<component::animation, component::transform>().each()) {
 		if (animation.def.frames.empty()) continue;
 
 		using namespace std::chrono;
@@ -313,24 +302,28 @@ void barn::animation_system(entt::registry& registry, barn::context& context, fl
 		draw_texture(
 			context.renderer,
 			animation.texture,
+			registry.all_of<component::previous_transform>(entity)
+			? interpolate(registry.get<component::previous_transform>(entity), transform, alpha) : transform,
 			&animation.def.frames[frame_index],
 			animation.def.width,
-			animation.def.height,
-			registry.all_of<component::transform>(entity) ?
-			interpolate(registry.get<component::transform>(entity), b2Body_GetTransform(body.id), alpha)
-			: b2Body_GetTransform(body.id)
+			animation.def.height
 		);
 	}
 }
 
 void barn::body_system(entt::registry& registry, barn::context& context) {
-	// Update transforms from physics bodies before the step for interpolation
-	for (auto [entity, body] : registry.view<component::body>().each()) {
-		auto velocity = b2Body_GetLinearVelocity(body.id);
-		registry.emplace_or_replace<component::transform>(entity, b2Body_GetTransform(body.id));
-	}
-
 	b2World_Step(context.world_id, PHYSICS_TIMESTEP, BOX2D_SUB_STEP_COUNT);
+
+	for (auto [entity, body] : registry.view<component::body>().each()) {
+		if (registry.all_of<component::transform>(entity)) {
+			registry.emplace_or_replace<component::previous_transform>(entity, registry.get<component::transform>(entity));
+			registry.emplace_or_replace<component::transform>(entity, b2Body_GetTransform(body.id));
+		}
+		else {
+			registry.emplace_or_replace<component::transform>(entity, b2Body_GetTransform(body.id));
+			registry.emplace_or_replace<component::previous_transform>(entity, registry.get<component::transform>(entity));
+		}
+	}
 
 	for (auto [entity, body] : registry.view<component::bullet, component::body>().each()) {
 		constexpr float BULLET_DESTROY_MARGIN = 2.f;

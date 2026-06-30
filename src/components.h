@@ -174,6 +174,8 @@ namespace barn::component {
 
 	using transform = b2Transform;
 
+	struct previous_transform : public transform {};
+
 	enum class player {
 		P1,
 		P2,
