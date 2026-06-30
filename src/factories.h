@@ -10,6 +10,7 @@ namespace barn {
 		std::optional<barn::sprite_def> sprite{};
 		std::optional<barn::base_properties> properties{};
 		std::optional<barn::skillset_def> skillset{};
+		std::optional<component::transform> transform{};
 		std::optional<component::AI_code> AI_code{};
 		std::optional<component::player> player{};
 		std::optional<component::enemy> enemy{};

@@ -7,13 +7,12 @@
 #include <box2d/box2d.h>
 
 namespace barn {
-	struct settings;
-
 	struct context {
 		SDL_Window* const window{};
 		SDL_Renderer* const renderer{};
 		MIX_Mixer* const mixer{};
 		b2WorldId const world_id{};
 		barn::settings settings{};
+        std::vector<barn::gamepad> gamepads{};
 	};
 }

@@ -54,14 +54,16 @@ void barn::gamepad_system(entt::registry& registry, barn::context& context) {
 				return static_cast<float>(axis > 0 ? axis - DEAD_ZONE : axis + DEAD_ZONE) / (axis > 0 ? 32767 - DEAD_ZONE : 32768 - DEAD_ZONE);
 			};
 
-		float axis_x = normalize_axis(SDL_GetGamepadAxis(gamepad.get(), controls.axis_x));
-		float axis_y = -normalize_axis(SDL_GetGamepadAxis(gamepad.get(), controls.axis_y));
+		SDL_Gamepad* gp = context.gamepads[gamepad.id].get();
+
+		float axis_x = normalize_axis(SDL_GetGamepadAxis(gp, controls.axis_x));
+		float axis_y = -normalize_axis(SDL_GetGamepadAxis(gp, controls.axis_y));
 
 		component::input& input = registry.emplace_or_replace<component::input>(entity);
 		input.axis_x = std::fabs(input.axis_x) > std::fabs(axis_x) ? input.axis_x : axis_x;
 		input.axis_y = std::fabs(input.axis_y) > std::fabs(axis_y) ? input.axis_y : axis_y;
 		for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
-			input.skills[i] |= SDL_GetGamepadButton(gamepad.get(), controls.skills[i]);
+			input.skills[i] |= SDL_GetGamepadButton(gp, controls.skills[i]);
 		}
 	}
 }
