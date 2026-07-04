@@ -196,5 +196,4 @@ namespace barn::component {
 	struct enemy {};
 	struct bullet {};
 	struct obstacle {};
-	struct background {};
 }

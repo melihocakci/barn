@@ -22,11 +22,8 @@ int barn::main_menu(barn::context& context) {
 		},
 		.level{
 			.bg_music = audios::kasane_territory,
+			.bg_texture = textures::bliss,
 			.elements{
-				entity_def{
-					.sprite{textures::bliss},
-					.background = component::background{}
-				}
 			},
 			.enemies{
 				enemy_presets[0],
@@ -188,8 +185,22 @@ static void draw_menu(barn::context& context, game_state& current_menu) {
 	}
 }
 
+static bool enable_logical_presentation(SDL_Renderer* renderer) {
+	return SDL_SetRenderLogicalPresentation(
+		renderer,
+		barn::VIRTUAL_WIDTH_PIXELS,
+		barn::VIRTUAL_HEIGHT_PIXELS,
+		SDL_LOGICAL_PRESENTATION_LETTERBOX
+	);
+}
+
+static bool disable_logical_presentation(SDL_Renderer* renderer) {
+	return SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+}
+
 int barn::combat_scene(barn::context& context, barn::session& session) {
 	barn::audio bg_music = barn::get_audio(session.level.bg_music);
+	barn::texture bg_texture = barn::get_texture(context.renderer, session.level.bg_texture);
 	MIX_Track* track = MIX_CreateTrack(context.mixer);
 	MIX_SetTrackAudio(track, bg_music.get());
 	SDL_PropertiesID props = SDL_CreateProperties();
@@ -220,6 +231,8 @@ int barn::combat_scene(barn::context& context, barn::session& session) {
 	Uint64 prevTicks = SDL_GetTicks();
 	game_state state = game_state::COMBAT;
 
+	barn::texture sidebar_texture = barn::get_texture(context.renderer, barn::textures::clovers);
+
 	while (state != game_state::EXIT) {
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
@@ -230,18 +243,18 @@ int barn::combat_scene(barn::context& context, barn::session& session) {
 			}
 			else if (event.type == SDL_EventType::SDL_EVENT_GAMEPAD_ADDED) {
 				for (auto [entity, player] : registry.view<component::player>().each()) {
-					if (!registry.any_of<component::gamepad>(entity)) {
-						//registry.emplace<component::gamepad>(player_entity, SDL_OpenGamepad(event.gdevice.which), SDL_CloseGamepad);
-						break;
-					}
+					//if (!registry.any_of<component::gamepad>(entity)) {
+					//	registry.emplace<component::gamepad>(player_entity, SDL_OpenGamepad(event.gdevice.which), SDL_CloseGamepad);
+					//	break;
+					//}
 				}
 			}
 			else if (event.type == SDL_EventType::SDL_EVENT_GAMEPAD_REMOVED) {
 				for (auto [entity, gamepad] : registry.view<component::gamepad>().each()) {
-					if (SDL_GetGamepadID(gamepad.get()) == event.gdevice.which) {
-						registry.remove<component::gamepad>(entity);
-						break;
-					}
+					//if (SDL_GetGamepadID(gamepad.get()) == event.gdevice.which) {
+					//	registry.remove<component::gamepad>(entity);
+					//	break;
+					//}
 				}
 			}
 			else if ((event.type == SDL_EVENT_KEY_DOWN && event.key.scancode == SDL_Scancode::SDL_SCANCODE_ESCAPE)
@@ -272,6 +285,15 @@ int barn::combat_scene(barn::context& context, barn::session& session) {
 		}
 
 		SDL_RenderClear(context.renderer);
+
+		disable_logical_presentation(context.renderer);
+
+		SDL_RenderTexture(context.renderer, sidebar_texture.get(), nullptr, nullptr);
+
+		enable_logical_presentation(context.renderer);
+
+		SDL_RenderTexture(context.renderer, bg_texture.get(), nullptr, nullptr);
+
 		// compute alpha for interpolation (clamp to [0,1])
 		const float alpha = std::clamp(accumulator / PHYSICS_TIMESTEP, 0.0f, 1.0f);
 		sprite_system(registry, context, alpha);
@@ -286,17 +308,10 @@ int barn::combat_scene(barn::context& context, barn::session& session) {
 
 		ImGui::Render();
 
-		bool success = SDL_SetRenderLogicalPresentation(context.renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
-		if (!success) throw std::runtime_error(SDL_GetError());
+		disable_logical_presentation(context.renderer);
+
 		ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), context.renderer);
 
-		success = SDL_SetRenderLogicalPresentation(
-			context.renderer,
-			barn::VIRTUAL_WIDTH_PIXELS,
-			barn::VIRTUAL_HEIGHT_PIXELS,
-			SDL_LOGICAL_PRESENTATION_LETTERBOX
-		);
-		if (!success) throw std::runtime_error(SDL_GetError());
 		SDL_RenderPresent(context.renderer);
 	}
 

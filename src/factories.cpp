@@ -108,9 +108,5 @@ entt::entity barn::create_entity(entt::registry& registry, barn::context& contex
 		registry.emplace<component::obstacle>(entity);
 	}
 
-	if (def.background) {
-		registry.emplace<component::background>(entity);
-	}
-
 	return entity;
 }
