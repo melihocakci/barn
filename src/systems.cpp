@@ -34,7 +34,7 @@ void barn::keyboard_system(entt::registry& registry, barn::context& context) {
 		if (state[controls.right])
 			axis_x += 1.f;
 
-		component::input& input = registry.emplace_or_replace<component::input>(entity);
+		component::input& input = registry.get_or_emplace<component::input>(entity);
 		input.axis_x = std::fabs(input.axis_x) > std::fabs(axis_x) ? input.axis_x : axis_x;
 		input.axis_y = std::fabs(input.axis_y) > std::fabs(axis_y) ? input.axis_y : axis_y;
 		for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
@@ -54,16 +54,16 @@ void barn::gamepad_system(entt::registry& registry, barn::context& context) {
 				return static_cast<float>(axis > 0 ? axis - DEAD_ZONE : axis + DEAD_ZONE) / (axis > 0 ? 32767 - DEAD_ZONE : 32768 - DEAD_ZONE);
 			};
 
-		SDL_Gamepad* gp = context.gamepads[gamepad.id].get();
+		barn::gamepad& gp = context.gamepads.at(gamepad.id);
 
-		float axis_x = normalize_axis(SDL_GetGamepadAxis(gp, controls.axis_x));
-		float axis_y = -normalize_axis(SDL_GetGamepadAxis(gp, controls.axis_y));
+		float axis_x = normalize_axis(SDL_GetGamepadAxis(gp.get(), controls.axis_x));
+		float axis_y = -normalize_axis(SDL_GetGamepadAxis(gp.get(), controls.axis_y));
 
-		component::input& input = registry.emplace_or_replace<component::input>(entity);
+		component::input& input = registry.get_or_emplace<component::input>(entity);
 		input.axis_x = std::fabs(input.axis_x) > std::fabs(axis_x) ? input.axis_x : axis_x;
 		input.axis_y = std::fabs(input.axis_y) > std::fabs(axis_y) ? input.axis_y : axis_y;
 		for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
-			input.skills[i] |= SDL_GetGamepadButton(gp, controls.skills[i]);
+			input.skills[i] |= SDL_GetGamepadButton(gp.get(), controls.skills[i]);
 		}
 	}
 }
@@ -132,7 +132,7 @@ void barn::input_system(entt::registry& registry, barn::context& context) {
 			b2Body_SetLinearVelocity(body.id, vec * properties.speed);
 		}
 
-		if (registry.any_of<component::skillset>(entity)) {
+		if (registry.all_of<component::skillset>(entity)) {
 			component::skillset& skillset = registry.get<component::skillset>(entity);
 			for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
 				if (input.skills[i]) {

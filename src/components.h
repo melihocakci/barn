@@ -167,7 +167,7 @@ namespace barn::component {
 	struct keyboard {};
 
 	struct gamepad {
-		int id = -1;
+		SDL_JoystickID id{};
 	};
 
 	using skillset = std::array<skill, SKILLSET_SIZE>;
