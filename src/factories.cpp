@@ -71,21 +71,33 @@ entt::entity barn::create_entity(entt::registry& registry, barn::context& contex
 	if (def.idle_animation) {
 		add_idle_animation(entity, registry, context.renderer, *def.idle_animation);
 	}
-	
+
 	if (def.sprite) {
 		add_sprite(entity, registry, context.renderer, *def.sprite);
 	}
-	
+
 	if (def.properties) {
 		add_properties(entity, registry, *def.properties);
 	}
-	
+
 	if (def.skillset) {
 		add_skillset(entity, registry, context.renderer, *def.skillset);
 	}
 
+	if (def.keyboard) {
+		registry.emplace<component::keyboard>(entity);
+	}
+
+	if (def.gamepad) {
+		registry.emplace<component::gamepad>(entity, *def.gamepad);
+	}
+
 	if (def.transform) {
 		registry.emplace<component::transform>(entity, *def.transform);
+		if (registry.all_of<component::body>(entity)) {
+			const auto& body = registry.get<component::body>(entity);
+			b2Body_SetTransform(body.id, def.transform->p, def.transform->q);
+		}
 	}
 
 	if (def.AI_code) {

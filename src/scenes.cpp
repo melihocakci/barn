@@ -15,25 +15,6 @@
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
 
-int barn::main_menu(barn::context& context) {
-	barn::session session{
-		.players = {
-			character_presets[0],
-		},
-		.level{
-			.bg_music = audios::kasane_territory,
-			.bg_texture = textures::bliss,
-			.elements{
-			},
-			.enemies{
-				enemy_presets[0],
-			}
-		}
-	};
-	session.players[0].player = component::player::P1;
-
-	return barn::combat_scene(context, session);
-}
 
 static entt::entity create_borders(entt::registry& registry, barn::context& context) {
 	using namespace barn;
@@ -102,15 +83,8 @@ static void draw_ui(barn::context& context, entt::registry& registry) {
 	ImGui::End();
 }
 
-enum class game_state {
-	COMBAT,
-	MENU,
-	OPTIONS,
-	EXIT,
-};
-
-static void draw_menu(barn::context& context, game_state& current_menu) {
-	if (current_menu == game_state::COMBAT) {
+static void draw_menu(barn::context& context) {
+	if (context.state == barn::game_state::COMBAT) {
 		return;
 	}
 
@@ -128,29 +102,29 @@ static void draw_menu(barn::context& context, game_state& current_menu) {
 		ImGuiWindowFlags_AlwaysAutoResize;
 	const ImVec2 button_size{ 200.0f, 40.0f };
 
-	switch (current_menu) {
-	case game_state::MENU:
+	switch (context.state) {
+	case barn::game_state::MENU:
 		ImGui::Begin("Main Menu", nullptr, window_flags);
 
 		if (ImGui::Button("Resume", button_size)) {
-			current_menu = game_state::COMBAT;
+			context.state = barn::game_state::COMBAT;
 		}
 
 		ImGui::Spacing();
 
 		if (ImGui::Button("Options", button_size)) {
-			current_menu = game_state::OPTIONS;
+			context.state = barn::game_state::OPTIONS;
 		}
 
 		ImGui::Spacing();
 
 		if (ImGui::Button("Exit", button_size)) {
-			current_menu = game_state::EXIT;
+			context.state = barn::game_state::EXIT;
 		}
 
 		ImGui::End();
 		break;
-	case game_state::OPTIONS:
+	case barn::game_state::OPTIONS:
 		// We use the same windowFlags so it looks identical to the main menu
 		ImGui::Begin("Options", nullptr, window_flags);
 
@@ -177,7 +151,7 @@ static void draw_menu(barn::context& context, game_state& current_menu) {
 
 		// Return to the main menu
 		if (ImGui::Button("Back", button_size)) {
-			current_menu = game_state::MENU;
+			context.state = barn::game_state::MENU;
 		}
 
 		ImGui::End();
@@ -198,6 +172,54 @@ static bool disable_logical_presentation(SDL_Renderer* renderer) {
 	return SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
 }
 
+static void handle_sdl_events(barn::context& context) {
+	SDL_Event event;
+	while (SDL_PollEvent(&event)) {
+		ImGui_ImplSDL3_ProcessEvent(&event);
+
+		if (event.type == SDL_EVENT_QUIT) {
+			context.state = barn::game_state::EXIT;
+		}
+		else if (event.type == SDL_EventType::SDL_EVENT_GAMEPAD_ADDED) {
+			context.gamepads.emplace(event.gdevice.which, barn::gamepad{ SDL_OpenGamepad(event.gdevice.which), SDL_CloseGamepad });
+		}
+		else if (event.type == SDL_EventType::SDL_EVENT_GAMEPAD_REMOVED) {
+			context.gamepads.erase(event.gdevice.which);
+		}
+		else if ((event.type == SDL_EVENT_KEY_DOWN && event.key.scancode == SDL_Scancode::SDL_SCANCODE_ESCAPE)
+			|| (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN && event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK)) {
+			context.state = context.state == barn::game_state::COMBAT ? barn::game_state::MENU : barn::game_state::COMBAT;
+		}
+	}
+}
+
+int barn::main_menu(barn::context& context) {
+	handle_sdl_events(context);
+
+	barn::session session{
+		.players = {
+			character_presets[0],
+		},
+		.level{
+			.bg_music = audios::kasane_territory,
+			.bg_texture = textures::bliss,
+			.elements{
+			},
+			.enemies{
+				enemy_presets[0],
+			}
+		}
+	};
+	session.players[0].player = component::player::P1;
+	if (!context.gamepads.empty()) {
+		session.players[0].gamepad = { .id = context.gamepads.begin()->first };
+	}
+	session.players[0].keyboard = component::keyboard{};
+	session.players[0].transform = component::transform{ { VIRTUAL_WIDTH_METERS / 2.f, VIRTUAL_HEIGHT_METERS / 4.f }, b2Rot_identity };
+
+	return barn::combat_scene(context, session);
+}
+
 int barn::combat_scene(barn::context& context, barn::session& session) {
 	barn::audio bg_music = barn::get_audio(session.level.bg_music);
 	barn::texture bg_texture = barn::get_texture(context.renderer, session.level.bg_texture);
@@ -211,60 +233,28 @@ int barn::combat_scene(barn::context& context, barn::session& session) {
 
 	create_borders(registry, context);
 
-	for (auto element_def : session.level.elements) {
-		entt::entity element_entity = create_entity(registry, context, element_def);
+	for (const barn::entity_def& element_def : session.level.elements) {
+		create_entity(registry, context, element_def);
 	}
 
-	for (int i = 0; i < session.players.size(); ++i) {
-		barn::entity_def player_def = session.players[i];
-		player_def.body->def.position = { static_cast<float>(VIRTUAL_WIDTH_METERS) / (session.players.size() + 1) * (i + 1), VIRTUAL_HEIGHT_METERS / 4 };
-		player_def.player = session.players[i].player;
-		entt::entity player_entity = create_entity(registry, context, player_def);
-		registry.emplace<component::keyboard>(player_entity);
+	for (const barn::entity_def& player_def : session.players) {
+		create_entity(registry, context, player_def);
 	}
 
-	for (auto enemy_def : session.level.enemies) {
-		entt::entity enemy_entity = create_entity(registry, context, enemy_def);
+	for (const barn::entity_def& enemy_def : session.level.enemies) {
+		create_entity(registry, context, enemy_def);
 	}
 
 	float accumulator = 0.0f;
 	Uint64 prevTicks = SDL_GetTicks();
-	game_state state = game_state::COMBAT;
 
 	barn::texture sidebar_texture = barn::get_texture(context.renderer, barn::textures::clovers);
 
-	while (state != game_state::EXIT) {
-		SDL_Event event;
-		while (SDL_PollEvent(&event)) {
-			ImGui_ImplSDL3_ProcessEvent(&event);
-
-			if (event.type == SDL_EVENT_QUIT) {
-				state = game_state::EXIT;
-			}
-			else if (event.type == SDL_EventType::SDL_EVENT_GAMEPAD_ADDED) {
-				for (auto [entity, player] : registry.view<component::player>().each()) {
-					//if (!registry.any_of<component::gamepad>(entity)) {
-					//	registry.emplace<component::gamepad>(player_entity, SDL_OpenGamepad(event.gdevice.which), SDL_CloseGamepad);
-					//	break;
-					//}
-				}
-			}
-			else if (event.type == SDL_EventType::SDL_EVENT_GAMEPAD_REMOVED) {
-				for (auto [entity, gamepad] : registry.view<component::gamepad>().each()) {
-					//if (SDL_GetGamepadID(gamepad.get()) == event.gdevice.which) {
-					//	registry.remove<component::gamepad>(entity);
-					//	break;
-					//}
-				}
-			}
-			else if ((event.type == SDL_EVENT_KEY_DOWN && event.key.scancode == SDL_Scancode::SDL_SCANCODE_ESCAPE)
-				|| (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN && event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK)) {
-				state = state == game_state::COMBAT ? game_state::MENU : game_state::COMBAT;
-			}
-		}
+	while (context.state != barn::game_state::EXIT) {
+		handle_sdl_events(context);
 
 		const Uint64 currentTicks = SDL_GetTicks();
-		const float deltaTime = state == game_state::COMBAT ? (currentTicks - prevTicks) / 1000.0f : 0.f;
+		const float deltaTime = context.state == barn::game_state::COMBAT ? (currentTicks - prevTicks) / 1000.0f : 0.f;
 		prevTicks = currentTicks;
 		accumulator += deltaTime;
 
@@ -304,7 +294,7 @@ int barn::combat_scene(barn::context& context, barn::session& session) {
 		ImGui::NewFrame();
 
 		draw_ui(context, registry);
-		draw_menu(context, state);
+		draw_menu(context);
 
 		ImGui::Render();
 
