@@ -16,7 +16,6 @@ namespace barn {
 		std::optional<component::enemy> enemy{};
 		std::optional<component::bullet> bullet{};
 		std::optional<component::obstacle> obstacle{};
-		std::optional<component::background> background{};
 	};
 
 	entt::entity create_entity(entt::registry& registry, barn::context& context, const barn::entity_def& def);
