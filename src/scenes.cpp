@@ -194,30 +194,79 @@ static void handle_sdl_events(barn::context& context) {
 }
 
 int barn::main_menu(barn::context& context) {
-	handle_sdl_events(context);
+	while (true) {
+		handle_sdl_events(context);
 
-	barn::session session{
-		.players = {
-			character_presets[0],
-		},
-		.level{
-			.bg_music = audios::kasane_territory,
-			.bg_texture = textures::bliss,
-			.elements{
-			},
-			.enemies{
-				enemy_presets[0],
+		SDL_RenderClear(context.renderer);
+
+		ImGui_ImplSDLRenderer3_NewFrame();
+		ImGui_ImplSDL3_NewFrame();
+		ImGui::NewFrame();
+
+		ImVec2 screen_size = ImGui::GetIO().DisplaySize;
+		ImVec2 center{ screen_size.x * 0.5f, screen_size.y * 0.5f };
+		ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+
+		constexpr ImGuiWindowFlags window_flags =
+			ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_NoCollapse |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_AlwaysAutoResize;
+
+		ImGui::Begin("Main Menu", nullptr, window_flags);
+
+		constexpr ImVec2 button_size{ 200.0f, 40.0f };
+
+		if (ImGui::Button("Start", button_size)) {
+			ImGui::End();
+			ImGui::EndFrame();
+			barn::session session{
+				.players = {
+					character_presets[0],
+				},
+				.level{
+					.bg_music = audios::kasane_territory,
+					.bg_texture = textures::bliss,
+					.elements{
+					},
+					.enemies{
+						enemy_presets[0],
+					}
+				}
+			};
+			session.players[0].player = component::player::P1;
+			if (!context.gamepads.empty()) {
+				session.players[0].gamepad = { .id = context.gamepads.begin()->first };
 			}
-		}
-	};
-	session.players[0].player = component::player::P1;
-	if (!context.gamepads.empty()) {
-		session.players[0].gamepad = { .id = context.gamepads.begin()->first };
-	}
-	session.players[0].keyboard = component::keyboard{};
-	session.players[0].transform = component::transform{ { VIRTUAL_WIDTH_METERS / 2.f, VIRTUAL_HEIGHT_METERS / 4.f }, b2Rot_identity };
+			session.players[0].keyboard = component::keyboard{};
+			session.players[0].transform = component::transform{ { VIRTUAL_WIDTH_METERS / 2.f, VIRTUAL_HEIGHT_METERS / 4.f }, b2Rot_identity };
 
-	return barn::combat_scene(context, session);
+			return barn::combat_scene(context, session);
+		}
+
+		ImGui::Spacing();
+
+		if (ImGui::Button("Settings", button_size)) {
+		}
+
+		ImGui::Spacing();
+
+		if (ImGui::Button("Exit", button_size)) {
+			return 0;
+		}
+
+		ImGui::End();
+
+		ImGui::Render();
+
+		disable_logical_presentation(context.renderer);
+
+		ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), context.renderer);
+		SDL_RenderPresent(context.renderer);
+	}
+
+	return 0;
 }
 
 int barn::combat_scene(barn::context& context, barn::session& session) {
