@@ -10,6 +10,7 @@
 #include <chrono>
 #include <memory>
 #include <future>
+#include <filesystem>
 
 namespace barn {
 	struct circle_def {
@@ -74,7 +75,7 @@ namespace barn {
 	using texture = barn::asset<SDL_Texture>;
 	using audio = barn::asset<MIX_Audio>;
 
-	using asset_def = std::string_view;
+	using asset_def = std::filesystem::path;
 
 	struct sprite_def {
 		barn::asset_def texture{};

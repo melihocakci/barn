@@ -5,13 +5,13 @@
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_mixer/SDL_mixer.h>
 
-barn::texture barn::get_texture(SDL_Renderer* renderer, std::string_view path) {
+barn::texture barn::get_texture(SDL_Renderer* renderer, const std::filesystem::path& path) {
 	using element_t = SDL_Texture*;
 	using future_t = std::shared_future<element_t>;
 	using shared_ptr_t = std::shared_ptr<future_t>;
 	using weak_ptr_t = shared_ptr_t::weak_type;
 
-	static std::unordered_map<std::string_view, weak_ptr_t> textures{};
+	static std::unordered_map<std::filesystem::path, weak_ptr_t> textures{};
 
 	const auto it = textures.find(path);
 	if (it != textures.end()) {
@@ -34,7 +34,7 @@ barn::texture barn::get_texture(SDL_Renderer* renderer, std::string_view path) {
 	std::future<SDL_Surface*> surface_ftr = std::async(std::launch::async,
 		[path]() -> SDL_Surface*
 		{
-			return IMG_Load(path.data());
+			return IMG_Load(path.generic_string().c_str());
 		});
 
 	*texture = std::async(std::launch::deferred,
@@ -53,13 +53,13 @@ barn::texture barn::get_texture(SDL_Renderer* renderer, std::string_view path) {
 	return { texture };
 }
 
-barn::audio barn::get_audio(std::string_view path) {
+barn::audio barn::get_audio(const std::filesystem::path& path) {
 	using element_t = MIX_Audio*;
 	using future_t = std::shared_future<element_t>;
 	using shared_ptr_t = std::shared_ptr<future_t>;
 	using weak_ptr_t = shared_ptr_t::weak_type;
 
-	static std::unordered_map<std::string_view, weak_ptr_t> audios{};
+	static std::unordered_map<std::filesystem::path, weak_ptr_t> audios{};
 
 	const auto it = audios.find(path);
 	if (it != audios.end()) {
@@ -82,7 +82,7 @@ barn::audio barn::get_audio(std::string_view path) {
 	*audio = std::async(std::launch::async,
 		[path]() -> MIX_Audio*
 		{
-			return MIX_LoadAudio(nullptr, path.data(), false);
+			return MIX_LoadAudio(nullptr, path.generic_string().c_str(), false);
 		});
 
 	audios[path] = audio;

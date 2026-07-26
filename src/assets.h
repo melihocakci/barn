@@ -4,7 +4,7 @@
 
 #include <SDL3/SDL.h>
 
-#include <string_view>
+#include <filesystem>
 
 namespace barn::textures {
 	constexpr std::string_view bliss = "assets/texture/bliss.jpg";
@@ -21,7 +21,7 @@ namespace barn::audios {
 }
 
 namespace barn {
-	barn::texture get_texture(SDL_Renderer* renderer, std::string_view path);
+	barn::texture get_texture(SDL_Renderer* renderer, const std::filesystem::path& path);
 
-	barn::audio get_audio(std::string_view path);
+	barn::audio get_audio(const std::filesystem::path& path);
 }
