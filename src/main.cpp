@@ -52,11 +52,26 @@ struct context_guard {
 
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
+
 		ImGuiIO& io = ImGui::GetIO();
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
+		ImFont* main_font = io.Fonts->AddFontFromFileTTF("assets/font/Roboto-Medium.ttf", 24.0f);
+		if (!main_font) {
+			show_error_and_exit("Failed to load main font");
+		}
 
-		ImGui::StyleColorsDark();
+		ImGuiStyle& style = ImGui::GetStyle();
+		style.WindowRounding = 8.0f;
+		style.FrameRounding = 6.0f;
+		style.GrabRounding = 6.0f;
+		style.WindowPadding = ImVec2(40.0f, 40.0f);
+		style.ItemSpacing = ImVec2(10.0f, 15.0f);
+		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.06f, 0.08f, 0.94f);
+		style.Colors[ImGuiCol_Button] = ImVec4(0.15f, 0.30f, 0.60f, 1.00f);
+		style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.20f, 0.40f, 0.80f, 1.00f);
+		style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.10f, 0.20f, 0.45f, 1.00f);
+		style.Colors[ImGuiCol_Text] = ImVec4(0.95f, 0.95f, 0.95f, 1.00f);
 
 		success = ImGui_ImplSDL3_InitForSDLRenderer(context.window, context.renderer);
 		if (!success) {

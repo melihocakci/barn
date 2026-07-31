@@ -125,17 +125,13 @@ static void draw_menu(barn::context& context) {
 		ImGui::End();
 		break;
 	case barn::game_state::OPTIONS:
-		// We use the same windowFlags so it looks identical to the main menu
 		ImGui::Begin("Options", nullptr, window_flags);
 
 		ImGui::Text("Audio Settings");
 		ImGui::Spacing();
 
-		// Set the width of the slider to match your buttons for a clean look
 		ImGui::PushItemWidth(200.0f);
 
-		// The slider modifies 'volume' directly. 
-		// Ranges from 0.0f to 100.0f, and displays with a '%' sign.
 		if (ImGui::SliderFloat("Volume", &context.settings.master_volume, 0.0f, 100.0f, "%.0f%%")) {
 			barn::apply_settings(context.settings, context.renderer, context.mixer);
 		}
@@ -149,7 +145,6 @@ static void draw_menu(barn::context& context) {
 		ImGui::Spacing();
 		ImGui::Spacing();
 
-		// Return to the main menu
 		if (ImGui::Button("Back", button_size)) {
 			context.state = barn::game_state::MENU;
 		}
@@ -193,11 +188,82 @@ static void handle_sdl_events(barn::context& context) {
 	}
 }
 
+static void fill_screen(SDL_Renderer* renderer, SDL_Texture* texture) {
+	float tex_w, tex_h;
+	SDL_GetTextureSize(texture, &tex_w, &tex_h);
+
+	int screen_w, screen_h;
+	SDL_GetRenderOutputSize(renderer, &screen_w, &screen_h);
+
+	float scale = std::max(static_cast<float>(screen_w) / tex_w, static_cast<float>(screen_h) / tex_h);
+	float visible_w = screen_w / scale;
+	float visible_h = screen_h / scale;
+	float crop_x = (tex_w - visible_w) * 0.5f;
+	float crop_y = (tex_h - visible_h) * 0.5f;
+
+	SDL_FRect src = { crop_x, crop_y, visible_w, visible_h };
+	SDL_RenderTexture(renderer, texture, &src, nullptr);
+}
+
+static void render_ui(entt::registry& registry, barn::context& context) {
+	ImGui_ImplSDLRenderer3_NewFrame();
+	ImGui_ImplSDL3_NewFrame();
+	ImGui::NewFrame();
+
+	draw_ui(context, registry);
+	draw_menu(context);
+
+	ImGui::Render();
+
+	ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), context.renderer);
+}
+
+static void render(entt::registry& registry, barn::context& context, float alpha) {
+	SDL_RenderClear(context.renderer);
+
+	disable_logical_presentation(context.renderer);
+
+	fill_screen(context.renderer, barn::get_texture(context.renderer, barn::textures::bliss).get());
+
+	enable_logical_presentation(context.renderer);
+
+	int vw = barn::VIRTUAL_WIDTH_PIXELS;
+	int vh = barn::VIRTUAL_HEIGHT_PIXELS;
+	if (vw <= 0 || vh <= 0 || context.renderer == nullptr) return;
+
+	const int thickness = 2;                       // tweak for subtlety
+	const Uint8 r = 0, g = 0, b = 0, a = 80;      // tweak alpha 0-255
+
+	SDL_SetRenderDrawBlendMode(context.renderer, SDL_BLENDMODE_BLEND);
+	SDL_SetRenderDrawColor(context.renderer, r, g, b, a);
+
+	SDL_FRect rects[4] = {
+		{ 0, 0, vw, thickness },             // top
+		{ 0, vh - thickness, vw, thickness },// bottom
+		{ 0, 0, thickness, vh },             // left
+		{ vw - thickness, 0, thickness, vh } // right
+	};
+	SDL_RenderFillRects(context.renderer, rects, 4);
+
+	sprite_system(registry, context, alpha);
+	animation_system(registry, context, alpha);
+
+	disable_logical_presentation(context.renderer);
+
+	render_ui(registry, context);
+
+	SDL_RenderPresent(context.renderer);
+}
+
 int barn::main_menu(barn::context& context) {
+	barn::texture bg_texture = barn::get_texture(context.renderer, barn::textures::bliss);
+
 	while (true) {
 		handle_sdl_events(context);
 
+		SDL_SetRenderDrawColor(context.renderer, 20, 20, 30, 255);
 		SDL_RenderClear(context.renderer);
+		SDL_RenderTexture(context.renderer, bg_texture.get(), nullptr, nullptr);
 
 		ImGui_ImplSDLRenderer3_NewFrame();
 		ImGui_ImplSDL3_NewFrame();
@@ -206,6 +272,7 @@ int barn::main_menu(barn::context& context) {
 		ImVec2 screen_size = ImGui::GetIO().DisplaySize;
 		ImVec2 center{ screen_size.x * 0.5f, screen_size.y * 0.5f };
 		ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+		ImGui::SetNextWindowBgAlpha(0.85f);
 
 		constexpr ImGuiWindowFlags window_flags =
 			ImGuiWindowFlags_NoTitleBar |
@@ -216,7 +283,17 @@ int barn::main_menu(barn::context& context) {
 
 		ImGui::Begin("Main Menu", nullptr, window_flags);
 
-		constexpr ImVec2 button_size{ 200.0f, 40.0f };
+		ImGui::SetWindowFontScale(1.8f);
+		float title_width = ImGui::CalcTextSize("BARN").x;
+		ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - title_width) * 0.5f);
+		ImGui::Text("BARN");
+		ImGui::SetWindowFontScale(1.0f);
+
+		ImGui::Spacing();
+		ImGui::Separator();
+		ImGui::Spacing();
+
+		constexpr ImVec2 button_size{ 220.0f, 45.0f };
 
 		if (ImGui::Button("Start", button_size)) {
 			ImGui::End();
@@ -297,7 +374,7 @@ int barn::combat_scene(barn::context& context, barn::session& session) {
 	float accumulator = 0.0f;
 	Uint64 prevTicks = SDL_GetTicks();
 
-	barn::texture sidebar_texture = barn::get_texture(context.renderer, barn::textures::clovers);
+	barn::texture sidebar_texture = barn::get_texture(context.renderer, barn::textures::clouds);
 
 	while (context.state != barn::game_state::EXIT) {
 		handle_sdl_events(context);
@@ -323,35 +400,7 @@ int barn::combat_scene(barn::context& context, barn::session& session) {
 			accumulator -= PHYSICS_TIMESTEP;
 		}
 
-		SDL_RenderClear(context.renderer);
-
-		disable_logical_presentation(context.renderer);
-
-		SDL_RenderTexture(context.renderer, sidebar_texture.get(), nullptr, nullptr);
-
-		enable_logical_presentation(context.renderer);
-
-		SDL_RenderTexture(context.renderer, bg_texture.get(), nullptr, nullptr);
-
-		// compute alpha for interpolation (clamp to [0,1])
-		const float alpha = std::clamp(accumulator / PHYSICS_TIMESTEP, 0.0f, 1.0f);
-		sprite_system(registry, context, alpha);
-		animation_system(registry, context, alpha);
-
-		ImGui_ImplSDLRenderer3_NewFrame();
-		ImGui_ImplSDL3_NewFrame();
-		ImGui::NewFrame();
-
-		draw_ui(context, registry);
-		draw_menu(context);
-
-		ImGui::Render();
-
-		disable_logical_presentation(context.renderer);
-
-		ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), context.renderer);
-
-		SDL_RenderPresent(context.renderer);
+		render(registry, context, accumulator / PHYSICS_TIMESTEP);
 	}
 
 	return 0;
