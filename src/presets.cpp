@@ -58,7 +58,7 @@ decltype(barn::character_presets) barn::character_presets
 				return rects;
 			}(),
 			.height = .8f * PIXELS_PER_METER,
-			.duration = 1000ms,
+			.duration = 1500ms,
 		},
 		.properties = base_properties{
 			.health = 1000,
