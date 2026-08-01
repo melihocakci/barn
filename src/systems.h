@@ -18,9 +18,9 @@ namespace barn {
 
 	void AI_system(entt::registry& registry, barn::context& context);
 
-	void sprite_system(entt::registry& registry, barn::context& context, float alpha);
+	void sprite_system(entt::registry& registry, barn::context& context, float alpha, float scale, float offset_x, float offset_y);
 
-	void animation_system(entt::registry& registry, barn::context& context, float alpha);
+	void animation_system(entt::registry& registry, barn::context& context, float alpha, float scale, float offset_x, float offset_y);
 
 	void body_system(entt::registry& registry, barn::context& context);
 }

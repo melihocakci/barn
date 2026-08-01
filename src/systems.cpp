@@ -213,7 +213,16 @@ static barn::component::transform interpolate(barn::component::transform prev, b
 	};
 }
 
-static void draw_texture(SDL_Renderer* renderer, barn::texture texture, barn::component::transform transform, const SDL_FRect* src_rect = nullptr, std::optional<float> width = std::nullopt, std::optional<float> height = std::nullopt)
+static void draw_texture(
+	SDL_Renderer* renderer,
+	barn::texture texture,
+	barn::component::transform transform,
+	const SDL_FRect* src_rect = nullptr,
+	std::optional<float> width = std::nullopt,
+	std::optional<float> height = std::nullopt,
+	float offset_x = 0.f,
+	float offset_y = 0.f
+)
 {
 	if (!texture) return;
 
@@ -238,8 +247,8 @@ static void draw_texture(SDL_Renderer* renderer, barn::texture texture, barn::co
 	}
 
 	const SDL_FRect dest_rect = {
-		transform.p.x * barn::PIXELS_PER_METER - dest_width / 2,
-		barn::VIRTUAL_HEIGHT_PIXELS - transform.p.y * barn::PIXELS_PER_METER - dest_height / 2,
+		offset_x + transform.p.x * barn::PIXELS_PER_METER - dest_width / 2,
+		offset_y + barn::VIRTUAL_HEIGHT_PIXELS - transform.p.y * barn::PIXELS_PER_METER - dest_height / 2,
 		dest_width,
 		dest_height
 	};
@@ -255,7 +264,7 @@ static void draw_texture(SDL_Renderer* renderer, barn::texture texture, barn::co
 	);
 }
 
-void barn::sprite_system(entt::registry& registry, barn::context& context, float alpha) {
+void barn::sprite_system(entt::registry& registry, barn::context& context, float alpha, float scale, float offset_x, float offset_y) {
 	for (auto [entity, sprite, transform] : registry.view<component::sprite, component::transform>().each()) {
 		draw_texture(
 			context.renderer,
@@ -264,12 +273,14 @@ void barn::sprite_system(entt::registry& registry, barn::context& context, float
 			? interpolate(registry.get<component::previous_transform>(entity), transform, alpha) : transform,
 			sprite.def.src_rect ? &*sprite.def.src_rect : nullptr,
 			sprite.def.width,
-			sprite.def.height
+			sprite.def.height,
+			offset_x,
+			offset_y
 		);
 	}
 }
 
-void barn::animation_system(entt::registry& registry, barn::context& context, float alpha) {
+void barn::animation_system(entt::registry& registry, barn::context& context, float alpha, float scale, float offset_x, float offset_y) {
 	for (auto [entity, idle_animation] : registry.view<component::idle_animation>().each()) {
 		if (!registry.all_of<component::animation>(entity)) {
 			component::animation& animation = registry.emplace<component::animation>(entity, idle_animation);
@@ -308,7 +319,9 @@ void barn::animation_system(entt::registry& registry, barn::context& context, fl
 			? interpolate(registry.get<component::previous_transform>(entity), transform, alpha) : transform,
 			&animation.def.frames[frame_index],
 			animation.def.width,
-			animation.def.height
+			animation.def.height,
+			offset_x,
+			offset_y
 		);
 	}
 }
