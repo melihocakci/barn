@@ -154,19 +154,6 @@ static void draw_menu(barn::context& context) {
 	}
 }
 
-static bool enable_logical_presentation(SDL_Renderer* renderer) {
-	return SDL_SetRenderLogicalPresentation(
-		renderer,
-		barn::VIRTUAL_WIDTH_PIXELS,
-		barn::VIRTUAL_HEIGHT_PIXELS,
-		SDL_LOGICAL_PRESENTATION_LETTERBOX
-	);
-}
-
-static bool disable_logical_presentation(SDL_Renderer* renderer) {
-	return SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
-}
-
 static void handle_sdl_events(barn::context& context) {
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
@@ -221,34 +208,32 @@ static void render_ui(entt::registry& registry, barn::context& context) {
 static void render(entt::registry& registry, barn::context& context, float alpha) {
 	SDL_RenderClear(context.renderer);
 
-	disable_logical_presentation(context.renderer);
-
 	fill_screen(context.renderer, barn::get_texture(context.renderer, barn::textures::bliss).get());
 
-	enable_logical_presentation(context.renderer);
+	int window_w, window_h;
+	SDL_GetCurrentRenderOutputSize(context.renderer, &window_w, &window_h);
+	const float scale = std::min(static_cast<float>(window_w) / barn::VIRTUAL_WIDTH_PIXELS, static_cast<float>(window_h) / barn::VIRTUAL_HEIGHT_PIXELS);
+	float offset_x = (static_cast<float>(window_w) / scale - barn::VIRTUAL_WIDTH_PIXELS) / 2.0f;
+	float offset_y = (static_cast<float>(window_h) / scale - barn::VIRTUAL_HEIGHT_PIXELS) / 2.0f;
 
-	int vw = barn::VIRTUAL_WIDTH_PIXELS;
-	int vh = barn::VIRTUAL_HEIGHT_PIXELS;
-	if (vw <= 0 || vh <= 0 || context.renderer == nullptr) return;
+	SDL_SetRenderScale(context.renderer, scale, scale);
 
-	const int thickness = 2;                       // tweak for subtlety
-	const Uint8 r = 0, g = 0, b = 0, a = 80;      // tweak alpha 0-255
-
+	const int thickness = 2;
+	const Uint8 r = 0, g = 0, b = 0, a = 80;
 	SDL_SetRenderDrawBlendMode(context.renderer, SDL_BLENDMODE_BLEND);
 	SDL_SetRenderDrawColor(context.renderer, r, g, b, a);
-
 	SDL_FRect rects[4] = {
-		{ 0, 0, vw, thickness },             // top
-		{ 0, vh - thickness, vw, thickness },// bottom
-		{ 0, 0, thickness, vh },             // left
-		{ vw - thickness, 0, thickness, vh } // right
+		{ offset_x, offset_y, barn::VIRTUAL_WIDTH_PIXELS, thickness },									// top
+		{ offset_x, offset_y + barn::VIRTUAL_HEIGHT_PIXELS, barn::VIRTUAL_WIDTH_PIXELS, thickness },	// bottom
+		{ offset_x, offset_y, thickness, barn::VIRTUAL_HEIGHT_PIXELS },									// left
+		{ offset_x + barn::VIRTUAL_WIDTH_PIXELS, offset_y, thickness, barn::VIRTUAL_HEIGHT_PIXELS }		// right
 	};
 	SDL_RenderFillRects(context.renderer, rects, 4);
 
-	sprite_system(registry, context, alpha);
-	animation_system(registry, context, alpha);
+	sprite_system(registry, context, alpha, scale, offset_x, offset_y);
+	animation_system(registry, context, alpha, scale, offset_x, offset_y);
 
-	disable_logical_presentation(context.renderer);
+	SDL_SetRenderScale(context.renderer, 1.0f, 1.0f);
 
 	render_ui(registry, context);
 
@@ -336,8 +321,6 @@ int barn::main_menu(barn::context& context) {
 		ImGui::End();
 
 		ImGui::Render();
-
-		disable_logical_presentation(context.renderer);
 
 		ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), context.renderer);
 		SDL_RenderPresent(context.renderer);
