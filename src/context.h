@@ -9,20 +9,13 @@
 #include <unordered_map>
 
 namespace barn {
-	enum class game_state {
-		COMBAT,
-		MENU,
-		OPTIONS,
-		EXIT,
-	};
-
 	struct context {
 		SDL_Window* const window{};
 		SDL_Renderer* const renderer{};
 		MIX_Mixer* const mixer{};
 		b2WorldId const world_id{};
 		barn::settings settings{};
-        std::unordered_map<SDL_JoystickID, barn::gamepad> gamepads{};
-		barn::game_state state{};
+		std::unordered_map<SDL_JoystickID, barn::gamepad> gamepads{};
+		bool exit = false;
 	};
 }

@@ -220,8 +220,9 @@ static void draw_texture(
 	const SDL_FRect* src_rect = nullptr,
 	std::optional<float> width = std::nullopt,
 	std::optional<float> height = std::nullopt,
-	float offset_x = 0.f,
-	float offset_y = 0.f
+	float scale = 1.f,
+	int offset_x = 0,
+	int offset_y = 0
 )
 {
 	if (!texture) return;
@@ -247,11 +248,15 @@ static void draw_texture(
 	}
 
 	const SDL_FRect dest_rect = {
-		offset_x + transform.p.x * barn::PIXELS_PER_METER - dest_width / 2,
-		offset_y + barn::VIRTUAL_HEIGHT_PIXELS - transform.p.y * barn::PIXELS_PER_METER - dest_height / 2,
+		static_cast<float>(offset_x) / scale + transform.p.x * barn::PIXELS_PER_METER - dest_width / 2,
+		static_cast<float>(offset_y) / scale + barn::VIRTUAL_HEIGHT_PIXELS - transform.p.y * barn::PIXELS_PER_METER - dest_height / 2,
 		dest_width,
 		dest_height
 	};
+
+	float prev_scale_x, prev_scale_y;
+	SDL_GetRenderScale(renderer, &prev_scale_x, &prev_scale_y);
+	SDL_SetRenderScale(renderer, scale, scale);
 
 	SDL_RenderTextureRotated(
 		renderer,
@@ -262,9 +267,11 @@ static void draw_texture(
 		nullptr,
 		SDL_FLIP_NONE
 	);
+
+	SDL_SetRenderScale(renderer, prev_scale_x, prev_scale_y);
 }
 
-void barn::sprite_system(entt::registry& registry, barn::context& context, float alpha, float scale, float offset_x, float offset_y) {
+void barn::sprite_system(entt::registry& registry, barn::context& context, float alpha, float scale, int offset_x, int offset_y) {
 	for (auto [entity, sprite, transform] : registry.view<component::sprite, component::transform>().each()) {
 		draw_texture(
 			context.renderer,
@@ -274,13 +281,14 @@ void barn::sprite_system(entt::registry& registry, barn::context& context, float
 			sprite.def.src_rect ? &*sprite.def.src_rect : nullptr,
 			sprite.def.width,
 			sprite.def.height,
+			scale,
 			offset_x,
 			offset_y
 		);
 	}
 }
 
-void barn::animation_system(entt::registry& registry, barn::context& context, float alpha, float scale, float offset_x, float offset_y) {
+void barn::animation_system(entt::registry& registry, barn::context& context, float alpha, float scale, int offset_x, int offset_y) {
 	for (auto [entity, idle_animation] : registry.view<component::idle_animation>().each()) {
 		if (!registry.all_of<component::animation>(entity)) {
 			component::animation& animation = registry.emplace<component::animation>(entity, idle_animation);
@@ -320,6 +328,7 @@ void barn::animation_system(entt::registry& registry, barn::context& context, fl
 			&animation.def.frames[frame_index],
 			animation.def.width,
 			animation.def.height,
+			scale,
 			offset_x,
 			offset_y
 		);
