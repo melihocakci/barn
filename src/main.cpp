@@ -118,5 +118,17 @@ int main(int argc, char* argv[]) {
 
 	barn::apply_settings(guard.context.settings, guard.context.renderer, guard.context.mixer);
 
-	return barn::main_menu(guard.context);
+	while (!guard.context.exit) {
+		barn::menu_state state = barn::home_scene(guard.context);
+		if (state == barn::menu_state::EXIT) {
+			return 0;
+		}
+
+		std::optional<barn::session> session = barn::lobby_scene(guard.context);
+		if (!session) {
+			continue;
+		}
+
+		barn::combat_scene(guard.context, *session);
+	}
 }

@@ -16,6 +16,15 @@
 #include <imgui_impl_sdlrenderer3.h>
 
 
+constexpr ImGuiWindowFlags window_flags =
+ImGuiWindowFlags_NoTitleBar |
+ImGuiWindowFlags_NoCollapse |
+ImGuiWindowFlags_NoResize |
+ImGuiWindowFlags_NoMove |
+ImGuiWindowFlags_AlwaysAutoResize;
+
+constexpr ImVec2 button_size{ 200.0f, 40.0f };
+
 static entt::entity create_borders(entt::registry& registry, barn::context& context) {
 	using namespace barn;
 
@@ -49,13 +58,6 @@ static entt::entity create_borders(entt::registry& registry, barn::context& cont
 }
 
 static void draw_ui(barn::context& context, entt::registry& registry) {
-	constexpr ImGuiWindowFlags window_flags =
-		ImGuiWindowFlags_NoTitleBar |
-		ImGuiWindowFlags_NoCollapse |
-		ImGuiWindowFlags_NoResize |
-		ImGuiWindowFlags_NoMove |
-		ImGuiWindowFlags_AlwaysAutoResize;
-
 	if (context.settings.show_fps) {
 		ImGui::SetNextWindowBgAlpha(0.5f);
 		ImGui::Begin("FPS", nullptr, window_flags);
@@ -83,98 +85,6 @@ static void draw_ui(barn::context& context, entt::registry& registry) {
 	ImGui::End();
 }
 
-static void draw_menu(barn::context& context) {
-	if (context.state == barn::game_state::COMBAT) {
-		return;
-	}
-
-	ImVec2 screen_size = ImGui::GetIO().DisplaySize;
-	ImU32 tint_color = IM_COL32(0, 0, 0, 150);
-	ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2{ 0.0f, 0.0f }, screen_size, tint_color);
-
-	ImVec2 center{ screen_size.x * 0.5f, screen_size.y * 0.5f };
-	ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-	constexpr ImGuiWindowFlags window_flags =
-		ImGuiWindowFlags_NoTitleBar |
-		ImGuiWindowFlags_NoCollapse |
-		ImGuiWindowFlags_NoResize |
-		ImGuiWindowFlags_NoMove |
-		ImGuiWindowFlags_AlwaysAutoResize;
-	const ImVec2 button_size{ 200.0f, 40.0f };
-
-	switch (context.state) {
-	case barn::game_state::MENU:
-		ImGui::Begin("Main Menu", nullptr, window_flags);
-
-		if (ImGui::Button("Resume", button_size)) {
-			context.state = barn::game_state::COMBAT;
-		}
-
-		ImGui::Spacing();
-
-		if (ImGui::Button("Options", button_size)) {
-			context.state = barn::game_state::OPTIONS;
-		}
-
-		ImGui::Spacing();
-
-		if (ImGui::Button("Exit", button_size)) {
-			context.state = barn::game_state::EXIT;
-		}
-
-		ImGui::End();
-		break;
-	case barn::game_state::OPTIONS:
-		ImGui::Begin("Options", nullptr, window_flags);
-
-		ImGui::Text("Audio Settings");
-		ImGui::Spacing();
-
-		ImGui::PushItemWidth(200.0f);
-
-		if (ImGui::SliderFloat("Volume", &context.settings.master_volume, 0.0f, 100.0f, "%.0f%%")) {
-			barn::apply_settings(context.settings, context.renderer, context.mixer);
-		}
-
-		ImGui::PopItemWidth();
-
-		ImGui::Spacing();
-
-		ImGui::Checkbox("Show FPS", &context.settings.show_fps);
-
-		ImGui::Spacing();
-		ImGui::Spacing();
-
-		if (ImGui::Button("Back", button_size)) {
-			context.state = barn::game_state::MENU;
-		}
-
-		ImGui::End();
-		break;
-	}
-}
-
-static void handle_sdl_events(barn::context& context) {
-	SDL_Event event;
-	while (SDL_PollEvent(&event)) {
-		ImGui_ImplSDL3_ProcessEvent(&event);
-
-		if (event.type == SDL_EVENT_QUIT) {
-			context.state = barn::game_state::EXIT;
-		}
-		else if (event.type == SDL_EventType::SDL_EVENT_GAMEPAD_ADDED) {
-			context.gamepads.emplace(event.gdevice.which, barn::gamepad{ SDL_OpenGamepad(event.gdevice.which), SDL_CloseGamepad });
-		}
-		else if (event.type == SDL_EventType::SDL_EVENT_GAMEPAD_REMOVED) {
-			context.gamepads.erase(event.gdevice.which);
-		}
-		else if ((event.type == SDL_EVENT_KEY_DOWN && event.key.scancode == SDL_Scancode::SDL_SCANCODE_ESCAPE)
-			|| (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN && event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK)) {
-			context.state = context.state == barn::game_state::COMBAT ? barn::game_state::MENU : barn::game_state::COMBAT;
-		}
-	}
-}
-
 static void fill_screen(SDL_Renderer* renderer, SDL_Texture* texture) {
 	float tex_w, tex_h;
 	SDL_GetTextureSize(texture, &tex_w, &tex_h);
@@ -192,144 +102,209 @@ static void fill_screen(SDL_Renderer* renderer, SDL_Texture* texture) {
 	SDL_RenderTexture(renderer, texture, &src, nullptr);
 }
 
-static void render_ui(entt::registry& registry, barn::context& context) {
+static void start_render(SDL_Renderer* renderer) {
+	SDL_RenderClear(renderer);
 	ImGui_ImplSDLRenderer3_NewFrame();
 	ImGui_ImplSDL3_NewFrame();
 	ImGui::NewFrame();
+}
 
-	draw_ui(context, registry);
-	draw_menu(context);
-
+static void end_render(SDL_Renderer* renderer) {
 	ImGui::Render();
-
-	ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), context.renderer);
+	ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
+	SDL_RenderPresent(renderer);
 }
 
 static void render(entt::registry& registry, barn::context& context, float alpha) {
-	SDL_RenderClear(context.renderer);
-
 	fill_screen(context.renderer, barn::get_texture(context.renderer, barn::textures::bliss).get());
 
 	int window_w, window_h;
 	SDL_GetCurrentRenderOutputSize(context.renderer, &window_w, &window_h);
 	const float scale = std::min(static_cast<float>(window_w) / barn::VIRTUAL_WIDTH_PIXELS, static_cast<float>(window_h) / barn::VIRTUAL_HEIGHT_PIXELS);
-	float offset_x = (static_cast<float>(window_w) / scale - barn::VIRTUAL_WIDTH_PIXELS) / 2.0f;
-	float offset_y = (static_cast<float>(window_h) / scale - barn::VIRTUAL_HEIGHT_PIXELS) / 2.0f;
-
-	SDL_SetRenderScale(context.renderer, scale, scale);
+	int offset_x = (window_w - scale * barn::VIRTUAL_WIDTH_PIXELS) / 2;
+	int offset_y = (window_h - scale * barn::VIRTUAL_HEIGHT_PIXELS) / 2;
 
 	const int thickness = 2;
 	const Uint8 r = 0, g = 0, b = 0, a = 80;
 	SDL_SetRenderDrawBlendMode(context.renderer, SDL_BLENDMODE_BLEND);
 	SDL_SetRenderDrawColor(context.renderer, r, g, b, a);
 	SDL_FRect rects[4] = {
-		{ offset_x, offset_y, barn::VIRTUAL_WIDTH_PIXELS, thickness },									// top
-		{ offset_x, offset_y + barn::VIRTUAL_HEIGHT_PIXELS, barn::VIRTUAL_WIDTH_PIXELS, thickness },	// bottom
-		{ offset_x, offset_y, thickness, barn::VIRTUAL_HEIGHT_PIXELS },									// left
-		{ offset_x + barn::VIRTUAL_WIDTH_PIXELS, offset_y, thickness, barn::VIRTUAL_HEIGHT_PIXELS }		// right
+		{ offset_x, offset_y, barn::VIRTUAL_WIDTH_PIXELS * scale, thickness },									// top
+		{ offset_x, offset_y + barn::VIRTUAL_HEIGHT_PIXELS * scale - thickness, barn::VIRTUAL_WIDTH_PIXELS * scale, thickness },	// bottom
+		{ offset_x, offset_y, thickness, barn::VIRTUAL_HEIGHT_PIXELS * scale },									// left
+		{ offset_x + barn::VIRTUAL_WIDTH_PIXELS * scale - thickness, offset_y, thickness, barn::VIRTUAL_HEIGHT_PIXELS * scale }		// right
 	};
 	SDL_RenderFillRects(context.renderer, rects, 4);
 
 	sprite_system(registry, context, alpha, scale, offset_x, offset_y);
 	animation_system(registry, context, alpha, scale, offset_x, offset_y);
 
-	SDL_SetRenderScale(context.renderer, 1.0f, 1.0f);
-
-	render_ui(registry, context);
-
-	SDL_RenderPresent(context.renderer);
+	draw_ui(context, registry);
 }
 
-int barn::main_menu(barn::context& context) {
-	barn::texture bg_texture = barn::get_texture(context.renderer, barn::textures::bliss);
+static void main_menu(barn::context& context, std::vector<barn::menu_state>& menu_stack) {
+	ImGui::Begin("Main Menu", nullptr, window_flags);
 
-	while (true) {
-		handle_sdl_events(context);
+	ImGui::SetWindowFontScale(1.8f);
+	float title_width = ImGui::CalcTextSize("BARN").x;
+	ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - title_width) * 0.5f);
+	ImGui::Text("BARN");
+	ImGui::SetWindowFontScale(1.0f);
 
-		SDL_SetRenderDrawColor(context.renderer, 20, 20, 30, 255);
-		SDL_RenderClear(context.renderer);
-		SDL_RenderTexture(context.renderer, bg_texture.get(), nullptr, nullptr);
+	ImGui::Spacing();
+	ImGui::Separator();
+	ImGui::Spacing();
 
-		ImGui_ImplSDLRenderer3_NewFrame();
-		ImGui_ImplSDL3_NewFrame();
-		ImGui::NewFrame();
-
-		ImVec2 screen_size = ImGui::GetIO().DisplaySize;
-		ImVec2 center{ screen_size.x * 0.5f, screen_size.y * 0.5f };
-		ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-		ImGui::SetNextWindowBgAlpha(0.85f);
-
-		constexpr ImGuiWindowFlags window_flags =
-			ImGuiWindowFlags_NoTitleBar |
-			ImGuiWindowFlags_NoCollapse |
-			ImGuiWindowFlags_NoResize |
-			ImGuiWindowFlags_NoMove |
-			ImGuiWindowFlags_AlwaysAutoResize;
-
-		ImGui::Begin("Main Menu", nullptr, window_flags);
-
-		ImGui::SetWindowFontScale(1.8f);
-		float title_width = ImGui::CalcTextSize("BARN").x;
-		ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - title_width) * 0.5f);
-		ImGui::Text("BARN");
-		ImGui::SetWindowFontScale(1.0f);
-
-		ImGui::Spacing();
-		ImGui::Separator();
-		ImGui::Spacing();
-
-		constexpr ImVec2 button_size{ 220.0f, 45.0f };
-
-		if (ImGui::Button("Start", button_size)) {
-			ImGui::End();
-			ImGui::EndFrame();
-			barn::session session{
-				.players = {
-					character_presets[0],
-				},
-				.level{
-					.bg_music = audios::kasane_territory,
-					.bg_texture = textures::bliss,
-					.elements{
-					},
-					.enemies{
-						enemy_presets[0],
-					}
-				}
-			};
-			session.players[0].player = component::player::P1;
-			if (!context.gamepads.empty()) {
-				session.players[0].gamepad = { .id = context.gamepads.begin()->first };
-			}
-			session.players[0].keyboard = component::keyboard{};
-			session.players[0].transform = component::transform{ { VIRTUAL_WIDTH_METERS / 2.f, VIRTUAL_HEIGHT_METERS / 4.f }, b2Rot_identity };
-
-			return barn::combat_scene(context, session);
-		}
-
-		ImGui::Spacing();
-
-		if (ImGui::Button("Settings", button_size)) {
-		}
-
-		ImGui::Spacing();
-
-		if (ImGui::Button("Exit", button_size)) {
-			return 0;
-		}
-
-		ImGui::End();
-
-		ImGui::Render();
-
-		ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), context.renderer);
-		SDL_RenderPresent(context.renderer);
+	if (ImGui::Button("Start", button_size)) {
+		menu_stack.push_back(barn::menu_state::START_GAME);
 	}
 
-	return 0;
+	ImGui::Spacing();
+
+	if (ImGui::Button("Settings", button_size)) {
+		menu_stack.push_back(barn::menu_state::SETTINGS_MENU);
+	}
+
+	ImGui::Spacing();
+
+	if (ImGui::Button("Exit", button_size)) {
+		menu_stack.push_back(barn::menu_state::EXIT);
+	}
+
+	ImGui::End();
 }
 
-int barn::combat_scene(barn::context& context, barn::session& session) {
+static void settings_menu(barn::context& context, std::vector<barn::menu_state>& menu_stack) {
+	ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+	ImGui::Text("Audio Settings");
+	ImGui::Spacing();
+
+	ImGui::PushItemWidth(200.0f);
+
+	if (ImGui::SliderFloat("Volume", &context.settings.master_volume, 0.0f, 100.0f, "%.0f%%")) {
+		barn::apply_settings(context.settings, context.renderer, context.mixer);
+	}
+
+	ImGui::PopItemWidth();
+
+	ImGui::Spacing();
+
+	ImGui::Checkbox("Show FPS", &context.settings.show_fps);
+
+	ImGui::Spacing();
+	ImGui::Spacing();
+
+	if (ImGui::Button("Back", ImVec2(200.0f, 40.0f))) {
+		menu_stack.pop_back();
+	}
+
+	ImGui::End();
+}
+
+static void pause_menu(std::vector<barn::menu_state>& menu_stack) {
+	ImVec2 screen_size = ImGui::GetIO().DisplaySize;
+	ImU32 tint_color = IM_COL32(0, 0, 0, 150);
+	ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2{ 0.0f, 0.0f }, screen_size, tint_color);
+
+	ImVec2 center{ screen_size.x * 0.5f, screen_size.y * 0.5f };
+	ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+
+	ImGui::Begin("Main Menu", nullptr, window_flags);
+
+	if (ImGui::Button("Resume", button_size)) {
+		menu_stack.pop_back();
+	}
+
+	ImGui::Spacing();
+
+	if (ImGui::Button("Settings", button_size)) {
+		menu_stack.push_back(barn::menu_state::SETTINGS_MENU);
+	}
+
+	ImGui::Spacing();
+
+	if (ImGui::Button("Exit", button_size)) {
+		menu_stack.push_back(barn::menu_state::EXIT);
+	}
+
+	ImGui::End();
+}
+
+static void draw_menu(barn::context& context, std::vector<barn::menu_state>& menu_stack) {
+	if (menu_stack.empty()) {
+		return;
+	}
+
+	switch (menu_stack.back()) {
+	case barn::menu_state::MAIN_MENU:
+		return main_menu(context, menu_stack);
+	case barn::menu_state::PAUSE_MENU:
+		return pause_menu(menu_stack);
+	case barn::menu_state::SETTINGS_MENU:
+		return settings_menu(context, menu_stack);
+	}
+}
+
+barn::menu_state barn::home_scene(barn::context& context) {
+	std::vector<barn::menu_state> menu_stack{ barn::menu_state::MAIN_MENU };
+	barn::texture background_texture = barn::get_texture(context.renderer, barn::textures::bliss);
+
+	while (!context.exit) {
+		SDL_Event event;
+		while (SDL_PollEvent(&event)) {
+			ImGui_ImplSDL3_ProcessEvent(&event);
+
+			if (event.type == SDL_EVENT_QUIT) {
+				context.exit = true;
+			}
+			else if (event.type == SDL_EventType::SDL_EVENT_GAMEPAD_ADDED) {
+				context.gamepads.emplace(event.gdevice.which, barn::gamepad{ SDL_OpenGamepad(event.gdevice.which), SDL_CloseGamepad });
+			}
+			else if (event.type == SDL_EventType::SDL_EVENT_GAMEPAD_REMOVED) {
+				context.gamepads.erase(event.gdevice.which);
+			}
+		}
+
+		start_render(context.renderer);
+
+		fill_screen(context.renderer, background_texture.get());
+
+		draw_menu(context, menu_stack);
+
+		end_render(context.renderer);
+
+		if (menu_stack.back() == barn::menu_state::EXIT || menu_stack.back() == barn::menu_state::START_GAME) {
+			return menu_stack.back();
+		}
+	}
+}
+
+std::optional<barn::session> barn::lobby_scene(barn::context& context) {
+	barn::session session{
+	.players = {
+		barn::character_presets[0],
+	},
+	.level{
+		.bg_music = barn::audios::kasane_territory,
+		.bg_texture = barn::textures::bliss,
+		.elements{
+		},
+		.enemies{
+			barn::enemy_presets[0],
+		}
+	}
+	};
+	session.players[0].player = barn::component::player::P1;
+	if (!context.gamepads.empty()) {
+		session.players[0].gamepad = { .id = context.gamepads.begin()->first };
+	}
+	session.players[0].keyboard = barn::component::keyboard{};
+	session.players[0].transform = barn::component::transform{ { barn::VIRTUAL_WIDTH_METERS / 2.f, barn::VIRTUAL_HEIGHT_METERS / 4.f }, b2Rot_identity };
+
+	return session;
+}
+
+void barn::combat_scene(barn::context& context, barn::session& session) {
 	barn::audio bg_music = barn::get_audio(session.level.bg_music);
 	barn::texture bg_texture = barn::get_texture(context.renderer, session.level.bg_texture);
 	MIX_Track* track = MIX_CreateTrack(context.mixer);
@@ -338,7 +313,7 @@ int barn::combat_scene(barn::context& context, barn::session& session) {
 	SDL_SetNumberProperty(props, MIX_PROP_PLAY_LOOPS_NUMBER, -1);
 	MIX_PlayTrack(track, props);
 
-	entt::registry registry;
+	entt::registry registry{};
 
 	create_borders(registry, context);
 
@@ -359,32 +334,61 @@ int barn::combat_scene(barn::context& context, barn::session& session) {
 
 	barn::texture sidebar_texture = barn::get_texture(context.renderer, barn::textures::clouds);
 
-	while (context.state != barn::game_state::EXIT) {
-		handle_sdl_events(context);
+	std::vector<barn::menu_state> menu_stack{};
+	while (!context.exit) {
+		SDL_Event event;
+		while (SDL_PollEvent(&event)) {
+			ImGui_ImplSDL3_ProcessEvent(&event);
+
+			if (event.type == SDL_EVENT_QUIT) {
+				context.exit = true;
+			}
+			else if (event.type == SDL_EventType::SDL_EVENT_GAMEPAD_ADDED) {
+				context.gamepads.emplace(event.gdevice.which, barn::gamepad{ SDL_OpenGamepad(event.gdevice.which), SDL_CloseGamepad });
+			}
+			else if (event.type == SDL_EventType::SDL_EVENT_GAMEPAD_REMOVED) {
+				context.gamepads.erase(event.gdevice.which);
+			}
+			else if ((event.type == SDL_EVENT_KEY_DOWN && event.key.scancode == SDL_Scancode::SDL_SCANCODE_ESCAPE)
+				|| (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN && event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK))
+			{
+				if (menu_stack.empty()) {
+					menu_stack.push_back(barn::menu_state::PAUSE_MENU);
+				}
+				else {
+					menu_stack.pop_back();
+				}
+			}
+		}
 
 		const Uint64 currentTicks = SDL_GetTicks();
-		const float deltaTime = context.state == barn::game_state::COMBAT ? (currentTicks - prevTicks) / 1000.0f : 0.f;
+		const float deltaTime = menu_stack.empty() ? (currentTicks - prevTicks) / 1000.0f : 0.f;
 		prevTicks = currentTicks;
 		accumulator += deltaTime;
 
-		while (accumulator >= PHYSICS_TIMESTEP) {
-			property_system(registry);
+		while (accumulator >= barn::PHYSICS_TIMESTEP) {
+			barn::property_system(registry);
 
 			if (SDL_GetWindowFlags(context.window) & SDL_WINDOW_INPUT_FOCUS) {
-				keyboard_system(registry, context);
-				gamepad_system(registry, context);
+				barn::keyboard_system(registry, context);
+				barn::gamepad_system(registry, context);
 			}
 
-			input_system(registry, context);
+			barn::input_system(registry, context);
 
-			AI_system(registry, context);
+			barn::AI_system(registry, context);
 
-			body_system(registry, context);
-			accumulator -= PHYSICS_TIMESTEP;
+			barn::body_system(registry, context);
+			accumulator -= barn::PHYSICS_TIMESTEP;
 		}
 
-		render(registry, context, accumulator / PHYSICS_TIMESTEP);
-	}
+		start_render(context.renderer);
+		render(registry, context, accumulator / barn::PHYSICS_TIMESTEP);
+		draw_menu(context, menu_stack);
+		end_render(context.renderer);
 
-	return 0;
+		if (!menu_stack.empty() && menu_stack.back() == barn::menu_state::EXIT) {
+			return;
+		}
+	}
 }
