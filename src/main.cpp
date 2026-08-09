@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
 	while (!guard.context.exit) {
 		barn::menu_state state = barn::home_scene(guard.context);
 		if (state == barn::menu_state::EXIT) {
-			return 0;
+			break;
 		}
 
 		std::optional<barn::session> session = barn::lobby_scene(guard.context);
@@ -131,4 +131,6 @@ int main(int argc, char* argv[]) {
 
 		barn::combat_scene(guard.context, *session);
 	}
+
+	return 0;
 }
