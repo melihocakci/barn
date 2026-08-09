@@ -100,6 +100,7 @@ add_executable(${PROJECT_NAME} WIN32
     "src/levels.cpp"
     "src/settings.cpp"
     "src/assets.cpp"
+    "src/interface.cpp"
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
