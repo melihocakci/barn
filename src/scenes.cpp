@@ -106,8 +106,8 @@ static void render(entt::registry& registry, barn::context& context, float alpha
 	draw_ui(context, registry);
 }
 
-barn::menu_state barn::home_scene(barn::context& context) {
-	std::vector<barn::menu_state> menu_stack{ barn::menu_state::MAIN_MENU };
+barn::menu_action barn::home_scene(barn::context& context) {
+	std::vector<barn::menu> menu_stack{ barn::menu::MAIN_MENU };
 	barn::texture background_texture = barn::get_texture(context.renderer, barn::textures::bliss);
 
 	while (!context.exit) {
@@ -130,14 +130,16 @@ barn::menu_state barn::home_scene(barn::context& context) {
 
 		fill_screen(context.renderer, background_texture.get());
 
-		draw_menu(context, menu_stack);
+		barn::menu_action result = draw_menu(context, menu_stack);
 
 		end_render(context.renderer);
 
-		if (menu_stack.back() == barn::menu_state::EXIT || menu_stack.back() == barn::menu_state::START_GAME) {
-			return menu_stack.back();
+		if (result != barn::menu_action::NONE) {
+			return result;
 		}
 	}
+
+	return barn::menu_action::NONE;
 }
 
 std::optional<barn::session> barn::lobby_scene(barn::context& context) {
@@ -195,7 +197,7 @@ void barn::combat_scene(barn::context& context, barn::session& session) {
 
 	barn::texture sidebar_texture = barn::get_texture(context.renderer, barn::textures::clouds);
 
-	std::vector<barn::menu_state> menu_stack{};
+	std::vector<barn::menu> menu_stack{};
 	while (!context.exit) {
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
@@ -214,7 +216,7 @@ void barn::combat_scene(barn::context& context, barn::session& session) {
 				|| (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN && event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK))
 			{
 				if (menu_stack.empty()) {
-					menu_stack.push_back(barn::menu_state::PAUSE_MENU);
+					menu_stack.push_back(barn::menu::PAUSE_MENU);
 				}
 				else {
 					menu_stack.pop_back();
@@ -245,11 +247,11 @@ void barn::combat_scene(barn::context& context, barn::session& session) {
 
 		start_render(context.renderer);
 		render(registry, context, accumulator / barn::PHYSICS_TIMESTEP);
-		draw_menu(context, menu_stack);
+		barn::menu_action result = barn::draw_menu(context, menu_stack);
 		end_render(context.renderer);
 
-		if (!menu_stack.empty() && menu_stack.back() == barn::menu_state::EXIT) {
-			return;
+		if (result == barn::menu_action::EXIT) {
+			break;
 		}
 	}
 }

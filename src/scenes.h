@@ -12,7 +12,7 @@ namespace barn {
 		barn::level level{};
 	};
 
-	barn::menu_state home_scene(barn::context& context);
+	barn::menu_action home_scene(barn::context& context);
 
 	std::optional<barn::session> lobby_scene(barn::context& context);
 

@@ -3,15 +3,19 @@
 #include "context.h"
 
 namespace barn {
-	enum class menu_state {
+	enum class menu {
 		MAIN_MENU,
 		SETTINGS_MENU,
 		PAUSE_MENU,
+	};
+
+	enum class menu_action {
+		NONE,
 		START_GAME,
 		EXIT,
 	};
 
-	void draw_menu(barn::context& context, std::vector<barn::menu_state>& menu_stack);
+	barn::menu_action draw_menu(barn::context& context, std::vector<barn::menu>& menu_stack);
 
 	void draw_ui(barn::context& context, entt::registry& registry);
 }

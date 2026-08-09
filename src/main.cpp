@@ -119,8 +119,8 @@ int main(int argc, char* argv[]) {
 	barn::apply_settings(guard.context.settings, guard.context.renderer, guard.context.mixer);
 
 	while (!guard.context.exit) {
-		barn::menu_state state = barn::home_scene(guard.context);
-		if (state == barn::menu_state::EXIT) {
+		barn::menu_action result = barn::home_scene(guard.context);
+		if (result == barn::menu_action::EXIT) {
 			break;
 		}
 
