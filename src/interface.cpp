@@ -14,7 +14,9 @@ constexpr ImGuiWindowFlags window_flags =
 
 constexpr ImVec2 button_size{ 200.0f, 40.0f };
 
-static void main_menu(barn::context& context, std::vector<barn::menu_state>& menu_stack) {
+static barn::menu_action main_menu(barn::context& context, std::vector<barn::menu>& menu_stack) {
+	barn::menu_action result = barn::menu_action::NONE;
+
 	ImGui::Begin("Main Menu", nullptr, window_flags);
 
 	ImGui::SetWindowFontScale(1.8f);
@@ -28,25 +30,27 @@ static void main_menu(barn::context& context, std::vector<barn::menu_state>& men
 	ImGui::Spacing();
 
 	if (ImGui::Button("Start", button_size)) {
-		menu_stack.push_back(barn::menu_state::START_GAME);
+		result = barn::menu_action::START_GAME;
 	}
 
 	ImGui::Spacing();
 
 	if (ImGui::Button("Settings", button_size)) {
-		menu_stack.push_back(barn::menu_state::SETTINGS_MENU);
+		menu_stack.push_back(barn::menu::SETTINGS_MENU);
 	}
 
 	ImGui::Spacing();
 
 	if (ImGui::Button("Exit", button_size)) {
-		menu_stack.push_back(barn::menu_state::EXIT);
+		result = barn::menu_action::EXIT;
 	}
 
 	ImGui::End();
+
+	return result;
 }
 
-static void settings_menu(barn::context& context, std::vector<barn::menu_state>& menu_stack) {
+static barn::menu_action settings_menu(barn::context& context, std::vector<barn::menu>& menu_stack) {
 	ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 	ImGui::Text("Audio Settings");
 	ImGui::Spacing();
@@ -71,9 +75,13 @@ static void settings_menu(barn::context& context, std::vector<barn::menu_state>&
 	}
 
 	ImGui::End();
+
+	return barn::menu_action::NONE;
 }
 
-static void pause_menu(std::vector<barn::menu_state>& menu_stack) {
+static barn::menu_action pause_menu(std::vector<barn::menu>& menu_stack) {
+	barn::menu_action result = barn::menu_action::NONE;
+
 	ImVec2 screen_size = ImGui::GetIO().DisplaySize;
 	ImU32 tint_color = IM_COL32(0, 0, 0, 150);
 	ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2{ 0.0f, 0.0f }, screen_size, tint_color);
@@ -90,29 +98,31 @@ static void pause_menu(std::vector<barn::menu_state>& menu_stack) {
 	ImGui::Spacing();
 
 	if (ImGui::Button("Settings", button_size)) {
-		menu_stack.push_back(barn::menu_state::SETTINGS_MENU);
+		menu_stack.push_back(barn::menu::SETTINGS_MENU);
 	}
 
 	ImGui::Spacing();
 
 	if (ImGui::Button("Exit", button_size)) {
-		menu_stack.push_back(barn::menu_state::EXIT);
+		result = barn::menu_action::EXIT;
 	}
 
 	ImGui::End();
+
+	return result;
 }
 
-void barn::draw_menu(barn::context& context, std::vector<barn::menu_state>& menu_stack) {
+barn::menu_action barn::draw_menu(barn::context& context, std::vector<barn::menu>& menu_stack) {
 	if (menu_stack.empty()) {
-		return;
+		return barn::menu_action::NONE;
 	}
 
 	switch (menu_stack.back()) {
-	case barn::menu_state::MAIN_MENU:
+	case barn::menu::MAIN_MENU:
 		return main_menu(context, menu_stack);
-	case barn::menu_state::PAUSE_MENU:
+	case barn::menu::PAUSE_MENU:
 		return pause_menu(menu_stack);
-	case barn::menu_state::SETTINGS_MENU:
+	case barn::menu::SETTINGS_MENU:
 		return settings_menu(context, menu_stack);
 	}
 }
