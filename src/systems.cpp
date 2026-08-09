@@ -4,6 +4,7 @@
 #include "utils.h"
 #include "factories.h"
 #include "assets.h"
+#include "render.h"
 
 #include <box2d/box2d.h>
 #include <SDL3/SDL.h>
@@ -185,7 +186,6 @@ void barn::AI_system(entt::registry& registry, barn::context& context) {
 	}
 }
 
-// helper lambda to compute interpolated position
 static barn::component::transform interpolate(barn::component::transform prev, barn::component::transform curr, float alpha) {
 	const b2Vec2 pos = prev.p + (curr.p - prev.p) * alpha;
 
@@ -211,64 +211,6 @@ static barn::component::transform interpolate(barn::component::transform prev, b
 		pos,
 		rot
 	};
-}
-
-static void draw_texture(
-	SDL_Renderer* renderer,
-	barn::texture texture,
-	barn::component::transform transform,
-	const SDL_FRect* src_rect = nullptr,
-	std::optional<float> width = std::nullopt,
-	std::optional<float> height = std::nullopt,
-	float scale = 1.f,
-	int offset_x = 0,
-	int offset_y = 0
-)
-{
-	if (!texture) return;
-
-	const float texture_aspect_ratio = static_cast<float>(texture->w) / texture->h;
-
-	float dest_width, dest_height;
-	if (width && height) {
-		dest_width = *width;
-		dest_height = *height;
-	}
-	else if (!width && height) {
-		dest_width = *height * texture_aspect_ratio;
-		dest_height = *height;
-	}
-	else if (width && !height) {
-		dest_width = *width;
-		dest_height = *width / texture_aspect_ratio;
-	}
-	else {
-		dest_width = texture->w;
-		dest_height = texture->h;
-	}
-
-	const SDL_FRect dest_rect = {
-		static_cast<float>(offset_x) / scale + transform.p.x * barn::PIXELS_PER_METER - dest_width / 2,
-		static_cast<float>(offset_y) / scale + barn::VIRTUAL_HEIGHT_PIXELS - transform.p.y * barn::PIXELS_PER_METER - dest_height / 2,
-		dest_width,
-		dest_height
-	};
-
-	float prev_scale_x, prev_scale_y;
-	SDL_GetRenderScale(renderer, &prev_scale_x, &prev_scale_y);
-	SDL_SetRenderScale(renderer, scale, scale);
-
-	SDL_RenderTextureRotated(
-		renderer,
-		texture.get(),
-		src_rect,
-		&dest_rect,
-		b2Rot_GetAngle(transform.q) * 360 / B2_PI,
-		nullptr,
-		SDL_FLIP_NONE
-	);
-
-	SDL_SetRenderScale(renderer, prev_scale_x, prev_scale_y);
 }
 
 void barn::sprite_system(entt::registry& registry, barn::context& context, float alpha, float scale, int offset_x, int offset_y) {

@@ -7,14 +7,13 @@
 #include "assets.h"
 #include "levels.h"
 #include "interface.h"
+#include "render.h"
 
 #include <entt/entt.hpp>
 #include <box2d/box2d.h>
 #include <SDL3/SDL.h>
 #include <SDL3_mixer/SDL_mixer.h>
-#include <imgui.h>
 #include <imgui_impl_sdl3.h>
-#include <imgui_impl_sdlrenderer3.h>
 
 
 static entt::entity create_borders(entt::registry& registry, barn::context& context) {
@@ -47,63 +46,6 @@ static entt::entity create_borders(entt::registry& registry, barn::context& cont
 	};
 
 	return create_entity(registry, context, entity_def);
-}
-
-static void fill_screen(SDL_Renderer* renderer, SDL_Texture* texture) {
-	float tex_w, tex_h;
-	SDL_GetTextureSize(texture, &tex_w, &tex_h);
-
-	int screen_w, screen_h;
-	SDL_GetRenderOutputSize(renderer, &screen_w, &screen_h);
-
-	float scale = std::max(static_cast<float>(screen_w) / tex_w, static_cast<float>(screen_h) / tex_h);
-	float visible_w = screen_w / scale;
-	float visible_h = screen_h / scale;
-	float crop_x = (tex_w - visible_w) * 0.5f;
-	float crop_y = (tex_h - visible_h) * 0.5f;
-
-	SDL_FRect src = { crop_x, crop_y, visible_w, visible_h };
-	SDL_RenderTexture(renderer, texture, &src, nullptr);
-}
-
-static void start_render(SDL_Renderer* renderer) {
-	SDL_RenderClear(renderer);
-	ImGui_ImplSDLRenderer3_NewFrame();
-	ImGui_ImplSDL3_NewFrame();
-	ImGui::NewFrame();
-}
-
-static void end_render(SDL_Renderer* renderer) {
-	ImGui::Render();
-	ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
-	SDL_RenderPresent(renderer);
-}
-
-static void render(entt::registry& registry, barn::context& context, float alpha) {
-	fill_screen(context.renderer, barn::get_texture(context.renderer, barn::textures::bliss).get());
-
-	int window_w, window_h;
-	SDL_GetCurrentRenderOutputSize(context.renderer, &window_w, &window_h);
-	const float scale = std::min(static_cast<float>(window_w) / barn::VIRTUAL_WIDTH_PIXELS, static_cast<float>(window_h) / barn::VIRTUAL_HEIGHT_PIXELS);
-	int offset_x = (window_w - scale * barn::VIRTUAL_WIDTH_PIXELS) / 2;
-	int offset_y = (window_h - scale * barn::VIRTUAL_HEIGHT_PIXELS) / 2;
-
-	const int thickness = 2;
-	const Uint8 r = 0, g = 0, b = 0, a = 80;
-	SDL_SetRenderDrawBlendMode(context.renderer, SDL_BLENDMODE_BLEND);
-	SDL_SetRenderDrawColor(context.renderer, r, g, b, a);
-	SDL_FRect rects[4] = {
-		{ offset_x, offset_y, barn::VIRTUAL_WIDTH_PIXELS * scale, thickness },									// top
-		{ offset_x, offset_y + barn::VIRTUAL_HEIGHT_PIXELS * scale - thickness, barn::VIRTUAL_WIDTH_PIXELS * scale, thickness },	// bottom
-		{ offset_x, offset_y, thickness, barn::VIRTUAL_HEIGHT_PIXELS * scale },									// left
-		{ offset_x + barn::VIRTUAL_WIDTH_PIXELS * scale - thickness, offset_y, thickness, barn::VIRTUAL_HEIGHT_PIXELS * scale }		// right
-	};
-	SDL_RenderFillRects(context.renderer, rects, 4);
-
-	sprite_system(registry, context, alpha, scale, offset_x, offset_y);
-	animation_system(registry, context, alpha, scale, offset_x, offset_y);
-
-	draw_ui(context, registry);
 }
 
 barn::menu_action barn::home_scene(barn::context& context) {
@@ -195,8 +137,6 @@ void barn::combat_scene(barn::context& context, barn::session& session) {
 	float accumulator = 0.0f;
 	Uint64 prevTicks = SDL_GetTicks();
 
-	barn::texture sidebar_texture = barn::get_texture(context.renderer, barn::textures::clouds);
-
 	std::vector<barn::menu> menu_stack{};
 	while (!context.exit) {
 		SDL_Event event;
@@ -245,10 +185,16 @@ void barn::combat_scene(barn::context& context, barn::session& session) {
 			accumulator -= barn::PHYSICS_TIMESTEP;
 		}
 
-		start_render(context.renderer);
-		render(registry, context, accumulator / barn::PHYSICS_TIMESTEP);
+		barn::start_render(context.renderer);
+		barn::fill_screen(context.renderer, bg_texture.get());
+		auto [scale, offset_x, offset_y] = barn::calculate_scale_and_offset(context.renderer);
+		barn::draw_borders(context.renderer, scale, offset_x, offset_y);
+		const float alpha = accumulator / barn::PHYSICS_TIMESTEP;
+		barn::sprite_system(registry, context, alpha, scale, offset_x, offset_y);
+		barn::animation_system(registry, context, alpha, scale, offset_x, offset_y);
+		barn::draw_ui(context, registry);
 		barn::menu_action result = barn::draw_menu(context, menu_stack);
-		end_render(context.renderer);
+		barn::end_render(context.renderer);
 
 		if (result == barn::menu_action::EXIT) {
 			break;

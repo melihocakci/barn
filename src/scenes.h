@@ -4,8 +4,6 @@
 #include "levels.h"
 #include "interface.h"
 
-#include <SDL3_mixer/SDL_mixer.h>
-
 namespace barn {
 	struct session {
 		std::vector<entity_def> players{};
