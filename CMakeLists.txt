@@ -101,6 +101,7 @@ add_executable(${PROJECT_NAME} WIN32
     "src/settings.cpp"
     "src/assets.cpp"
     "src/interface.cpp"
+    "src/render.cpp"
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
