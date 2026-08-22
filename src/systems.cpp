@@ -8,6 +8,7 @@
 
 #include <box2d/box2d.h>
 #include <SDL3/SDL.h>
+#include <SDL3_mixer/SDL_mixer.h>
 
 void barn::property_system(entt::registry& registry) {
 	for (auto [entity, properties] : registry.view<component::properties>().each()) {
@@ -214,6 +215,10 @@ static barn::component::transform interpolate(barn::component::transform prev, b
 }
 
 void barn::sprite_system(entt::registry& registry, barn::context& context, float alpha, float scale, int offset_x, int offset_y) {
+	for (auto [entity, sprite] : registry.view<component::sprite, component::background>().each()) {
+		barn::fill_screen(context.renderer, sprite.texture.get());
+	}
+
 	for (auto [entity, sprite, transform] : registry.view<component::sprite, component::transform>().each()) {
 		draw_texture(
 			context.renderer,
@@ -274,6 +279,14 @@ void barn::animation_system(entt::registry& registry, barn::context& context, fl
 			offset_x,
 			offset_y
 		);
+	}
+}
+
+void barn::track_system(entt::registry& registry, barn::context& context) {
+	for (auto [entity, track] : registry.view<component::track>().each()) {
+		if (!MIX_TrackPlaying(track.track.get())) {
+			registry.remove<component::track>(entity);
+		}
 	}
 }
 

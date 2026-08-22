@@ -22,5 +22,7 @@ namespace barn {
 
 	void animation_system(entt::registry& registry, barn::context& context, float alpha, float scale, int offset_x, int offset_y);
 
+	void track_system(entt::registry& registry, barn::context& context);
+
 	void body_system(entt::registry& registry, barn::context& context);
 }

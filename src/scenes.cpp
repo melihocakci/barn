@@ -85,19 +85,29 @@ barn::menu_action barn::home_scene(barn::context& context) {
 }
 
 std::optional<barn::session> barn::lobby_scene(barn::context& context) {
+	SDL_PropertiesID props = SDL_CreateProperties();
+	SDL_SetNumberProperty(props, MIX_PROP_PLAY_LOOPS_NUMBER, -1);
+
 	barn::session session{
-	.players = {
-		barn::character_presets[0],
-	},
-	.level{
-		.bg_music = barn::audios::kasane_territory,
-		.bg_texture = barn::textures::bliss,
-		.elements{
+		.players = {
+			barn::character_presets[0],
 		},
-		.enemies{
-			barn::enemy_presets[0],
+		.level = {
+			.background = barn::entity_def{
+				.sprite = barn::sprite_def{
+					.texture = barn::textures::bliss
+				},
+				.track = barn::track_def{
+					.audio = barn::audios::kasane_territory,
+					.properties_id = props
+				},
+				.background = barn::component::background{}
+			},
+			.elements = {},
+			.enemies = {
+				barn::enemy_presets[0],
+			}
 		}
-	}
 	};
 	session.players[0].player = barn::component::player::P1;
 	if (!context.gamepads.empty()) {
@@ -110,15 +120,8 @@ std::optional<barn::session> barn::lobby_scene(barn::context& context) {
 }
 
 void barn::combat_scene(barn::context& context, barn::session& session) {
-	barn::audio bg_music = barn::get_audio(session.level.bg_music);
-	barn::texture bg_texture = barn::get_texture(context.renderer, session.level.bg_texture);
-	MIX_Track* track = MIX_CreateTrack(context.mixer);
-	MIX_SetTrackAudio(track, bg_music.get());
-	SDL_PropertiesID props = SDL_CreateProperties();
-	SDL_SetNumberProperty(props, MIX_PROP_PLAY_LOOPS_NUMBER, -1);
-	MIX_PlayTrack(track, props);
-
 	entt::registry registry{};
+	create_entity(registry, context, session.level.background);
 
 	create_borders(registry, context);
 
@@ -183,12 +186,12 @@ void barn::combat_scene(barn::context& context, barn::session& session) {
 		}
 
 		barn::start_render(context.renderer);
-		barn::fill_screen(context.renderer, bg_texture.get());
 		auto [scale, offset_x, offset_y] = barn::calculate_scale_and_offset(context.renderer);
-		barn::draw_borders(context.renderer, scale, offset_x, offset_y);
 		const float alpha = accumulator / barn::PHYSICS_TIMESTEP;
 		barn::sprite_system(registry, context, alpha, scale, offset_x, offset_y);
 		barn::animation_system(registry, context, alpha, scale, offset_x, offset_y);
+		barn::draw_borders(context.renderer, scale, offset_x, offset_y);
+		barn::track_system(registry, context);
 		barn::draw_ui(context, registry);
 		barn::menu_action result = barn::draw_menu(context, menu_stack);
 		barn::end_render(context.renderer);
