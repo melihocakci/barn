@@ -11,6 +11,8 @@
 #include <memory>
 #include <future>
 #include <filesystem>
+#include <array>
+#include <chrono>
 
 namespace barn {
 	struct circle_def {
@@ -94,6 +96,11 @@ namespace barn {
 		std::chrono::milliseconds duration = 1000ms;
 	};
 
+	struct track_def {
+		barn::asset_def audio{};
+		SDL_PropertiesID properties_id{};
+	};
+
 	struct assets_def {
 		std::vector<barn::asset_def> textures{};
 		std::vector<barn::asset_def> audios{};
@@ -163,6 +170,12 @@ namespace barn::component {
 		std::chrono::steady_clock::time_point start_time{};
 	};
 
+	struct track {
+		barn::track_def def{};
+		barn::audio audio{};
+		std::unique_ptr<MIX_Track, decltype(&MIX_DestroyTrack)> track;
+	};
+
 	struct idle_animation : public animation {};
 
 	struct keyboard {};
@@ -197,4 +210,5 @@ namespace barn::component {
 	struct enemy {};
 	struct bullet {};
 	struct obstacle {};
+	struct background {};
 }

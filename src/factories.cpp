@@ -36,6 +36,19 @@ static void add_sprite(entt::entity entity, entt::registry& registry, SDL_Render
 	);
 }
 
+static void add_track(entt::entity entity, entt::registry& registry, MIX_Mixer* mixer, const barn::track_def& def) {
+	barn::audio audio = barn::get_audio(def.audio);
+	MIX_Track* track = MIX_CreateTrack(mixer);
+	MIX_SetTrackAudio(track, audio.get());
+	MIX_PlayTrack(track, def.properties_id);
+
+	registry.emplace<barn::component::track>(entity,
+		def,
+		audio,
+		std::unique_ptr<MIX_Track, decltype(&MIX_DestroyTrack)>(track, MIX_DestroyTrack)
+	);
+}
+
 static void add_properties(entt::entity entity, entt::registry& registry, const barn::base_properties& base) {
 	registry.emplace<barn::component::properties>(entity,
 		base,
@@ -74,6 +87,10 @@ entt::entity barn::create_entity(entt::registry& registry, barn::context& contex
 
 	if (def.sprite) {
 		add_sprite(entity, registry, context.renderer, *def.sprite);
+	}
+
+	if (def.track) {
+		add_track(entity, registry, context.mixer, *def.track);
 	}
 
 	if (def.properties) {
@@ -118,6 +135,10 @@ entt::entity barn::create_entity(entt::registry& registry, barn::context& contex
 
 	if (def.obstacle) {
 		registry.emplace<component::obstacle>(entity);
+	}
+
+	if (def.background) {
+		registry.emplace<component::background>(entity);
 	}
 
 	return entity;
