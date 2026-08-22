@@ -1,7 +1,7 @@
 #pragma once
 
-#include "components.h"
-#include "presets.h"
+#include "components.hpp"
+#include "presets.hpp"
 
 namespace barn {
 	struct level {

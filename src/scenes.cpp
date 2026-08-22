@@ -1,13 +1,13 @@
-#include "scenes.h"
-#include "systems.h"
-#include "presets.h"
-#include "constants.h"
-#include "factories.h"
-#include "utils.h"
-#include "assets.h"
-#include "levels.h"
-#include "interface.h"
-#include "render.h"
+#include "scenes.hpp"
+#include "systems.hpp"
+#include "presets.hpp"
+#include "constants.hpp"
+#include "factories.hpp"
+#include "utils.hpp"
+#include "assets.hpp"
+#include "levels.hpp"
+#include "interface.hpp"
+#include "render.hpp"
 
 #include <entt/entt.hpp>
 #include <box2d/box2d.h>

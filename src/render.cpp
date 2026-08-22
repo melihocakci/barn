@@ -1,5 +1,5 @@
-#include "render.h"
-#include "assets.h"
+#include "render.hpp"
+#include "assets.hpp"
 
 #include <SDL3/SDL.h>
 #include <imgui.h>
@@ -46,16 +46,16 @@ std::tuple<float, int, int> barn::calculate_scale_and_offset(SDL_Renderer* rende
 }
 
 void barn::draw_borders(SDL_Renderer* renderer, float scale, int offset_x, int offset_y) {
-	const int thickness = 2;
+	const int thickness = 2; 
 	const Uint8 r = 0, g = 0, b = 0, a = 80;
 	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 	SDL_SetRenderDrawColor(renderer, r, g, b, a);
 	float offset_x_f = static_cast<float>(offset_x);
 	float offset_y_f = static_cast<float>(offset_y);
 	SDL_FRect rects[4] = {
-		{ offset_x_f, offset_y_f, barn::VIRTUAL_WIDTH_PIXELS * scale, thickness },									// top
+		{ offset_x_f, offset_y_f, barn::VIRTUAL_WIDTH_PIXELS * scale, thickness },														// top
 		{ offset_x_f, offset_y_f + barn::VIRTUAL_HEIGHT_PIXELS * scale - thickness, barn::VIRTUAL_WIDTH_PIXELS * scale, thickness },	// bottom
-		{ offset_x_f, offset_y_f, thickness, barn::VIRTUAL_HEIGHT_PIXELS * scale },									// left
+		{ offset_x_f, offset_y_f, thickness, barn::VIRTUAL_HEIGHT_PIXELS * scale },														// left
 		{ offset_x_f + barn::VIRTUAL_WIDTH_PIXELS * scale - thickness, offset_y_f, thickness, barn::VIRTUAL_HEIGHT_PIXELS * scale }		// right
 	};
 	SDL_RenderFillRects(renderer, rects, 4);

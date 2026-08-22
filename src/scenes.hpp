@@ -1,8 +1,8 @@
 #pragma once
 
-#include "context.h"
-#include "levels.h"
-#include "interface.h"
+#include "context.hpp"
+#include "levels.hpp"
+#include "interface.hpp"
 
 namespace barn {
 	struct session {

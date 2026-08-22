@@ -1,10 +1,10 @@
-#include "systems.h"
-#include "components.h"
-#include "constants.h"
-#include "utils.h"
-#include "factories.h"
-#include "assets.h"
-#include "render.h"
+#include "systems.hpp"
+#include "components.hpp"
+#include "constants.hpp"
+#include "utils.hpp"
+#include "factories.hpp"
+#include "assets.hpp"
+#include "render.hpp"
 
 #include <box2d/box2d.h>
 #include <SDL3/SDL.h>

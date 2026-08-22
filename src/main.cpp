@@ -1,8 +1,8 @@
-#include "context.h"
-#include "scenes.h"
-#include "constants.h"
-#include "utils.h"
-#include "settings.h"
+#include "context.hpp"
+#include "scenes.hpp"
+#include "constants.hpp"
+#include "utils.hpp"
+#include "settings.hpp"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
