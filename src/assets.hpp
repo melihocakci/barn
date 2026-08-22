@@ -1,6 +1,6 @@
 #pragma once
 
-#include "components.h"
+#include "components.hpp"
 
 #include <SDL3/SDL.h>
 

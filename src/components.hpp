@@ -1,6 +1,6 @@
 #pragma once
 
-#include "constants.h"
+#include "constants.hpp"
 
 #include <SDL3/SDL.h>
 #include <SDL3_mixer/SDL_mixer.h>

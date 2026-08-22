@@ -1,7 +1,7 @@
-#include "factories.h"
-#include "components.h"
-#include "constants.h"
-#include "assets.h"
+#include "factories.hpp"
+#include "components.hpp"
+#include "constants.hpp"
+#include "assets.hpp"
 
 #include <box2d/box2d.h>
 #include <box2d/types.h>

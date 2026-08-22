@@ -1,9 +1,9 @@
-#include "presets.h"
-#include "components.h"
-#include "utils.h"
-#include "factories.h"
-#include "constants.h"
-#include "assets.h"
+#include "presets.hpp"
+#include "components.hpp"
+#include "utils.hpp"
+#include "factories.hpp"
+#include "constants.hpp"
+#include "assets.hpp"
 
 #include <box2d/box2d.h>
 

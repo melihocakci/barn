@@ -1,4 +1,4 @@
-#include "interface.h"
+#include "interface.hpp"
 
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
