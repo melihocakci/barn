@@ -13,35 +13,55 @@ constexpr ImGuiWindowFlags window_flags =
 	ImGuiWindowFlags_AlwaysAutoResize;
 
 constexpr ImVec2 button_size{ 200.0f, 40.0f };
+constexpr float menu_width = 350.0f;
+
+// Helper function to center text properly
+static void centered_text(const char* text, bool large = false) {
+	if (large) ImGui::SetWindowFontScale(1.8f);
+
+	ImGui::NewLine();
+	float text_width = ImGui::CalcTextSize(text).x;
+	ImGui::SetCursorPosX((ImGui::GetWindowWidth() - text_width) * 0.5f);
+	ImGui::Text(text);
+
+	if (large) ImGui::SetWindowFontScale(1.0f);
+}
 
 static barn::menu_action main_menu(barn::context& context, std::vector<barn::menu>& menu_stack) {
 	barn::menu_action result = barn::menu_action::NONE;
 
+	ImVec2 screen_size = ImGui::GetIO().DisplaySize;
+	ImVec2 center{ screen_size.x * 0.5f, screen_size.y * 0.5f };
+	ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowSizeConstraints(ImVec2(menu_width, 0), ImVec2(menu_width, FLT_MAX));
 	ImGui::Begin("Main Menu", nullptr, window_flags);
 
-	ImGui::SetWindowFontScale(1.8f);
-	float title_width = ImGui::CalcTextSize("BARN").x;
-	ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - title_width) * 0.5f);
-	ImGui::Text("BARN");
-	ImGui::SetWindowFontScale(1.0f);
+	centered_text("BARN", true);
 
 	ImGui::Spacing();
 	ImGui::Separator();
 	ImGui::Spacing();
 
+	// Center buttons
+	float button_offset = (menu_width - button_size.x) * 0.5f;
+	ImGui::SetCursorPosX(button_offset);
 	if (ImGui::Button("Start", button_size)) {
+		menu_stack.pop_back();
 		result = barn::menu_action::START_GAME;
 	}
 
 	ImGui::Spacing();
 
+	ImGui::SetCursorPosX(button_offset);
 	if (ImGui::Button("Settings", button_size)) {
 		menu_stack.push_back(barn::menu::SETTINGS_MENU);
 	}
 
 	ImGui::Spacing();
 
+	ImGui::SetCursorPosX(button_offset);
 	if (ImGui::Button("Exit", button_size)) {
+		menu_stack.pop_back();
 		result = barn::menu_action::EXIT;
 	}
 
@@ -51,7 +71,24 @@ static barn::menu_action main_menu(barn::context& context, std::vector<barn::men
 }
 
 static barn::menu_action settings_menu(barn::context& context, std::vector<barn::menu>& menu_stack) {
-	ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+	barn::menu_action result = barn::menu_action::NONE;
+
+	ImVec2 screen_size = ImGui::GetIO().DisplaySize;
+	ImU32 tint_color = IM_COL32(0, 0, 0, 150);
+	ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2{ 0.0f, 0.0f }, screen_size, tint_color);
+
+	ImVec2 center{ screen_size.x * 0.5f, screen_size.y * 0.5f };
+	ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowSizeConstraints(ImVec2(menu_width, 0), ImVec2(menu_width, FLT_MAX));
+
+	ImGui::Begin("Settings", nullptr, window_flags);
+
+	centered_text("Settings", true);
+
+	ImGui::Spacing();
+	ImGui::Separator();
+	ImGui::Spacing();
+
 	ImGui::Text("Audio Settings");
 	ImGui::Spacing();
 
@@ -70,13 +107,15 @@ static barn::menu_action settings_menu(barn::context& context, std::vector<barn:
 	ImGui::Spacing();
 	ImGui::Spacing();
 
-	if (ImGui::Button("Back", ImVec2(200.0f, 40.0f))) {
+	float button_offset = (menu_width - button_size.x) * 0.5f;
+	ImGui::SetCursorPosX(button_offset);
+	if (ImGui::Button("Back", button_size) || ImGui::Shortcut(ImGuiKey_Escape) || ImGui::Shortcut(ImGuiKey_GamepadFaceRight) || ImGui::Shortcut(ImGuiKey_GamepadStart)) {
 		menu_stack.pop_back();
 	}
 
 	ImGui::End();
 
-	return barn::menu_action::NONE;
+	return result;
 }
 
 static barn::menu_action pause_menu(std::vector<barn::menu>& menu_stack) {
@@ -88,22 +127,34 @@ static barn::menu_action pause_menu(std::vector<barn::menu>& menu_stack) {
 
 	ImVec2 center{ screen_size.x * 0.5f, screen_size.y * 0.5f };
 	ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowSizeConstraints(ImVec2(menu_width, 0), ImVec2(menu_width, FLT_MAX));
 
-	ImGui::Begin("Main Menu", nullptr, window_flags);
+	ImGui::Begin("Pause Menu", nullptr, window_flags);
 
-	if (ImGui::Button("Resume", button_size)) {
+	centered_text("PAUSED", true);
+
+	ImGui::Spacing();
+	ImGui::Separator();
+	ImGui::Spacing();
+
+	float button_offset = (menu_width - button_size.x) * 0.5f;
+	ImGui::SetCursorPosX(button_offset);
+	if (ImGui::Button("Resume", button_size) || ImGui::Shortcut(ImGuiKey_Escape) || ImGui::Shortcut(ImGuiKey_GamepadFaceRight) || ImGui::Shortcut(ImGuiKey_GamepadStart)) {
 		menu_stack.pop_back();
 	}
 
 	ImGui::Spacing();
 
+	ImGui::SetCursorPosX(button_offset);
 	if (ImGui::Button("Settings", button_size)) {
 		menu_stack.push_back(barn::menu::SETTINGS_MENU);
 	}
 
 	ImGui::Spacing();
 
+	ImGui::SetCursorPosX(button_offset);
 	if (ImGui::Button("Exit", button_size)) {
+		menu_stack.pop_back();
 		result = barn::menu_action::EXIT;
 	}
 
@@ -117,14 +168,20 @@ barn::menu_action barn::draw_menu(barn::context& context, std::vector<barn::menu
 		return barn::menu_action::NONE;
 	}
 
+	barn::menu_action result = barn::menu_action::NONE;
 	switch (menu_stack.back()) {
 	case barn::menu::MAIN_MENU:
-		return main_menu(context, menu_stack);
+		result = main_menu(context, menu_stack);
+		break;
 	case barn::menu::PAUSE_MENU:
-		return pause_menu(menu_stack);
+		result = pause_menu(menu_stack);
+		break;
 	case barn::menu::SETTINGS_MENU:
-		return settings_menu(context, menu_stack);
+		result = settings_menu(context, menu_stack);
+		break;
 	}
+
+	return menu_stack.empty() ? result : barn::menu_action::NONE;
 }
 
 void barn::draw_ui(barn::context& context, entt::registry& registry) {

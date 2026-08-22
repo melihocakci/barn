@@ -153,13 +153,10 @@ void barn::combat_scene(barn::context& context, barn::session& session) {
 				context.gamepads.erase(event.gdevice.which);
 			}
 			else if ((event.type == SDL_EVENT_KEY_DOWN && event.key.scancode == SDL_Scancode::SDL_SCANCODE_ESCAPE)
-				|| (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN && event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK))
+				|| (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN && event.gbutton.button == SDL_GAMEPAD_BUTTON_START))
 			{
 				if (menu_stack.empty()) {
 					menu_stack.push_back(barn::menu::PAUSE_MENU);
-				}
-				else {
-					menu_stack.pop_back();
 				}
 			}
 		}
