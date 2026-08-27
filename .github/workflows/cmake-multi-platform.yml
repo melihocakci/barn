@@ -19,12 +19,15 @@ jobs:
           - os: windows-latest
             cpp_compiler: cl
             c_compiler: cl
+            generator: "Visual Studio 17 2022"
           - os: ubuntu-latest
             cpp_compiler: g++
             c_compiler: gcc
+            generator: "Ninja"
           - os: macos-latest
             cpp_compiler: clang++
             c_compiler: clang
+            generator: "Ninja"
 
     steps:
     - name: Install dependencies (Linux)
@@ -54,6 +57,7 @@ jobs:
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -G "${{ matrix.generator }}"
 
     - name: Build
       run: cmake --build build/ --config ${{ matrix.build_type }}
