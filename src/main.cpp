@@ -113,7 +113,7 @@ struct context_guard {
 	}
 };
 
-int main(int argc, char* argv[]) {
+int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
 	context_guard guard{};
 
 	barn::apply_settings(guard.context.settings, guard.context.renderer, guard.context.mixer);

@@ -14,6 +14,6 @@ glz::error_ctx barn::save_settings(const barn::settings& settings) {
 	return glz::write_file_json(settings, "settings.json", std::string{});
 }
 
-void barn::apply_settings(const barn::settings& settings, SDL_Renderer* renderer, MIX_Mixer* mixer) {
+void barn::apply_settings(const barn::settings& settings, [[maybe_unused]] SDL_Renderer* renderer, MIX_Mixer* mixer) {
 	MIX_SetMixerGain(mixer, powf(settings.master_volume / 100.0f, 2.0f));
 }

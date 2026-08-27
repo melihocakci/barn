@@ -104,6 +104,11 @@ add_executable(${PROJECT_NAME} WIN32
     "src/render.cpp"
 )
 
+target_compile_options(${PROJECT_NAME} PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:/W4>
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>
+)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
     "SDL3::SDL3-static"
     "SDL3_image::SDL3_image-static"

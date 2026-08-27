@@ -154,7 +154,7 @@ void barn::input_system(entt::registry& registry, barn::context& context) {
 	}
 }
 
-void barn::AI_system(entt::registry& registry, barn::context& context) {
+void barn::AI_system(entt::registry& registry, [[maybe_unused]] barn::context& context) {
 	for (auto [entity, AI_code] : registry.view<component::AI_code>().each()) {
 		switch (AI_code) {
 		case component::AI_code::CHASER:
@@ -282,7 +282,7 @@ void barn::animation_system(entt::registry& registry, barn::context& context, fl
 	}
 }
 
-void barn::track_system(entt::registry& registry, barn::context& context) {
+void barn::track_system(entt::registry& registry, [[maybe_unused]] barn::context& context) {
 	for (auto [entity, track] : registry.view<component::track>().each()) {
 		if (!MIX_TrackPlaying(track.track.get())) {
 			registry.remove<component::track>(entity);

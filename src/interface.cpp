@@ -27,7 +27,7 @@ static void centered_text(const char* text, bool large = false) {
 	if (large) ImGui::SetWindowFontScale(1.0f);
 }
 
-static barn::menu_action main_menu(barn::context& context, std::vector<barn::menu>& menu_stack) {
+static barn::menu_action main_menu(std::vector<barn::menu>& menu_stack) {
 	barn::menu_action result = barn::menu_action::NONE;
 
 	ImVec2 screen_size = ImGui::GetIO().DisplaySize;
@@ -171,7 +171,7 @@ barn::menu_action barn::draw_menu(barn::context& context, std::vector<barn::menu
 	barn::menu_action result = barn::menu_action::NONE;
 	switch (menu_stack.back()) {
 	case barn::menu::MAIN_MENU:
-		result = main_menu(context, menu_stack);
+		result = main_menu(menu_stack);
 		break;
 	case barn::menu::PAUSE_MENU:
 		result = pause_menu(menu_stack);

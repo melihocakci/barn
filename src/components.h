@@ -112,7 +112,6 @@ namespace barn {
 	};
 
 	enum class skill_code {
-		NONE,
 		GREEN_ONION,
 	};
 
@@ -203,7 +202,6 @@ namespace barn::component {
 	};
 
 	enum class AI_code {
-		NONE,
 		CHASER,
 	};
 
