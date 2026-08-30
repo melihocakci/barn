@@ -49,6 +49,20 @@ static entt::entity create_borders(entt::registry& registry, barn::context& cont
 }
 
 barn::menu_action barn::home_scene(barn::context& context) {
+	entt::registry registry{};
+	barn::entity_def entity_def{};
+	SDL_PropertiesID props = SDL_CreateProperties();
+	SDL_SetNumberProperty(props, MIX_PROP_PLAY_LOOPS_NUMBER, -1);
+	entity_def.track = barn::track_def{
+		.audio = barn::audios::ocarine_of_time,
+		.properties_id = props
+	};
+	entity_def.sprite = barn::sprite_def{
+		.texture = barn::textures::bliss
+	};
+	entity_def.background = barn::component::background{};
+	barn::create_entity(registry, context, entity_def);
+
 	std::vector<barn::menu> menu_stack{ barn::menu::MAIN_MENU };
 	barn::texture background_texture = barn::get_texture(context.renderer, barn::textures::bliss);
 
@@ -70,7 +84,7 @@ barn::menu_action barn::home_scene(barn::context& context) {
 
 		start_render(context.renderer);
 
-		fill_screen(context.renderer, background_texture.get());
+		sprite_system(registry, context, 0, 0, 0, 0);
 
 		barn::menu_action result = draw_menu(context, menu_stack);
 

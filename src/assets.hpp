@@ -19,6 +19,7 @@ namespace barn::textures {
 namespace barn::audios {
 	constexpr std::string_view kasane_territory = "assets/audio/kasane_territory.ogg";
 	constexpr std::string_view weiii = "assets/audio/weiii-daitaku-helios.ogg";
+	constexpr std::string_view ocarine_of_time = "assets/audio/ocarine_of_time.ogg";
 }
 
 namespace barn {
