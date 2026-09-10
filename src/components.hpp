@@ -112,23 +112,40 @@ namespace barn {
 	};
 
 	enum class skill_code {
+		NONE,
 		GREEN_ONION,
+		DASH,
 	};
 
 	struct skill_def {
 		barn::skill_code code{};
 		barn::assets_def assets{};
-		std::chrono::milliseconds cooldown{};
+		std::chrono::milliseconds skill_cooldown{};
+		int dash_max_charges = 0;
+    	std::chrono::milliseconds dash_recharge_time{};
+    	std::chrono::milliseconds dash_duration{};
+    	float dash_speed_bonus = 0.f;
 	};
 
 	using skillset_def = std::array<skill_def, SKILLSET_SIZE>;
 
 	struct skill {
-		barn::skill_def def{};
-		barn::assets assets{};
-		std::chrono::steady_clock::time_point last_used_time{};
-	};
+    barn::skill_def def{};
+    barn::assets assets{};
+    std::chrono::steady_clock::time_point last_used_time{};
+    bool key_was_down = false;
+};
+    namespace component {
+	struct dash_stats {
+        int current_charges = 0;
+        bool is_recharging = false;
+        std::chrono::steady_clock::time_point recharge_started_at{}; };
 
+	struct active_dash {
+        std::chrono::steady_clock::time_point started_at{};
+        b2Vec2 momentum_direction{};
+    };
+}
 	using gamepad = std::unique_ptr<SDL_Gamepad, decltype(&SDL_CloseGamepad)>;
 }
 
