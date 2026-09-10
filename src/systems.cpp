@@ -9,6 +9,7 @@
 #include <box2d/box2d.h>
 #include <SDL3/SDL.h>
 #include <SDL3_mixer/SDL_mixer.h>
+#include <cmath>
 
 void barn::property_system(entt::registry& registry) {
 	for (auto [entity, properties] : registry.view<component::properties>().each()) {
@@ -70,89 +71,211 @@ void barn::gamepad_system(entt::registry& registry, barn::context& context) {
 	}
 }
 
-static void execute_skill(barn::skill_code skill_code, entt::entity entity, entt::registry& registry, barn::context& context) {
-	using namespace barn;
+static bool execute_skill(barn::skill& skill, entt::entity entity, entt::registry& registry, barn::context& context) {
+    using namespace barn;
 
-	static const b2BodyDef default_body_def = [] {
-		b2BodyDef def = b2DefaultBodyDef();
-		def.type = b2_dynamicBody;
-		def.fixedRotation = true;
-		return def;
-		}();
+    static const b2BodyDef default_body_def = [] {
+        b2BodyDef def = b2DefaultBodyDef();
+        def.type = b2_dynamicBody;
+        def.fixedRotation = true;
+        return def;
+    }();
 
-	static const b2ShapeDef bullet_shape_def = [] {
-		b2ShapeDef def = b2DefaultShapeDef();
-		def.filter.categoryBits = barn::category::ALLY_BULLET;
-		def.filter.maskBits = barn::category::ENEMY | barn::category::OBSTACLE;
-		return def;
-		}();
+    static const b2ShapeDef bullet_shape_def = [] {
+        b2ShapeDef def = b2DefaultShapeDef();
+        def.filter.categoryBits = barn::category::ALLY_BULLET;
+        def.filter.maskBits = barn::category::ENEMY | barn::category::OBSTACLE;
+        return def;
+    }();
 
-	switch (skill_code) {
-	case barn::skill_code::GREEN_ONION:
-		auto [player_body, player_prop] = registry.get<component::body, component::properties>(entity);
+    switch (skill.def.code) {
+    case barn::skill_code::GREEN_ONION: {
+        auto [player_body, player_properties] = registry.get<component::body, component::properties>(entity);
 
-		MIX_PlayAudio(context.mixer, get_audio(audios::weiii).get());
+        MIX_PlayAudio(context.mixer, get_audio(audios::weiii).get());
 
-		b2BodyDef body_def = default_body_def;
-		body_def.type = b2_kinematicBody;
-		body_def.position = b2Body_GetPosition(player_body.id);
-		body_def.linearVelocity = { 0.f, 10.f };
-		body_def.angularVelocity = B2_PI;
+        b2BodyDef body_def = default_body_def;
+        body_def.type = b2_kinematicBody;
+        body_def.position = b2Body_GetPosition(player_body.id);
+        body_def.linearVelocity = { 0.f, 10.f };
+        body_def.angularVelocity = B2_PI;
 
-		barn::entity_def def{
-			.body = barn::body_def{
-				.def = body_def,
-				.circles{
-					{bullet_shape_def, b2Circle{{}, 0.25f}}
-				}
-			},
-			.idle_animation = animation_def{
-				.texture = textures::green_onion,
-				.frames = { SDL_FRect{0.f, 0.f, 260.f, 280.f} },
-				.width = 1.f * PIXELS_PER_METER,
-			},
-			.properties = base_properties{
-				.collide_damage = player_prop.attack,
-			},
-			.bullet = component::bullet{}
-		};
+        barn::entity_def entity_definition{
+            .body = barn::body_def{
+                .def = body_def,
+                .circles{
+                    {bullet_shape_def, b2Circle{{}, 0.25f}}
+                }
+            },
+            .idle_animation = animation_def{
+                .texture = textures::green_onion,
+                .frames = { SDL_FRect{0.f, 0.f, 260.f, 280.f} },
+                .width = 1.f * PIXELS_PER_METER,
+            },
+            .properties = base_properties{
+                .collide_damage = player_properties.attack,
+            },
+            .bullet = component::bullet{}
+        };
 
-		barn::create_entity(registry, context, def);
-	}
+        barn::create_entity(registry, context, entity_definition);
+        return true;
+    }
+    case barn::skill_code::DASH: {
+        if (!registry.all_of<component::dash_stats, component::input>(entity)) return false;
+        
+        auto& stats = registry.get<component::dash_stats>(entity);
+        const auto& input = registry.get<component::input>(entity);
+
+        if (stats.current_charges <= 0) {
+            return false;
+        }
+
+        --stats.current_charges;
+        if (!stats.is_recharging && stats.current_charges < skill.def.dash_max_charges) {
+            stats.is_recharging = true;
+            stats.recharge_started_at = std::chrono::steady_clock::now();
+        }
+
+        b2Vec2 direction{ input.axis_x, input.axis_y };
+        if (length(direction) > 0.f) {
+            direction = normalize(direction);
+        }
+
+        registry.emplace_or_replace<component::active_dash>(entity, std::chrono::steady_clock::now(), direction);
+        return true;
+    }
+    }
+    return false;
 }
 
-void barn::input_system(entt::registry& registry, barn::context& context) {
-	for (auto [entity, input] : registry.view<component::input>().each()) {
-		if (registry.all_of<component::body, component::properties>(entity)) {
-			auto [body, properties] = registry.get<component::body, component::properties>(entity);
-			b2Vec2 vec{
-				std::fabs(input.axis_x) > std::fabs(input.axis_x) ? input.axis_x : input.axis_x,
-				std::fabs(input.axis_y) > std::fabs(input.axis_y) ? input.axis_y : input.axis_y
-			};
-			if (length(vec) > 1.f)
-				vec = normalize(vec);
-			b2Body_SetLinearVelocity(body.id, vec * properties.speed);
-		}
+void barn::skill_system(entt::registry& registry, barn::context& context) {
+    const auto current_time = std::chrono::steady_clock::now();
 
-		if (registry.all_of<component::skillset>(entity)) {
-			component::skillset& skillset = registry.get<component::skillset>(entity);
-			for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
-				if (input.skills[i]) {
-					using namespace std::chrono;
-					const steady_clock::time_point current_time = steady_clock::now();
-					const milliseconds time_span = duration_cast<milliseconds>(current_time - skillset[i].last_used_time);
-					if (time_span < skillset[i].def.cooldown) {
-						continue;
-					}
-					execute_skill(skillset[i].def.code, entity, registry, context);
-					skillset[i].last_used_time = current_time;
-				}
-			}
-		}
+    for (auto [entity, input, character_skillset] : registry.view<component::input, component::skillset>().each()) {
+        for (int skill_index = 0; skill_index < barn::SKILLSET_SIZE; ++skill_index) {
+            barn::skill& skill = character_skillset[skill_index];
+            
+            if (skill.def.code == barn::skill_code::NONE) continue;
 
-		input = {};
-	}
+            const bool key_pressed = input.skills[skill_index] && !skill.key_was_down;
+            skill.key_was_down = input.skills[skill_index];
+
+            if (skill.def.code == barn::skill_code::DASH) {
+                if (key_pressed) execute_skill(skill, entity, registry, context);
+                continue;
+            }
+
+            if (!input.skills[skill_index]) continue;
+
+            const auto skill_elapsed = current_time - skill.last_used_time;
+            if (skill_elapsed >= skill.def.skill_cooldown) {
+                if (execute_skill(skill, entity, registry, context)) {
+                    skill.last_used_time = current_time;
+                }
+            }
+        }
+    }
 }
+
+void barn::dash_system(entt::registry& registry, barn::context& context) {
+    const auto current_time = std::chrono::steady_clock::now();
+
+    for (auto [entity, stats, skillset] : registry.view<component::dash_stats, component::skillset>().each()) {
+        if (!stats.is_recharging) continue;
+
+        barn::skill_def* dash_def = nullptr;
+        for (auto& s : skillset) {
+            if (s.def.code == barn::skill_code::DASH) { dash_def = &s.def; break; }
+        }
+        if (!dash_def) continue;
+
+        const auto elapsed = current_time - stats.recharge_started_at;
+        if (elapsed >= dash_def->dash_recharge_time) {
+            if (stats.current_charges < dash_def->dash_max_charges) {
+                ++stats.current_charges;
+            }
+            if (stats.current_charges >= dash_def->dash_max_charges) {
+                stats.current_charges = dash_def->dash_max_charges;
+                stats.is_recharging = false;
+            } else {
+                stats.recharge_started_at = current_time;
+            }
+        }
+    }
+
+    for (auto [entity, active, skillset] : registry.view<component::active_dash, component::skillset>().each()) {
+        barn::skill_def* dash_def = nullptr;
+        for (auto& s : skillset) {
+            if (s.def.code == barn::skill_code::DASH) { dash_def = &s.def; break; }
+        }
+        
+        if (dash_def) {
+            const float elapsed_secs = std::chrono::duration<float>(current_time - active.started_at).count();
+            const float duration_secs = std::chrono::duration<float>(dash_def->momentum_duration).count();
+
+            if (duration_secs <= 0.f || elapsed_secs >= duration_secs) {
+                registry.remove<component::active_dash>(entity);
+            }
+        }
+    }
+}
+
+void barn::movement_system(entt::registry& registry, barn::context& context) {
+    const auto current_time = std::chrono::steady_clock::now();
+
+    for (auto [entity, body, properties, input] : registry.view<component::body, component::properties, component::input>().each()) {
+        
+        b2Vec2 movement_direction{ input.axis_x, input.axis_y };
+        if (length(movement_direction) > 1.f) {
+            movement_direction = normalize(movement_direction);
+        }
+
+        if (registry.all_of<component::active_dash, component::skillset>(entity)) {
+            const auto& active = registry.get<component::active_dash>(entity);
+            const auto& skillset = registry.get<component::skillset>(entity);
+            
+            barn::skill_def* dash_def = nullptr;
+            for (const auto& s : skillset) {
+                if (s.def.code == barn::skill_code::DASH) { dash_def = (barn::skill_def*)&s.def; break; }
+            }
+
+            if (dash_def) {
+            const float elapsed_secs = std::chrono::duration<float>(current_time - active.started_at).count();
+            const float dash_duration_secs = std::chrono::duration<float>(dash_def->dash_duration).count();
+            const float momentum_duration_secs = std::chrono::duration<float>(dash_def->momentum_duration).count();
+            
+            float bonus_speed = 0.f;
+
+            if (elapsed_secs < dash_duration_secs) {
+                bonus_speed = dash_def->dash_speed_bonus;
+            } 
+            else if (elapsed_secs < momentum_duration_secs) {
+                const float momentum_elapsed = elapsed_secs - dash_duration_secs;
+                const float momentum_total = momentum_duration_secs - dash_duration_secs;
+                const float progress = momentum_elapsed / momentum_total;
+                const float decay = std::pow(1.f + 3.f * progress, -2.f);
+                bonus_speed = dash_def->dash_speed_bonus * decay;
+            }
+            if (length(movement_direction) > 0.f) {
+                b2Body_SetLinearVelocity(body.id, movement_direction * (properties.speed + bonus_speed));
+            } else {
+                b2Body_SetLinearVelocity(body.id, active.momentum_direction * bonus_speed);
+            }
+            continue; 
+        }
+        }
+
+        b2Body_SetLinearVelocity(body.id, movement_direction * static_cast<float>(properties.speed));
+    }
+
+    for (auto [entity, input] : registry.view<component::input>().each()) {
+        input.axis_x = 0.f;
+        input.axis_y = 0.f;
+        for (int i = 0; i < barn::SKILLSET_SIZE; ++i) input.skills[i] = false;
+    }
+}
+
 
 void barn::AI_system(entt::registry& registry, [[maybe_unused]] barn::context& context) {
 	for (auto [entity, AI_code] : registry.view<component::AI_code>().each()) {

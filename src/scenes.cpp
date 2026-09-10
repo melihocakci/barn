@@ -191,7 +191,9 @@ void barn::combat_scene(barn::context& context, barn::session& session) {
 				barn::gamepad_system(registry, context);
 			}
 
-			barn::input_system(registry, context);
+			barn::skill_system(registry, context);
+            barn::dash_system(registry, context);
+            barn::movement_system(registry, context);
 
 			barn::AI_system(registry, context);
 

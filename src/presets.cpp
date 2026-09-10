@@ -66,15 +66,23 @@ decltype(barn::character_presets) barn::character_presets
 			.speed = 10,
 		},
 		.skillset = skillset_def{
-			skill_def{
-				.code = skill_code::GREEN_ONION,
-				.assets = assets_def{
-					.textures{ textures::green_onion },
-					.audios{ audios::weiii },
-				},
-				.cooldown = 250ms,
-			},
-		}
+            skill_def{
+                .code = skill_code::GREEN_ONION,
+                .assets = assets_def{
+                    .textures{ textures::green_onion },
+                    .audios{ audios::weiii },
+                },
+                .skill_cooldown = 250ms,
+            },
+            skill_def{
+                .code = skill_code::DASH,
+                .dash_max_charges = 3,
+                .dash_recharge_time = 3500ms,
+                .dash_duration = 200ms,
+                .momentum_duration = 500ms,
+                .dash_speed_bonus = 10.f,
+            }
+        }
 	},
 };
 

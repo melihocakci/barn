@@ -13,7 +13,7 @@ namespace barn {
 		SDL_Scancode right{ SDL_SCANCODE_RIGHT };
 		std::array<SDL_Scancode, SKILLSET_SIZE> skills{
 			SDL_SCANCODE_Q,
-			SDL_SCANCODE_W,
+			SDL_SCANCODE_LSHIFT,
 			SDL_SCANCODE_E,
 			SDL_SCANCODE_R,
 		};
