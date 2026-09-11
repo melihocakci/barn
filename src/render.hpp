@@ -1,6 +1,7 @@
 #pragma once
 
-#include "context.hpp"
+#include "assets.hpp"
+#include "components.hpp"
 
 #include <SDL3/SDL.h>
 

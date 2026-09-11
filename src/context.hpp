@@ -9,6 +9,8 @@
 #include <unordered_map>
 
 namespace barn {
+	using gamepad = std::unique_ptr<SDL_Gamepad, decltype(&SDL_CloseGamepad)>;
+
 	struct context {
 		SDL_Window* const window{};
 		SDL_Renderer* const renderer{};

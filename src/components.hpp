@@ -1,6 +1,8 @@
 #pragma once
 
 #include "constants.hpp"
+#include "skills.hpp"
+#include "assets.hpp"
 
 #include <SDL3/SDL.h>
 #include <SDL3_mixer/SDL_mixer.h>
@@ -46,38 +48,6 @@ namespace barn {
 		int collide_damage = 0;
 		int speed = 1;
 	};
-
-	template<typename T>
-	struct asset {
-		std::shared_ptr<std::shared_future<T*>> ptr{};
-
-		T& operator *() {
-			return *ptr->get();
-		}
-		const T& operator *() const {
-			return *ptr->get();
-		}
-		T* operator->() {
-			return ptr->get();
-		}
-		const T* operator->() const {
-			return ptr->get();
-		}
-		T* get() {
-			return ptr->get();
-		}
-		const T* get() const {
-			return ptr->get();
-		}
-		operator bool() const {
-			return ptr->get();
-		}
-	};
-
-	using texture = barn::asset<SDL_Texture>;
-	using audio = barn::asset<MIX_Audio>;
-
-	using asset_def = std::filesystem::path;
 
 	struct sprite_def {
 		barn::asset_def texture{};
@@ -128,8 +98,6 @@ namespace barn {
 		barn::assets assets{};
 		std::chrono::steady_clock::time_point last_used_time{};
 	};
-
-	using gamepad = std::unique_ptr<SDL_Gamepad, decltype(&SDL_CloseGamepad)>;
 }
 
 namespace barn::component {

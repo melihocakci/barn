@@ -102,6 +102,7 @@ add_executable(${PROJECT_NAME} WIN32
     "src/assets.cpp"
     "src/interface.cpp"
     "src/render.cpp"
+    "src/skills.cpp"
 )
 
 target_compile_options(${PROJECT_NAME} PRIVATE

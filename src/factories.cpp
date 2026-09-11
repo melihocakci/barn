@@ -1,6 +1,5 @@
 #include "factories.hpp"
 #include "components.hpp"
-#include "constants.hpp"
 #include "assets.hpp"
 
 #include <box2d/box2d.h>
