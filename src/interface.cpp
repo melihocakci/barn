@@ -1,8 +1,10 @@
 #include "interface.hpp"
+#include "components.hpp"
 
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
+#include <entt/entt.hpp>
 
 
 constexpr ImGuiWindowFlags window_flags =

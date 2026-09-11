@@ -2,6 +2,8 @@
 
 #include "context.hpp"
 
+#include <entt/entt.hpp>
+
 namespace barn {
 	enum class menu {
 		MAIN_MENU,
