@@ -17,65 +17,6 @@
 #include <chrono>
 
 namespace barn {
-	struct circle_def {
-		b2ShapeDef def = b2DefaultShapeDef();
-		b2Circle circle{};
-	};
-
-	struct polygon_def {
-		b2ShapeDef def = b2DefaultShapeDef();
-		b2Polygon polygon{};
-	};
-
-	struct body_def {
-		b2BodyDef def = b2DefaultBodyDef();
-		std::vector<circle_def> circles{};
-		std::vector<polygon_def> polygons{};
-	};
-
-	enum category : std::uint64_t {
-		ALLY = 1,
-		ENEMY = 1 << 1,
-		ALLY_BULLET = 1 << 2,
-		ENEMY_BULLET = 1 << 3,
-		OBSTACLE = 1 << 4,
-	};
-
-	struct base_properties {
-		int health = 1;
-		int attack = 0;
-		int defense = 0;
-		int collide_damage = 0;
-		int speed = 1;
-	};
-
-	struct sprite_def {
-		barn::asset_def texture{};
-		std::optional<SDL_FRect> src_rect{};
-		std::optional<float> width{};
-		std::optional<float> height{};
-	};
-
-	using namespace std::chrono_literals;
-
-	struct animation_def {
-		barn::asset_def texture{};
-		std::vector<SDL_FRect> frames{};
-		std::optional<float> width{};
-		std::optional<float> height{};
-		std::chrono::milliseconds duration = 1000ms;
-	};
-
-	struct track_def {
-		barn::asset_def audio{};
-		SDL_PropertiesID properties_id{};
-	};
-
-	struct assets_def {
-		std::vector<barn::asset_def> textures{};
-		std::vector<barn::asset_def> audios{};
-	};
-
 	struct assets {
 		std::vector<barn::texture> textures{};
 		std::vector<barn::audio> audios{};
@@ -85,16 +26,9 @@ namespace barn {
 		GREEN_ONION,
 	};
 
-	struct skill_def {
-		barn::skill_code code{};
-		barn::assets_def assets{};
-		std::chrono::milliseconds cooldown{};
-	};
-
-	using skillset_def = std::array<skill_def, SKILLSET_SIZE>;
-
 	struct skill {
-		barn::skill_def def{};
+		barn::skill_code code{};
+		std::chrono::milliseconds cooldown{};
 		barn::assets assets{};
 		std::chrono::steady_clock::time_point last_used_time{};
 	};
@@ -127,18 +61,24 @@ namespace barn::component {
 	};
 
 	struct sprite {
-		barn::sprite_def def{};
+		std::optional<SDL_FRect> src_rect{};
+		std::optional<float> width{};
+		std::optional<float> height{};
 		barn::texture texture{};
 	};
+	
+	using namespace std::chrono_literals;
 
 	struct animation {
-		barn::animation_def def{};
+		std::vector<SDL_FRect> frames{};
+		std::optional<float> width{};
+		std::optional<float> height{};
+		std::chrono::milliseconds duration = 1000ms;
 		barn::texture texture{};
 		std::chrono::steady_clock::time_point start_time{};
 	};
 
 	struct track {
-		barn::track_def def{};
 		barn::audio audio{};
 		std::unique_ptr<MIX_Track, decltype(&MIX_DestroyTrack)> track;
 	};
@@ -153,8 +93,12 @@ namespace barn::component {
 
 	using skillset = std::array<skill, SKILLSET_SIZE>;
 
-	struct properties : public base_properties {
-		base_properties base{};
+	struct properties {
+		int health = 1;
+		int attack = 0;
+		int defense = 0;
+		int collide_damage = 0;
+		int speed = 1;
 	};
 
 	using transform = b2Transform;

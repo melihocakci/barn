@@ -22,7 +22,10 @@ static void add_body(entt::entity entity, entt::registry& registry, b2WorldId wo
 
 static void add_idle_animation(entt::entity entity, entt::registry& registry, SDL_Renderer* renderer, const barn::animation_def& def) {
 	registry.emplace<barn::component::idle_animation>(entity,
-		def,
+		def.frames,
+		def.width,
+		def.height,
+		def.duration,
 		barn::get_texture(renderer, def.texture),
 		std::chrono::steady_clock::time_point{}
 	);
@@ -30,7 +33,9 @@ static void add_idle_animation(entt::entity entity, entt::registry& registry, SD
 
 static void add_sprite(entt::entity entity, entt::registry& registry, SDL_Renderer* renderer, const barn::sprite_def& def) {
 	registry.emplace<barn::component::sprite>(entity,
-		def,
+		def.src_rect,
+		def.width,
+		def.height,
 		barn::get_texture(renderer, def.texture)
 	);
 }
@@ -42,7 +47,6 @@ static void add_track(entt::entity entity, entt::registry& registry, MIX_Mixer* 
 	MIX_PlayTrack(track, def.properties_id);
 
 	registry.emplace<barn::component::track>(entity,
-		def,
 		audio,
 		std::unique_ptr<MIX_Track, decltype(&MIX_DestroyTrack)>(track, MIX_DestroyTrack)
 	);
@@ -50,7 +54,6 @@ static void add_track(entt::entity entity, entt::registry& registry, MIX_Mixer* 
 
 static void add_properties(entt::entity entity, entt::registry& registry, const barn::base_properties& base) {
 	registry.emplace<barn::component::properties>(entity,
-		base,
 		base.health,
 		base.attack,
 		base.defense,
@@ -63,7 +66,9 @@ static void add_skillset(entt::entity entity, entt::registry& registry, SDL_Rend
 	barn::component::skillset& skillset = registry.emplace<barn::component::skillset>(entity);
 
 	for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
-		skillset[i].def = def[i];
+		skillset[i].cooldown = def[i].cooldown;
+		skillset[i].code = def[i].code;
+		
 		for (const auto& texture_def : def[i].assets.textures) {
 			skillset[i].assets.textures.push_back(barn::get_texture(renderer, texture_def));
 		}
