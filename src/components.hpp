@@ -16,24 +16,6 @@
 #include <array>
 #include <chrono>
 
-namespace barn {
-	struct assets {
-		std::vector<barn::texture> textures{};
-		std::vector<barn::audio> audios{};
-	};
-
-	enum class skill_code {
-		GREEN_ONION,
-	};
-
-	struct skill {
-		barn::skill_code code{};
-		std::chrono::milliseconds cooldown{};
-		barn::assets assets{};
-		std::chrono::steady_clock::time_point last_used_time{};
-	};
-}
-
 namespace barn::component {
 	struct body {
 		b2BodyId id{};
