@@ -200,14 +200,14 @@ void barn::draw_ui(barn::context& context, entt::registry& registry) {
 
 	ImGui::Begin("Health", nullptr, window_flags);
 	for (auto [entity, player, properties] : registry.view<barn::component::player, barn::component::properties>().each()) {
-		float progress = static_cast<float>(properties.health) / properties.base.health;
+		float progress = static_cast<float>(properties.health) / properties.health;
 
 		const ImVec4 red{ 1.0f, 0.0f, 0.0f, 1.0f };
 		const ImVec4 green{ 0.0f, 1.0f, 0.0f, 1.0f };
 		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, progress < 0.2f ? ImVec4{ 1.0f, 0.0f, 0.0f, 1.0f } : ImVec4{ 0.0f, 1.0f, 0.0f, 1.0f });
 		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
 
-		ImGui::ProgressBar(progress, ImVec2{ screen_size.x * 0.5f, 20.0f }, std::format("HP: {}/{}", properties.health, properties.base.health).c_str());
+		ImGui::ProgressBar(progress, ImVec2{ screen_size.x * 0.5f, 20.0f }, std::format("HP: {}/{}", properties.health, properties.health).c_str());
 
 		ImGui::PopStyleColor(2);
 	}

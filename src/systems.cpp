@@ -141,10 +141,10 @@ void barn::input_system(entt::registry& registry, barn::context& context) {
 					using namespace std::chrono;
 					const steady_clock::time_point current_time = steady_clock::now();
 					const milliseconds time_span = duration_cast<milliseconds>(current_time - skillset[i].last_used_time);
-					if (time_span < skillset[i].def.cooldown) {
+					if (time_span < skillset[i].cooldown) {
 						continue;
 					}
-					execute_skill(skillset[i].def.code, entity, registry, context);
+					execute_skill(skillset[i].code, entity, registry, context);
 					skillset[i].last_used_time = current_time;
 				}
 			}
@@ -225,9 +225,9 @@ void barn::sprite_system(entt::registry& registry, barn::context& context, float
 			sprite.texture,
 			registry.all_of<component::previous_transform>(entity)
 			? interpolate(registry.get<component::previous_transform>(entity), transform, alpha) : transform,
-			sprite.def.src_rect ? &*sprite.def.src_rect : nullptr,
-			sprite.def.width,
-			sprite.def.height,
+			sprite.src_rect ? &*sprite.src_rect : nullptr,
+			sprite.width,
+			sprite.height,
 			scale,
 			offset_x,
 			offset_y
@@ -244,19 +244,19 @@ void barn::animation_system(entt::registry& registry, barn::context& context, fl
 	}
 
 	for (auto [entity, animation, transform] : registry.view<component::animation, component::transform>().each()) {
-		if (animation.def.frames.empty()) continue;
+		if (animation.frames.empty()) continue;
 
 		using namespace std::chrono;
 		const steady_clock::time_point current_time = steady_clock::now();
 		long elapsed = duration_cast<milliseconds>(current_time - animation.start_time).count();
-		long duration = animation.def.duration.count();
+		long duration = animation.duration.count();
 
 		if (elapsed >= duration) {
 			if (registry.all_of<component::idle_animation>(entity)) {
 				animation = registry.get<component::idle_animation>(entity);
 				animation.start_time = current_time;
 				elapsed = 0;
-				duration = animation.def.duration.count();
+				duration = animation.duration.count();
 			}
 			else {
 				registry.remove<component::animation>(entity);
@@ -264,7 +264,7 @@ void barn::animation_system(entt::registry& registry, barn::context& context, fl
 			}
 		}
 
-		long size = animation.def.frames.size();
+		long size = animation.frames.size();
 		int frame_index = static_cast<double>(elapsed) / duration * size;
 
 		draw_texture(
@@ -272,9 +272,9 @@ void barn::animation_system(entt::registry& registry, barn::context& context, fl
 			animation.texture,
 			registry.all_of<component::previous_transform>(entity)
 			? interpolate(registry.get<component::previous_transform>(entity), transform, alpha) : transform,
-			&animation.def.frames[frame_index],
-			animation.def.width,
-			animation.def.height,
+			&animation.frames[frame_index],
+			animation.width,
+			animation.height,
 			scale,
 			offset_x,
 			offset_y
