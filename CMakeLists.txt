@@ -4,6 +4,7 @@ project(barn LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
@@ -103,6 +104,10 @@ add_executable(${PROJECT_NAME} WIN32
     "src/interface.cpp"
     "src/render.cpp"
     "src/skills.cpp"
+)
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
 target_compile_options(${PROJECT_NAME} PRIVATE

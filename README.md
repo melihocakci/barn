@@ -9,7 +9,8 @@ Inspired by *Touhou Project*, *Rabbit and Steel* and *Risk of Rain*.
 ## How to build
 
     git submodule update --init --recursive
-	mkdir build
+    git lfs pull
+    mkdir build
     cmake -S . -B build
     cmake --build build
 

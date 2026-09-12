@@ -4,6 +4,9 @@
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_mixer/SDL_mixer.h>
 
+#include <unordered_map>
+#include <filesystem>
+
 barn::texture barn::get_texture(SDL_Renderer* renderer, const std::filesystem::path& path) {
 	using element_t = SDL_Texture*;
 	using future_t = std::shared_future<element_t>;
