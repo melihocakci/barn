@@ -4,6 +4,7 @@
 #include "factories.hpp"
 #include "constants.hpp"
 #include "assets.hpp"
+#include "skills.hpp"
 
 #include <box2d/box2d.h>
 
@@ -65,15 +66,8 @@ decltype(barn::character_presets) barn::character_presets
 			.attack = 10,
 			.speed = 10,
 		},
-		.skillset = skillset_def{
-			skill_def{
-				.code = skill_code::GREEN_ONION,
-				.assets = assets_def{
-					.textures{ textures::green_onion },
-					.audios{ audios::weiii },
-				},
-				.cooldown = 250ms,
-			},
+		.skillset = component::skillset{
+			skills::green_onion{},
 		}
 	},
 };

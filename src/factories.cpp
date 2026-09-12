@@ -62,22 +62,6 @@ static void add_properties(entt::entity entity, entt::registry& registry, const 
 	);
 }
 
-static void add_skillset(entt::entity entity, entt::registry& registry, SDL_Renderer* renderer, const barn::skillset_def& def) {
-	barn::component::skillset& skillset = registry.emplace<barn::component::skillset>(entity);
-
-	for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
-		skillset[i].cooldown = def[i].cooldown;
-		skillset[i].code = def[i].code;
-		
-		for (const auto& texture_def : def[i].assets.textures) {
-			skillset[i].assets.textures.push_back(barn::get_texture(renderer, texture_def));
-		}
-		for (const auto& audio_def : def[i].assets.audios) {
-			skillset[i].assets.audios.push_back(barn::get_audio(audio_def));
-		}
-	}
-}
-
 entt::entity barn::create_entity(entt::registry& registry, barn::context& context, const barn::entity_def& def) {
 	const entt::entity entity = registry.create();
 
@@ -102,7 +86,13 @@ entt::entity barn::create_entity(entt::registry& registry, barn::context& contex
 	}
 
 	if (def.skillset) {
-		add_skillset(entity, registry, context.renderer, *def.skillset);
+		registry.emplace<component::skillset>(entity, *def.skillset);
+
+		for (auto& skill : registry.get<component::skillset>(entity)) {
+			std::visit([&context](auto&& skill) {
+				skill.initialize(context);
+			}, skill);
+		}
 	}
 
 	if (def.keyboard) {

@@ -70,57 +70,6 @@ void barn::gamepad_system(entt::registry& registry, barn::context& context) {
 	}
 }
 
-static void execute_skill(barn::skill_code skill_code, entt::entity entity, entt::registry& registry, barn::context& context) {
-	using namespace barn;
-
-	static const b2BodyDef default_body_def = [] {
-		b2BodyDef def = b2DefaultBodyDef();
-		def.type = b2_dynamicBody;
-		def.fixedRotation = true;
-		return def;
-		}();
-
-	static const b2ShapeDef bullet_shape_def = [] {
-		b2ShapeDef def = b2DefaultShapeDef();
-		def.filter.categoryBits = barn::category::ALLY_BULLET;
-		def.filter.maskBits = barn::category::ENEMY | barn::category::OBSTACLE;
-		return def;
-		}();
-
-	switch (skill_code) {
-	case barn::skill_code::GREEN_ONION:
-		auto [player_body, player_prop] = registry.get<component::body, component::properties>(entity);
-
-		MIX_PlayAudio(context.mixer, get_audio(audios::weiii).get());
-
-		b2BodyDef body_def = default_body_def;
-		body_def.type = b2_kinematicBody;
-		body_def.position = b2Body_GetPosition(player_body.id);
-		body_def.linearVelocity = { 0.f, 10.f };
-		body_def.angularVelocity = B2_PI;
-
-		barn::entity_def def{
-			.body = barn::body_def{
-				.def = body_def,
-				.circles{
-					{bullet_shape_def, b2Circle{{}, 0.25f}}
-				}
-			},
-			.idle_animation = animation_def{
-				.texture = textures::green_onion,
-				.frames = { SDL_FRect{0.f, 0.f, 260.f, 280.f} },
-				.width = 1.f * PIXELS_PER_METER,
-			},
-			.properties = base_properties{
-				.collide_damage = player_prop.attack,
-			},
-			.bullet = component::bullet{}
-		};
-
-		barn::create_entity(registry, context, def);
-	}
-}
-
 void barn::input_system(entt::registry& registry, barn::context& context) {
 	for (auto [entity, input] : registry.view<component::input>().each()) {
 		if (registry.all_of<component::body, component::properties>(entity)) {
@@ -137,15 +86,19 @@ void barn::input_system(entt::registry& registry, barn::context& context) {
 		if (registry.all_of<component::skillset>(entity)) {
 			component::skillset& skillset = registry.get<component::skillset>(entity);
 			for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
+				if (std::visit([](auto&& skill) { return skill.on_cooldown(); }, skillset[i])) {
+					continue;
+				}
+				
 				if (input.skills[i]) {
-					using namespace std::chrono;
-					const steady_clock::time_point current_time = steady_clock::now();
-					const milliseconds time_span = duration_cast<milliseconds>(current_time - skillset[i].last_used_time);
-					if (time_span < skillset[i].cooldown) {
-						continue;
-					}
-					execute_skill(skillset[i].code, entity, registry, context);
-					skillset[i].last_used_time = current_time;
+					std::visit([&](auto&& skill) {
+						skill.key_down(context, registry, entity);
+					}, skillset[i]);
+				}
+				else {
+					std::visit([&](auto&& skill) {
+						skill.key_up(context, registry, entity);
+					}, skillset[i]);
 				}
 			}
 		}

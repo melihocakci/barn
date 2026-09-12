@@ -58,26 +58,13 @@ namespace barn {
 		SDL_PropertiesID properties_id{};
 	};
 
-	struct assets_def {
-		std::vector<barn::asset_def> textures{};
-		std::vector<barn::asset_def> audios{};
-	};
-
-	struct skill_def {
-		barn::skill_code code{};
-		barn::assets_def assets{};
-		std::chrono::milliseconds cooldown{};
-	};
-
-	using skillset_def = std::array<skill_def, SKILLSET_SIZE>;
-
 	struct entity_def {
 		std::optional<barn::body_def> body{};
 		std::optional<barn::animation_def> idle_animation{};
 		std::optional<barn::sprite_def> sprite{};
 		std::optional<barn::track_def> track{};
 		std::optional<barn::base_properties> properties{};
-		std::optional<barn::skillset_def> skillset{};
+		std::optional<component::skillset> skillset{};
 		std::optional<component::keyboard> keyboard{};
 		std::optional<component::gamepad> gamepad{};
 		std::optional<component::transform> transform{};

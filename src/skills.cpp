@@ -18,7 +18,11 @@ static const b2ShapeDef bullet_shape_def = [] {
 	return def;
 	}();
 
-void green_onion_skill::execute(barn::context& context, entt::registry& registry, entt::entity entity) {
+void barn::skills::green_onion::initialize(barn::context& context) {
+	// Initialization logic for the green onion skill
+}
+
+void barn::skills::green_onion::key_down(barn::context& context, entt::registry& registry, entt::entity entity) {
 	auto [player_body, player_prop] = registry.get<barn::component::body, barn::component::properties>(entity);
 
 	MIX_PlayAudio(context.mixer, barn::get_audio(barn::audios::weiii).get());
@@ -48,4 +52,10 @@ void green_onion_skill::execute(barn::context& context, entt::registry& registry
 	};
 
 	barn::create_entity(registry, context, def);
+
+	start_cooldown(registry, entity);
+}
+
+void barn::skills::green_onion::key_up(barn::context& context, entt::registry& registry, entt::entity entity) {
+	// Logic for when the key is released
 }
