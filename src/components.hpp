@@ -39,7 +39,15 @@ namespace barn::component {
 	struct input {
 		float axis_x = 0.f;
 		float axis_y = 0.f;
-		bool skills[SKILLSET_SIZE] = { false };
+		bool skill_pressed[SKILLSET_SIZE] = { false };
+
+		enum class state {
+			NONE,
+			PRESSED,
+			RELEASED,
+			HOLDING
+		};
+		state skill_state[SKILLSET_SIZE] = { state::NONE };
 	};
 
 	struct sprite {
@@ -60,12 +68,12 @@ namespace barn::component {
 		std::chrono::steady_clock::time_point start_time{};
 	};
 
+	struct idle_animation : public animation {};
+
 	struct track {
 		barn::audio audio{};
 		std::unique_ptr<MIX_Track, decltype(&MIX_DestroyTrack)> track;
 	};
-
-	struct idle_animation : public animation {};
 
 	struct keyboard {};
 

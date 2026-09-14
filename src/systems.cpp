@@ -40,7 +40,7 @@ void barn::keyboard_system(entt::registry& registry, barn::context& context) {
 		input.axis_x = std::fabs(input.axis_x) > std::fabs(axis_x) ? input.axis_x : axis_x;
 		input.axis_y = std::fabs(input.axis_y) > std::fabs(axis_y) ? input.axis_y : axis_y;
 		for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
-			input.skills[i] |= state[controls.skills[i]];
+			input.skill_pressed[i] |= state[controls.skills[i]];
 		}
 	}
 }
@@ -65,7 +65,7 @@ void barn::gamepad_system(entt::registry& registry, barn::context& context) {
 		input.axis_x = std::fabs(input.axis_x) > std::fabs(axis_x) ? input.axis_x : axis_x;
 		input.axis_y = std::fabs(input.axis_y) > std::fabs(axis_y) ? input.axis_y : axis_y;
 		for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
-			input.skills[i] |= SDL_GetGamepadButton(gp.get(), controls.skills[i]);
+			input.skill_pressed[i] |= SDL_GetGamepadButton(gp.get(), controls.skills[i]);
 		}
 	}
 }
@@ -86,20 +86,30 @@ void barn::input_system(entt::registry& registry, barn::context& context) {
 		if (registry.all_of<component::skillset>(entity)) {
 			component::skillset& skillset = registry.get<component::skillset>(entity);
 			for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
+				switch (input.skill_state[i]) {
+				case component::input::state::PRESSED:
+				case component::input::state::HOLDING:
+					input.skill_state[i] = input.skill_pressed[i] ? component::input::state::HOLDING : component::input::state::RELEASED;
+					break;
+				default:
+					input.skill_state[i] = input.skill_pressed[i] ? component::input::state::PRESSED : component::input::state::NONE;
+				}
+
 				if (std::visit([](auto&& skill) { return skill.on_cooldown(); }, skillset[i])) {
 					continue;
 				}
 				
-				if (input.skills[i]) {
-					std::visit([&](auto&& skill) {
-						skill.key_down(context, registry, entity);
-					}, skillset[i]);
-				}
-				else {
-					std::visit([&](auto&& skill) {
-						skill.key_up(context, registry, entity);
-					}, skillset[i]);
-				}
+				std::visit([&](auto&& skill) {
+					if (input.skill_state[i] == component::input::state::PRESSED) {
+						skill.pressed(context, registry, entity);
+					}
+					else if (input.skill_state[i] == component::input::state::HOLDING) {
+						skill.holding(context, registry, entity);
+					}
+					else if (input.skill_state[i] == component::input::state::RELEASED) {
+						skill.released(context, registry, entity);
+					}
+				}, skillset[i]);
 			}
 		}
 

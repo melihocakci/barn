@@ -19,8 +19,9 @@ namespace barn::skills {
 		virtual std::chrono::milliseconds base_cooldown() const = 0;
 
 		virtual void initialize(barn::context& context) = 0;
-		virtual void key_down(barn::context& context, entt::registry& registry, entt::entity entity) = 0;
-		virtual void key_up(barn::context& context, entt::registry& registry, entt::entity entity) = 0;
+		virtual void pressed(barn::context& context, entt::registry& registry, entt::entity entity) = 0;
+		virtual void holding(barn::context& context, entt::registry& registry, entt::entity entity) = 0;
+		virtual void released(barn::context& context, entt::registry& registry, entt::entity entity) = 0;
 
 		std::chrono::steady_clock::time_point cooldown_end{};
 
@@ -40,8 +41,9 @@ namespace barn::skills {
 		std::chrono::milliseconds base_cooldown() const override { return 250ms; }
 
 		void initialize(barn::context& context) override;
-		void key_down(barn::context& context, entt::registry& registry, entt::entity entity) override;
-		void key_up(barn::context& context, entt::registry& registry, entt::entity entity) override {};
+		void pressed(barn::context& context, entt::registry& registry, entt::entity entity) override;
+		void holding(barn::context& context, entt::registry& registry, entt::entity entity) override { pressed(context, registry, entity); }
+		void released(barn::context& context, entt::registry& registry, entt::entity entity) override {};
 
 		barn::texture onion{};
 		barn::audio weii{};

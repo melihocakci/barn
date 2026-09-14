@@ -23,7 +23,7 @@ void barn::skills::green_onion::initialize(barn::context& context) {
 	this->weii = barn::get_audio(barn::audios::weiii);
 }
 
-void barn::skills::green_onion::key_down(barn::context& context, entt::registry& registry, entt::entity entity) {
+void barn::skills::green_onion::pressed(barn::context& context, entt::registry& registry, entt::entity entity) {
 	auto [player_body, player_prop] = registry.get<barn::component::body, barn::component::properties>(entity);
 
 	MIX_PlayAudio(context.mixer, this->weii.get());
