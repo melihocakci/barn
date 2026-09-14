@@ -1,6 +1,7 @@
 #pragma once
 
 #include "context.hpp"
+#include "assets.hpp"
 
 #include <entt/entt.hpp>
 
@@ -27,7 +28,7 @@ namespace barn::skills {
 			cooldown_end = std::chrono::steady_clock::now() + static_cooldown() + base_cooldown();
 		}
 
-		bool on_cooldown() {
+		bool on_cooldown() const {
 			return std::chrono::steady_clock::now() < cooldown_end;
 		}
 	};
@@ -40,7 +41,10 @@ namespace barn::skills {
 
 		void initialize(barn::context& context) override;
 		void key_down(barn::context& context, entt::registry& registry, entt::entity entity) override;
-		void key_up(barn::context& context, entt::registry& registry, entt::entity entity) override;
+		void key_up(barn::context& context, entt::registry& registry, entt::entity entity) override {};
+
+		barn::texture onion{};
+		barn::audio weii{};
 	};
 }
 
