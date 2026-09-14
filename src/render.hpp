@@ -27,4 +27,13 @@ namespace barn {
 		int offset_x = 0,
 		int offset_y = 0
 	);
+
+	void draw_animation(
+		SDL_Renderer* renderer,
+		const component::animation& animation,
+		component::transform transform,
+		float scale,
+		int offset_x,
+		int offset_y
+	);
 }

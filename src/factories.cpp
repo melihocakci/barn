@@ -6,8 +6,10 @@
 #include <box2d/types.h>
 #include <box2d/collision.h>
 
-static void add_body(entt::entity entity, entt::registry& registry, b2WorldId world, const barn::body_def& def) {
-	const barn::component::body& body = registry.emplace<barn::component::body>(entity, b2CreateBody(world, &def.def));
+#include <ranges>
+
+static barn::component::body make_body(const barn::body_def& def, b2WorldId world, entt::entity entity) {
+	barn::component::body body = b2CreateBody(world, &def.def);
 
 	for (const auto& [shape_def, circle] : def.circles) {
 		b2CreateCircleShape(body.id, &shape_def, &circle);
@@ -18,41 +20,56 @@ static void add_body(entt::entity entity, entt::registry& registry, b2WorldId wo
 	}
 
 	b2Body_SetUserData(body.id, new entt::entity{ entity });
+
+	return body;
 }
 
-static void add_idle_animation(entt::entity entity, entt::registry& registry, SDL_Renderer* renderer, const barn::animation_def& def) {
-	registry.emplace<barn::component::idle_animation>(entity,
+static barn::component::animation make_animation(const barn::animation_def& def, SDL_Renderer* renderer) {
+	return barn::component::animation{
 		def.frames,
 		def.width,
 		def.height,
 		def.duration,
 		barn::get_texture(renderer, def.texture),
 		std::chrono::steady_clock::time_point{}
-	);
+	};
 }
 
-static void add_sprite(entt::entity entity, entt::registry& registry, SDL_Renderer* renderer, const barn::sprite_def& def) {
-	registry.emplace<barn::component::sprite>(entity,
+static barn::component::animation_list make_animation_list(const barn::animation_list_def& def, SDL_Renderer* renderer) {
+	barn::component::animation_list list{};
+
+	if (def.idle_animation) {
+		list.idle = make_animation(*def.idle_animation, renderer);
+	}
+	if (def.attack_animation) {
+		list.idle = make_animation(*def.attack_animation, renderer);
+	}
+
+	return list;
+}
+
+static barn::component::sprite make_sprite(const barn::sprite_def& def, SDL_Renderer* renderer) {
+	return barn::component::sprite{
 		def.src_rect,
 		def.width,
 		def.height,
 		barn::get_texture(renderer, def.texture)
-	);
+	};
 }
 
-static void add_track(entt::entity entity, entt::registry& registry, MIX_Mixer* mixer, const barn::track_def& def) {
+static barn::component::track make_track(const barn::track_def& def, MIX_Mixer* mixer) {
 	barn::audio audio = barn::get_audio(def.audio);
 	MIX_Track* track = MIX_CreateTrack(mixer);
 	MIX_SetTrackAudio(track, audio.get());
 	MIX_PlayTrack(track, def.properties_id);
 
-	registry.emplace<barn::component::track>(entity,
+	return barn::component::track{
 		audio,
 		std::unique_ptr<MIX_Track, decltype(&MIX_DestroyTrack)>(track, MIX_DestroyTrack)
-	);
+	};
 }
 
-static void add_properties(entt::entity entity, entt::registry& registry, const barn::base_properties& base) {
+static void add_properties(entt::entity entity, entt::registry& registry, const barn::component::base_properties& base) {
 	registry.emplace<barn::component::properties>(entity,
 		base.health,
 		base.attack,
@@ -66,23 +83,27 @@ entt::entity barn::create_entity(entt::registry& registry, barn::context& contex
 	const entt::entity entity = registry.create();
 
 	if (def.body) {
-		add_body(entity, registry, context.world_id, *def.body);
+		registry.emplace<component::body>(entity, make_body(*def.body, context.world_id, entity));
 	}
 
-	if (def.idle_animation) {
-		add_idle_animation(entity, registry, context.renderer, *def.idle_animation);
+	if (def.animation) {
+		registry.emplace<component::animation>(entity, make_animation(*def.animation, context.renderer));
+	}
+
+	if (def.animation_list) {
+		registry.emplace<component::animation_list>(entity, make_animation_list(*def.animation_list, context.renderer));
 	}
 
 	if (def.sprite) {
-		add_sprite(entity, registry, context.renderer, *def.sprite);
+		registry.emplace<component::sprite>(entity, make_sprite(*def.sprite, context.renderer));
 	}
 
 	if (def.track) {
-		add_track(entity, registry, context.mixer, *def.track);
+		registry.emplace<component::track>(entity, make_track(*def.track, context.mixer));
 	}
 
-	if (def.properties) {
-		add_properties(entity, registry, *def.properties);
+	if (def.base_properties) {
+		add_properties(entity, registry, *def.base_properties);
 	}
 
 	if (def.skillset) {
@@ -105,6 +126,7 @@ entt::entity barn::create_entity(entt::registry& registry, barn::context& contex
 
 	if (def.transform) {
 		registry.emplace<component::transform>(entity, *def.transform);
+		registry.emplace<component::previous_transform>(entity, *def.transform);
 		if (registry.all_of<component::body>(entity)) {
 			const auto& body = registry.get<component::body>(entity);
 			b2Body_SetTransform(body.id, def.transform->p, def.transform->q);

@@ -57,18 +57,26 @@ namespace barn::component {
 		barn::texture texture{};
 	};
 	
-	using namespace std::chrono_literals;
-
 	struct animation {
 		std::vector<SDL_FRect> frames{};
 		std::optional<float> width{};
 		std::optional<float> height{};
-		std::chrono::milliseconds duration = 1000ms;
+		std::chrono::milliseconds duration{ 1000 };
 		barn::texture texture{};
 		std::chrono::steady_clock::time_point start_time{};
 	};
 
-	struct idle_animation : public animation {};
+	struct animation_list {
+		enum class type {
+			IDLE,
+			ATTACK
+		};
+
+		type current = type::IDLE;
+
+		std::optional<component::animation> idle{};
+		std::optional<component::animation> attack{};
+	};
 
 	struct track {
 		barn::audio audio{};
@@ -83,13 +91,15 @@ namespace barn::component {
 
 	using skillset = std::array<skill, SKILLSET_SIZE>;
 
-	struct properties {
+	struct base_properties {
 		int health = 1;
 		int attack = 0;
 		int defense = 0;
 		int collide_damage = 0;
 		int speed = 1;
 	};
+
+	struct properties : public base_properties {};
 
 	using transform = b2Transform;
 

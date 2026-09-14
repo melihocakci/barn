@@ -28,14 +28,6 @@ namespace barn {
 		OBSTACLE = 1 << 4,
 	};
 
-	struct base_properties {
-		int health = 1;
-		int attack = 0;
-		int defense = 0;
-		int collide_damage = 0;
-		int speed = 1;
-	};
-
 	struct sprite_def {
 		barn::asset_def texture{};
 		std::optional<SDL_FRect> src_rect{};
@@ -53,6 +45,11 @@ namespace barn {
 		std::chrono::milliseconds duration = 1000ms;
 	};
 
+	struct animation_list_def {
+		std::optional<barn::animation_def> idle_animation;
+		std::optional<barn::animation_def> attack_animation;
+	};
+
 	struct track_def {
 		barn::asset_def audio{};
 		SDL_PropertiesID properties_id{};
@@ -60,10 +57,11 @@ namespace barn {
 
 	struct entity_def {
 		std::optional<barn::body_def> body{};
-		std::optional<barn::animation_def> idle_animation{};
+		std::optional<barn::animation_def> animation{};
+		std::optional<barn::animation_list_def> animation_list{};
 		std::optional<barn::sprite_def> sprite{};
 		std::optional<barn::track_def> track{};
-		std::optional<barn::base_properties> properties{};
+		std::optional<component::base_properties> base_properties{};
 		std::optional<component::skillset> skillset{};
 		std::optional<component::keyboard> keyboard{};
 		std::optional<component::gamepad> gamepad{};

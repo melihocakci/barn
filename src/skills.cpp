@@ -41,12 +41,12 @@ void barn::skills::green_onion::pressed(barn::context& context, entt::registry& 
 				{bullet_shape_def, b2Circle{{}, 0.25f}}
 			}
 		},
-		.idle_animation = barn::animation_def{
+		.animation = barn::animation_def{
 			.texture = barn::textures::green_onion,
 			.frames = { SDL_FRect{0.f, 0.f, 260.f, 280.f} },
 			.width = 1.f * barn::PIXELS_PER_METER,
 		},
-		.properties = barn::base_properties{
+		.base_properties = component::base_properties{
 			.collide_damage = player_prop.attack,
 		},
 		.bullet = barn::component::bullet{}

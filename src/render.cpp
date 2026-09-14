@@ -121,3 +121,34 @@ void barn::draw_texture(
 
 	SDL_SetRenderScale(renderer, prev_scale_x, prev_scale_y);
 }
+
+void barn::draw_animation(
+	SDL_Renderer* renderer,
+	const component::animation& animation,
+	component::transform transform,
+	float scale,
+	int offset_x,
+	int offset_y
+) {
+	if (animation.frames.empty()) return;
+
+	using namespace std::chrono;
+	const steady_clock::time_point current_time = steady_clock::now();
+	long elapsed = duration_cast<milliseconds>(current_time - animation.start_time).count();
+	long duration = animation.duration.count();
+
+	long size = animation.frames.size();
+	int frame_index = static_cast<double>(elapsed % duration) / duration * size;
+
+	barn::draw_texture(
+		renderer,
+		animation.texture,
+		transform,
+		&animation.frames[frame_index],
+		animation.width,
+		animation.height,
+		scale,
+		offset_x,
+		offset_y
+	);
+}

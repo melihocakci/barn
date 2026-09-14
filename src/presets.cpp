@@ -49,19 +49,21 @@ decltype(barn::character_presets) barn::character_presets
 				{ally_shape_def, b2Circle{{}, 0.25f}}
 			}
 		},
-		.idle_animation = animation_def{
-			.texture = textures::miku_animation,
-			.frames = []() -> std::vector<SDL_FRect> {
-				std::vector<SDL_FRect> rects;
-				for (int i = 0; i < 20; ++i) {
-					rects.emplace_back(i * 59.f, 0.f, 59.f, 64.f);
-				}
-				return rects;
-			}(),
-			.height = .8f * PIXELS_PER_METER,
-			.duration = 1500ms,
+		.animation_list = barn::animation_list_def{
+			barn::animation_def{
+				.texture = textures::miku_animation,
+				.frames = []() -> std::vector<SDL_FRect> {
+					std::vector<SDL_FRect> rects;
+					for (int i = 0; i < 20; ++i) {
+						rects.emplace_back(i * 59.f, 0.f, 59.f, 64.f);
+					}
+					return rects;
+				}(),
+				.height = .8f * PIXELS_PER_METER,
+				.duration = 1500ms,
+			}
 		},
-		.properties = base_properties{
+		.base_properties = component::base_properties{
 			.health = 1000,
 			.attack = 10,
 			.speed = 10,
@@ -87,13 +89,13 @@ decltype(barn::enemy_presets) barn::enemy_presets
 				{enemy_shape_def, b2Circle{{}, 0.5f}}
 			}
 		},
-		.idle_animation = animation_def{
+		.animation = animation_def{
 			.texture = textures::pearto,
 			.frames = { SDL_FRect{0.f, 0.f, 270.f, 450.f} },
 			.height = 2.f * PIXELS_PER_METER,
 			.duration = 1000ms,
 		},
-		.properties = base_properties{
+		.base_properties = component::base_properties{
 			.health = 100,
 			.collide_damage = 10,
 			.speed = 5,

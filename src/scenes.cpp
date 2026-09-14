@@ -204,6 +204,7 @@ void barn::combat_scene(barn::context& context, barn::session& session) {
 		const float alpha = accumulator / barn::PHYSICS_TIMESTEP;
 		barn::sprite_system(registry, context, alpha, scale, offset_x, offset_y);
 		barn::animation_system(registry, context, alpha, scale, offset_x, offset_y);
+		barn::animation_list_system(registry, context, alpha, scale, offset_x, offset_y);
 		barn::draw_borders(context.renderer, scale, offset_x, offset_y);
 		barn::track_system(registry, context);
 		barn::draw_ui(context, registry);

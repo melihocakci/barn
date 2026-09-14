@@ -183,7 +183,7 @@ void barn::sprite_system(entt::registry& registry, barn::context& context, float
 	}
 
 	for (auto [entity, sprite, transform] : registry.view<component::sprite, component::transform>().each()) {
-		draw_texture(
+		barn::draw_texture(
 			context.renderer,
 			sprite.texture,
 			registry.all_of<component::previous_transform>(entity)
@@ -199,49 +199,39 @@ void barn::sprite_system(entt::registry& registry, barn::context& context, float
 }
 
 void barn::animation_system(entt::registry& registry, barn::context& context, float alpha, float scale, int offset_x, int offset_y) {
-	for (auto [entity, idle_animation] : registry.view<component::idle_animation>().each()) {
-		if (!registry.all_of<component::animation>(entity)) {
-			component::animation& animation = registry.emplace<component::animation>(entity, idle_animation);
-			animation.start_time = std::chrono::steady_clock::now();
-		}
-	}
-
 	for (auto [entity, animation, transform] : registry.view<component::animation, component::transform>().each()) {
-		if (animation.frames.empty()) continue;
-
-		using namespace std::chrono;
-		const steady_clock::time_point current_time = steady_clock::now();
-		long elapsed = duration_cast<milliseconds>(current_time - animation.start_time).count();
-		long duration = animation.duration.count();
-
-		if (elapsed >= duration) {
-			if (registry.all_of<component::idle_animation>(entity)) {
-				animation = registry.get<component::idle_animation>(entity);
-				animation.start_time = current_time;
-				elapsed = 0;
-				duration = animation.duration.count();
-			}
-			else {
-				registry.remove<component::animation>(entity);
-				continue;
-			}
-		}
-
-		long size = animation.frames.size();
-		int frame_index = static_cast<double>(elapsed) / duration * size;
-
-		draw_texture(
+		barn::draw_animation(
 			context.renderer,
-			animation.texture,
-			registry.all_of<component::previous_transform>(entity)
-			? interpolate(registry.get<component::previous_transform>(entity), transform, alpha) : transform,
-			&animation.frames[frame_index],
-			animation.width,
-			animation.height,
+			animation,
+			interpolate(registry.get_or_emplace<component::previous_transform>(entity), transform, alpha),
 			scale,
 			offset_x,
 			offset_y
 		);
+	}
+}
+
+void barn::animation_list_system(entt::registry& registry, barn::context& context, float alpha, float scale, int offset_x, int offset_y) {
+	for (auto [entity, animation_list, transform] : registry.view<component::animation_list, component::transform>().each()) {
+		component::animation* animation_ptr = nullptr;
+
+		if (animation_list.current == component::animation_list::type::IDLE && animation_list.idle) {
+			animation_ptr = &*animation_list.idle;
+		}
+		else if (animation_list.current == component::animation_list::type::ATTACK && animation_list.attack) {
+			animation_ptr = &*animation_list.attack;
+		}
+
+		if (animation_ptr) {
+			barn::draw_animation(
+				context.renderer,
+				*animation_ptr,
+				interpolate(registry.get_or_emplace<component::previous_transform>(entity), transform, alpha),
+				scale,
+				offset_x,
+				offset_y
+			);
+		}
 	}
 }
 
