@@ -184,20 +184,20 @@ void barn::combat_scene(barn::context& context, barn::session& session) {
 		accumulator += deltaTime;
 
 		while (accumulator >= barn::PHYSICS_TIMESTEP) {
-			barn::property_system(registry);
-
-			if (SDL_GetWindowFlags(context.window) & SDL_WINDOW_INPUT_FOCUS) {
-				barn::keyboard_system(registry, context);
-				barn::gamepad_system(registry, context);
-			}
-
-			barn::input_system(registry, context);
-
-			barn::AI_system(registry, context);
-
 			barn::body_system(registry, context);
 			accumulator -= barn::PHYSICS_TIMESTEP;
 		}
+		
+		barn::property_system(registry);
+
+		if (SDL_GetWindowFlags(context.window) & SDL_WINDOW_INPUT_FOCUS) {
+			barn::keyboard_system(registry, context);
+			barn::gamepad_system(registry, context);
+		}
+
+		barn::input_system(registry, context);
+
+		barn::AI_system(registry, context);
 
 		barn::start_render(context.renderer);
 		auto [scale, offset_x, offset_y] = barn::calculate_scale_and_offset(context.renderer);

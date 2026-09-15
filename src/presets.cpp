@@ -50,7 +50,7 @@ decltype(barn::character_presets) barn::character_presets
 			}
 		},
 		.animation_list = barn::animation_list_def{
-			barn::animation_def{
+			.idle_animation = barn::animation_def{
 				.texture = textures::miku_animation,
 				.frames = []() -> std::vector<SDL_FRect> {
 					std::vector<SDL_FRect> rects;
@@ -59,8 +59,21 @@ decltype(barn::character_presets) barn::character_presets
 					}
 					return rects;
 				}(),
+				.width = 1.2f * PIXELS_PER_METER,
 				.height = .8f * PIXELS_PER_METER,
-				.duration = 1500ms,
+				.duration = 2000ms,
+			},
+			.attack_animation = barn::animation_def{
+				.texture = textures::miku_animation,
+				.frames = []() -> std::vector<SDL_FRect> {
+					std::vector<SDL_FRect> rects;
+					for (int i = 0; i < 8; ++i) {
+						rects.emplace_back(i * 85.f, 236.f, 85.f, 64.f);
+					}
+					return rects;
+				}(),
+				.height = .8f * PIXELS_PER_METER,
+				.duration = 300ms,
 			}
 		},
 		.base_properties = component::base_properties{

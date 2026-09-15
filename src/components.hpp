@@ -73,6 +73,7 @@ namespace barn::component {
 		};
 
 		type current = type::IDLE;
+		int loops = 0;
 
 		std::optional<component::animation> idle{};
 		std::optional<component::animation> attack{};

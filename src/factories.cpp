@@ -42,7 +42,7 @@ static barn::component::animation_list make_animation_list(const barn::animation
 		list.idle = make_animation(*def.idle_animation, renderer);
 	}
 	if (def.attack_animation) {
-		list.idle = make_animation(*def.attack_animation, renderer);
+		list.attack = make_animation(*def.attack_animation, renderer);
 	}
 
 	return list;

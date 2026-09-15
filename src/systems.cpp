@@ -95,10 +95,6 @@ void barn::input_system(entt::registry& registry, barn::context& context) {
 					input.skill_state[i] = input.skill_pressed[i] ? component::input::state::PRESSED : component::input::state::NONE;
 				}
 
-				if (std::visit([](auto&& skill) { return skill.on_cooldown(); }, skillset[i])) {
-					continue;
-				}
-				
 				std::visit([&](auto&& skill) {
 					if (input.skill_state[i] == component::input::state::PRESSED) {
 						skill.pressed(context, registry, entity);
@@ -213,25 +209,40 @@ void barn::animation_system(entt::registry& registry, barn::context& context, fl
 
 void barn::animation_list_system(entt::registry& registry, barn::context& context, float alpha, float scale, int offset_x, int offset_y) {
 	for (auto [entity, animation_list, transform] : registry.view<component::animation_list, component::transform>().each()) {
-		component::animation* animation_ptr = nullptr;
+		using component::animation_list::type::IDLE;
+		using component::animation_list::type::ATTACK;
 
-		if (animation_list.current == component::animation_list::type::IDLE && animation_list.idle) {
-			animation_ptr = &*animation_list.idle;
-		}
-		else if (animation_list.current == component::animation_list::type::ATTACK && animation_list.attack) {
-			animation_ptr = &*animation_list.attack;
+		if (animation_list.loops < 1) {
+			animation_list.current = IDLE;
 		}
 
-		if (animation_ptr) {
-			barn::draw_animation(
-				context.renderer,
-				*animation_ptr,
-				interpolate(registry.get_or_emplace<component::previous_transform>(entity), transform, alpha),
-				scale,
-				offset_x,
-				offset_y
-			);
+		component::animation* current_anim = animation_list.idle ? &*animation_list.idle : nullptr;
+
+		if (animation_list.current == IDLE && animation_list.idle.has_value()) {
+			current_anim = &*animation_list.idle;
 		}
+		else if (animation_list.current == ATTACK && animation_list.attack.has_value()) {
+			current_anim = &*animation_list.attack;
+		}
+
+		if (!current_anim) {
+			continue;
+		}
+
+		auto elapsed_time = std::chrono::steady_clock::now() - current_anim->start_time;
+		if (elapsed_time >= current_anim->duration && animation_list.loops > 0) {
+			current_anim->start_time = std::chrono::steady_clock::now();
+			--animation_list.loops;
+		}
+
+		barn::draw_animation(
+			context.renderer,
+			*current_anim,
+			interpolate(registry.get_or_emplace<component::previous_transform>(entity), transform, alpha),
+			scale,
+			offset_x,
+			offset_y
+		);
 	}
 }
 

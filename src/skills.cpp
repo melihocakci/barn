@@ -23,7 +23,16 @@ void barn::skills::green_onion::initialize(barn::context& context) {
 	this->weii = barn::get_audio(barn::audios::weiii);
 }
 
-void barn::skills::green_onion::pressed(barn::context& context, entt::registry& registry, entt::entity entity) {
+void barn::skills::green_onion::holding(barn::context& context, entt::registry& registry, entt::entity entity) {
+	component::animation_list& animation_list = registry.get_or_emplace<barn::component::animation_list>(entity);
+	if (animation_list.current != barn::component::animation_list::type::ATTACK) {
+		animation_list.current = barn::component::animation_list::type::ATTACK;
+		animation_list.attack->start_time = std::chrono::steady_clock::now();
+		animation_list.loops = 1;
+	}
+
+	if (on_cooldown()) return;
+
 	auto [player_body, player_prop] = registry.get<barn::component::body, barn::component::properties>(entity);
 
 	MIX_PlayAudio(context.mixer, this->weii.get());

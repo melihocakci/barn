@@ -38,11 +38,11 @@ namespace barn::skills {
 		std::string_view name() const override { return "Green Onion"; }
 		std::string_view description() const override { return "Shoots a green onion projectile."; }
 		std::chrono::milliseconds static_cooldown() const override { return 0ms; }
-		std::chrono::milliseconds base_cooldown() const override { return 250ms; }
+		std::chrono::milliseconds base_cooldown() const override { return 300ms; }
 
 		void initialize(barn::context& context) override;
-		void pressed(barn::context& context, entt::registry& registry, entt::entity entity) override;
-		void holding(barn::context& context, entt::registry& registry, entt::entity entity) override { pressed(context, registry, entity); }
+		void pressed(barn::context& context, entt::registry& registry, entt::entity entity) override { holding(context, registry, entity); }
+		void holding(barn::context& context, entt::registry& registry, entt::entity entity) override;
 		void released(barn::context& context, entt::registry& registry, entt::entity entity) override {};
 
 		barn::texture onion{};
