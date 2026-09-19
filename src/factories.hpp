@@ -42,7 +42,7 @@ namespace barn {
 		std::vector<SDL_FRect> frames{};
 		std::optional<float> width{};
 		std::optional<float> height{};
-		std::chrono::milliseconds duration = 1000ms;
+		std::chrono::nanoseconds duration = 1000ms;
 	};
 
 	struct animation_list_def {

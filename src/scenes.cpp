@@ -15,6 +15,8 @@
 #include <SDL3_mixer/SDL_mixer.h>
 #include <imgui_impl_sdl3.h>
 
+#include <chrono>
+
 
 static entt::entity create_borders(entt::registry& registry, barn::context& context) {
 	using namespace barn;
@@ -151,8 +153,8 @@ void barn::combat_scene(barn::context& context, barn::session& session) {
 		create_entity(registry, context, enemy_def);
 	}
 
-	float accumulator = 0.0f;
-	Uint64 prevTicks = SDL_GetTicks();
+	std::chrono::nanoseconds accumulator{};
+	auto prev_ticks = std::chrono::steady_clock::now();
 
 	std::vector<barn::menu> menu_stack{};
 	while (!context.exit) {
@@ -178,34 +180,37 @@ void barn::combat_scene(barn::context& context, barn::session& session) {
 			}
 		}
 
-		const Uint64 currentTicks = SDL_GetTicks();
-		const float deltaTime = menu_stack.empty() ? (currentTicks - prevTicks) / 1000.0f : 0.f;
-		prevTicks = currentTicks;
-		accumulator += deltaTime;
+		context.paused = !menu_stack.empty();
+
+		const auto current_ticks = std::chrono::steady_clock::now();
+		const auto elapsed_ticks = context.paused ? std::chrono::nanoseconds::zero() : std::chrono::duration_cast<std::chrono::nanoseconds>(current_ticks - prev_ticks);
+		prev_ticks = current_ticks;
+		accumulator += elapsed_ticks;
 
 		while (accumulator >= barn::PHYSICS_TIMESTEP) {
 			barn::body_system(registry, context);
 			accumulator -= barn::PHYSICS_TIMESTEP;
 		}
 		
-		barn::property_system(registry);
+		if (!context.paused) {
+			barn::property_system(registry);
 
-		if (SDL_GetWindowFlags(context.window) & SDL_WINDOW_INPUT_FOCUS) {
-			barn::keyboard_system(registry, context);
-			barn::gamepad_system(registry, context);
+			if (SDL_GetWindowFlags(context.window) & SDL_WINDOW_INPUT_FOCUS) {
+				barn::keyboard_system(registry, context);
+				barn::gamepad_system(registry, context);
+			}
+
+			barn::AI_system(registry, context);
+			barn::movement_system(registry, context);
+			barn::skill_system(registry, context);
 		}
-
-		barn::AI_system(registry, context);
-
-		barn::movement_system(registry, context);
-		barn::skill_system(registry, context);
-
+		
 		barn::start_render(context.renderer);
 		auto [scale, offset_x, offset_y] = barn::calculate_scale_and_offset(context.renderer);
-		const float alpha = accumulator / barn::PHYSICS_TIMESTEP;
+		const float alpha = static_cast<float>(accumulator.count()) / barn::PHYSICS_TIMESTEP.count();
 		barn::sprite_system(registry, context, alpha, scale, offset_x, offset_y);
-		barn::animation_system(registry, context, alpha, scale, offset_x, offset_y);
-		barn::animation_list_system(registry, context, alpha, scale, offset_x, offset_y);
+		barn::animation_system(registry, context, elapsed_ticks, alpha, scale, offset_x, offset_y);
+		barn::animation_list_system(registry, context, elapsed_ticks, alpha, scale, offset_x, offset_y);
 		barn::draw_borders(context.renderer, scale, offset_x, offset_y);
 		barn::track_system(registry, context);
 		barn::draw_ui(context, registry);

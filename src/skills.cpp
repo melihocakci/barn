@@ -27,7 +27,7 @@ void barn::skills::green_onion::holding(barn::context& context, entt::registry& 
 	component::animation_list& animation_list = registry.get_or_emplace<barn::component::animation_list>(entity);
 	if (animation_list.current != barn::component::animation_list::type::ATTACK) {
 		animation_list.current = barn::component::animation_list::type::ATTACK;
-		animation_list.attack->start_time = std::chrono::steady_clock::now();
+		animation_list.attack->elapsed = std::chrono::nanoseconds::zero();
 		animation_list.loops = 1;
 	}
 

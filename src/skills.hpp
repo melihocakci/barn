@@ -15,8 +15,8 @@ namespace barn::skills {
 	struct skill_interface {
 		virtual std::string_view name() const = 0;
 		virtual std::string_view description() const = 0;
-		virtual std::chrono::milliseconds static_cooldown() const = 0;
-		virtual std::chrono::milliseconds base_cooldown() const = 0;
+		virtual std::chrono::nanoseconds static_cooldown() const = 0;
+		virtual std::chrono::nanoseconds base_cooldown() const = 0;
 
 		virtual void initialize(barn::context& c) = 0;
 		virtual void update(barn::context& c, entt::registry& r, entt::entity e) = 0;
@@ -38,8 +38,8 @@ namespace barn::skills {
 	struct green_onion : public skill_interface {
 		std::string_view name() const override { return "Green Onion"; }
 		std::string_view description() const override { return "Shoots a green onion projectile."; }
-		std::chrono::milliseconds static_cooldown() const override { return 0ms; }
-		std::chrono::milliseconds base_cooldown() const override { return 300ms; }
+		std::chrono::nanoseconds static_cooldown() const override { return 0ms; }
+		std::chrono::nanoseconds base_cooldown() const override { return 300ms; }
 
 		void initialize(barn::context& c) override;
 		void update(barn::context& c, entt::registry& r, entt::entity e) override {};

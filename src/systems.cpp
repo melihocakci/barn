@@ -195,8 +195,10 @@ void barn::sprite_system(entt::registry& registry, barn::context& context, float
 	}
 }
 
-void barn::animation_system(entt::registry& registry, barn::context& context, float alpha, float scale, int offset_x, int offset_y) {
+void barn::animation_system(entt::registry& registry, barn::context& context, std::chrono::nanoseconds delta, float alpha, float scale, int offset_x, int offset_y) {
 	for (auto [entity, animation, transform] : registry.view<component::animation, component::transform>().each()) {
+		animation.elapsed += delta;
+
 		barn::draw_animation(
 			context.renderer,
 			animation,
@@ -208,7 +210,7 @@ void barn::animation_system(entt::registry& registry, barn::context& context, fl
 	}
 }
 
-void barn::animation_list_system(entt::registry& registry, barn::context& context, float alpha, float scale, int offset_x, int offset_y) {
+void barn::animation_list_system(entt::registry& registry, barn::context& context, std::chrono::nanoseconds delta, float alpha, float scale, int offset_x, int offset_y) {
 	for (auto [entity, animation_list, transform] : registry.view<component::animation_list, component::transform>().each()) {
 		using component::animation_list::type::IDLE;
 		using component::animation_list::type::ATTACK;
@@ -230,9 +232,9 @@ void barn::animation_list_system(entt::registry& registry, barn::context& contex
 			continue;
 		}
 
-		auto elapsed_time = std::chrono::steady_clock::now() - current_anim->start_time;
-		if (elapsed_time >= current_anim->duration && animation_list.loops > 0) {
-			current_anim->start_time = std::chrono::steady_clock::now();
+		current_anim->elapsed += delta;
+		if (current_anim->elapsed >= current_anim->duration && animation_list.loops > 0) {
+			current_anim->elapsed = std::chrono::nanoseconds::zero();
 			--animation_list.loops;
 		}
 
@@ -256,7 +258,7 @@ void barn::track_system(entt::registry& registry, [[maybe_unused]] barn::context
 }
 
 void barn::body_system(entt::registry& registry, barn::context& context) {
-	b2World_Step(context.world_id, PHYSICS_TIMESTEP, BOX2D_SUB_STEP_COUNT);
+	b2World_Step(context.world_id, std::chrono::duration<float>(PHYSICS_TIMESTEP).count(), BOX2D_SUB_STEP_COUNT);
 
 	for (auto [entity, body] : registry.view<component::body>().each()) {
 		if (registry.all_of<component::transform>(entity)) {

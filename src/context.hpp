@@ -19,5 +19,6 @@ namespace barn {
 		barn::settings settings{};
 		std::unordered_map<SDL_JoystickID, barn::gamepad> gamepads{};
 		bool exit = false;
+		bool paused = false;
 	};
 }

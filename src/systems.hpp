@@ -22,9 +22,9 @@ namespace barn {
 
 	void sprite_system(entt::registry& registry, barn::context& context, float alpha, float scale, int offset_x, int offset_y);
 
-	void animation_system(entt::registry& registry, barn::context& context, float alpha, float scale, int offset_x, int offset_y);
+	void animation_system(entt::registry& registry, barn::context& context, std::chrono::nanoseconds delta, float alpha, float scale, int offset_x, int offset_y);
 
-	void animation_list_system(entt::registry& registry, barn::context& context, float alpha, float scale, int offset_x, int offset_y);
+	void animation_list_system(entt::registry& registry, barn::context& context, std::chrono::nanoseconds delta, float alpha, float scale, int offset_x, int offset_y);
 
 	void track_system(entt::registry& registry, barn::context& context);
 

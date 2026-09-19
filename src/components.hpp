@@ -63,9 +63,9 @@ namespace barn::component {
 		std::vector<SDL_FRect> frames{};
 		std::optional<float> width{};
 		std::optional<float> height{};
-		std::chrono::milliseconds duration{ 1000 };
+		std::chrono::nanoseconds duration{ 1000 };
 		barn::texture texture{};
-		std::chrono::steady_clock::time_point start_time{};
+		std::chrono::nanoseconds elapsed{};
 	};
 
 	struct animation_list {

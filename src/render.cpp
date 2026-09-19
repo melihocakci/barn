@@ -132,13 +132,10 @@ void barn::draw_animation(
 ) {
 	if (animation.frames.empty()) return;
 
-	using namespace std::chrono;
-	const steady_clock::time_point current_time = steady_clock::now();
-	long elapsed = duration_cast<milliseconds>(current_time - animation.start_time).count();
-	long duration = animation.duration.count();
-
-	long size = animation.frames.size();
-	int frame_index = static_cast<double>(elapsed % duration) / duration * size;
+	const auto elapsed_ms = animation.elapsed.count();
+	const auto duration_ms = animation.duration.count();
+	const auto size = animation.frames.size();
+	int frame_index = static_cast<double>(elapsed_ms % duration_ms) / duration_ms * size;
 
 	barn::draw_texture(
 		renderer,

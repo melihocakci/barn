@@ -31,7 +31,7 @@ static barn::component::animation make_animation(const barn::animation_def& def,
 		def.height,
 		def.duration,
 		barn::get_texture(renderer, def.texture),
-		std::chrono::steady_clock::time_point{}
+		{}
 	};
 }
 
