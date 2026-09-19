@@ -16,6 +16,15 @@
 #include <array>
 #include <chrono>
 
+namespace barn {
+	enum class skill_state {
+		NONE,
+		PRESSED,
+		RELEASED,
+		HOLDING
+	};
+}
+
 namespace barn::component {
 	struct body {
 		b2BodyId id{};
@@ -39,15 +48,8 @@ namespace barn::component {
 	struct input {
 		float axis_x = 0.f;
 		float axis_y = 0.f;
-		bool skill_pressed[SKILLSET_SIZE] = { false };
-
-		enum class state {
-			NONE,
-			PRESSED,
-			RELEASED,
-			HOLDING
-		};
-		state skill_state[SKILLSET_SIZE] = { state::NONE };
+		std::array<bool, SKILLSET_SIZE> skill_pressed = { false };
+		std::array<barn::skill_state, SKILLSET_SIZE> skill_state = { barn::skill_state::NONE };
 	};
 
 	struct sprite {

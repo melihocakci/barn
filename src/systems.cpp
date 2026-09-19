@@ -70,46 +70,47 @@ void barn::gamepad_system(entt::registry& registry, barn::context& context) {
 	}
 }
 
-void barn::input_system(entt::registry& registry, barn::context& context) {
-	for (auto [entity, input] : registry.view<component::input>().each()) {
-		if (registry.all_of<component::body, component::properties>(entity)) {
-			auto [body, properties] = registry.get<component::body, component::properties>(entity);
-			b2Vec2 vec{
-				std::fabs(input.axis_x) > std::fabs(input.axis_x) ? input.axis_x : input.axis_x,
-				std::fabs(input.axis_y) > std::fabs(input.axis_y) ? input.axis_y : input.axis_y
-			};
-			if (length(vec) > 1.f)
-				vec = normalize(vec);
-			b2Body_SetLinearVelocity(body.id, vec * properties.speed);
-		}
+void barn::movement_system(entt::registry& registry, barn::context& context) {
+	for (auto [entity, input, body, properties] : registry.view<component::input, component::body, component::properties>().each()) {
+		b2Vec2 vec{ input.axis_x, input.axis_y };
+		if (length(vec) > 1.f)
+			vec = normalize(vec);
+		b2Body_SetLinearVelocity(body.id, vec * properties.speed);
 
-		if (registry.all_of<component::skillset>(entity)) {
-			component::skillset& skillset = registry.get<component::skillset>(entity);
-			for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
-				switch (input.skill_state[i]) {
-				case component::input::state::PRESSED:
-				case component::input::state::HOLDING:
-					input.skill_state[i] = input.skill_pressed[i] ? component::input::state::HOLDING : component::input::state::RELEASED;
-					break;
-				default:
-					input.skill_state[i] = input.skill_pressed[i] ? component::input::state::PRESSED : component::input::state::NONE;
-				}
+		input.axis_x = input.axis_y = {};
+	}
+}
 
-				std::visit([&](auto&& skill) {
-					if (input.skill_state[i] == component::input::state::PRESSED) {
-						skill.pressed(context, registry, entity);
-					}
-					else if (input.skill_state[i] == component::input::state::HOLDING) {
-						skill.holding(context, registry, entity);
-					}
-					else if (input.skill_state[i] == component::input::state::RELEASED) {
-						skill.released(context, registry, entity);
-					}
-				}, skillset[i]);
+void barn::skill_system(entt::registry& registry, barn::context& context) {
+	for (auto [entity, input, skillset] : registry.view<component::input, component::skillset>().each()) {
+		for (int i = 0; i < barn::SKILLSET_SIZE; ++i) {
+			switch (input.skill_state[i]) {
+			case skill_state::PRESSED:
+			case skill_state::HOLDING:
+				input.skill_state[i] = input.skill_pressed[i] ? skill_state::HOLDING : skill_state::RELEASED;
+				break;
+			case skill_state::RELEASED:
+			case skill_state::NONE:
+				input.skill_state[i] = input.skill_pressed[i] ? skill_state::PRESSED : skill_state::NONE;
+				break;
 			}
+
+			std::visit([&](auto&& skill) {
+				skill.update(context, registry, entity);
+
+				if (input.skill_state[i] == skill_state::PRESSED) {
+					skill.pressed(context, registry, entity);
+				}
+				else if (input.skill_state[i] == skill_state::HOLDING) {
+					skill.holding(context, registry, entity);
+				}
+				else if (input.skill_state[i] == skill_state::RELEASED) {
+					skill.released(context, registry, entity);
+				}
+			}, skillset[i]);
 		}
 
-		input = {};
+		input.skill_pressed = {};
 	}
 }
 

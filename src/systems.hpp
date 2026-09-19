@@ -14,7 +14,9 @@ namespace barn {
 
 	void gamepad_system(entt::registry& registry, barn::context& context);
 
-	void input_system(entt::registry& registry, barn::context& context);
+	void movement_system(entt::registry& registry, barn::context& context);
+
+	void skill_system(entt::registry& registry, barn::context& context);
 
 	void AI_system(entt::registry& registry, barn::context& context);
 
