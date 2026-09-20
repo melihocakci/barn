@@ -75,7 +75,7 @@ void barn::movement_system(entt::registry& registry, barn::context& context) {
 		b2Vec2 vec{ input.axis_x, input.axis_y };
 		if (length(vec) > 1.f)
 			vec = normalize(vec);
-		b2Body_SetLinearVelocity(body.id, vec * properties.speed);
+		b2Body_SetLinearVelocity(body.id, vec * static_cast<float>(properties.speed));
 
 		input.axis_x = input.axis_y = {};
 	}
@@ -124,7 +124,7 @@ void barn::AI_system(entt::registry& registry, [[maybe_unused]] barn::context& c
 			float shortest_distance = -1.f;
 			b2Vec2 closest_target{};
 
-			for (auto [entity, _, player_body] : registry.view<component::player, component::body>().each()) {
+			for (auto [player_entity, player, player_body] : registry.view<component::player, component::body>().each()) {
 				const b2Vec2 player_position = b2Body_GetPosition(player_body.id);
 
 				float distance = length(enemy_position - player_position);
@@ -141,7 +141,7 @@ void barn::AI_system(entt::registry& registry, [[maybe_unused]] barn::context& c
 				return;
 			}
 
-			b2Vec2 vel = normalize(closest_target - enemy_position) * enemy_stats.speed;
+			b2Vec2 vel = normalize(closest_target - enemy_position) * static_cast<float>(enemy_stats.speed);
 			b2Body_SetLinearVelocity(enemy_body.id, vel);
 		}
 	}

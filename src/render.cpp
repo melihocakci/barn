@@ -44,8 +44,8 @@ std::tuple<float, int, int> barn::calculate_scale_and_offset(SDL_Renderer* rende
 	int window_w, window_h;
 	SDL_GetCurrentRenderOutputSize(renderer, &window_w, &window_h);
 	float scale = std::min(static_cast<float>(window_w) / barn::VIRTUAL_WIDTH_PIXELS, static_cast<float>(window_h) / barn::VIRTUAL_HEIGHT_PIXELS);
-	int offset_x = (window_w - scale * barn::VIRTUAL_WIDTH_PIXELS) / 2;
-	int offset_y = (window_h - scale * barn::VIRTUAL_HEIGHT_PIXELS) / 2;
+	int offset_x = (window_w - static_cast<int>(scale * barn::VIRTUAL_WIDTH_PIXELS)) / 2;
+	int offset_y = (window_h - static_cast<int>(scale * barn::VIRTUAL_HEIGHT_PIXELS)) / 2;
 	return std::make_tuple(scale, offset_x, offset_y);
 }
 
@@ -94,8 +94,8 @@ void barn::draw_texture(
 		dest_height = *width / texture_aspect_ratio;
 	}
 	else {
-		dest_width = texture->w;
-		dest_height = texture->h;
+		dest_width = static_cast<float>(texture->w);
+		dest_height = static_cast<float>(texture->h);
 	}
 
 	const SDL_FRect dest_rect = {
@@ -135,7 +135,7 @@ void barn::draw_animation(
 	const auto elapsed_ms = animation.elapsed.count();
 	const auto duration_ms = animation.duration.count();
 	const auto size = animation.frames.size();
-	int frame_index = static_cast<double>(elapsed_ms % duration_ms) / duration_ms * size;
+	auto frame_index = (elapsed_ms % duration_ms) * size / duration_ms;
 
 	barn::draw_texture(
 		renderer,

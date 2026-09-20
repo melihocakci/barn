@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+if(MSVC)
+    add_compile_options(/experimental:external /external:W0 /external:anglebrackets)
+endif()
+
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
@@ -74,7 +78,7 @@ add_subdirectory(lib/glaze EXCLUDE_FROM_ALL)
 # endif()
 
 set(IMGUI_PATH "lib/imgui")
-add_library(imgui STATIC
+add_library(imgui STATIC EXCLUDE_FROM_ALL
     "${IMGUI_PATH}/imgui.cpp"
     "${IMGUI_PATH}/imgui_draw.cpp"
     "${IMGUI_PATH}/imgui_tables.cpp"
@@ -111,8 +115,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 
 target_compile_options(${PROJECT_NAME} PRIVATE
-    $<$<CXX_COMPILER_ID:MSVC>:/W4>
-    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>
+    $<$<CXX_COMPILER_ID:MSVC>:/W4 /wd4100>
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Wno-unused-parameter>
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
