@@ -5,6 +5,7 @@
 #include "constants.hpp"
 #include "assets.hpp"
 #include "skills.hpp"
+#include "ai_behaviors.hpp"
 
 #include <box2d/box2d.h>
 
@@ -113,6 +114,6 @@ decltype(barn::enemy_presets) barn::enemy_presets
 			.collide_damage = 10,
 			.speed = 5,
 		},
-		.AI_code = component::AI_code::CHASER,
+		.ai_behavior = barn::ai_behaviors::chaser{},
 	},
 };

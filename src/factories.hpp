@@ -66,7 +66,7 @@ namespace barn {
 		std::optional<component::keyboard> keyboard{};
 		std::optional<component::gamepad> gamepad{};
 		std::optional<component::transform> transform{};
-		std::optional<component::AI_code> AI_code{};
+		std::optional<component::ai_behavior> ai_behavior{};
 		std::optional<component::player> player{};
 		std::optional<component::enemy> enemy{};
 		std::optional<component::bullet> bullet{};

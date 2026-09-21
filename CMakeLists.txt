@@ -59,24 +59,6 @@ add_subdirectory(lib/box2d EXCLUDE_FROM_ALL)
 
 add_subdirectory(lib/glaze EXCLUDE_FROM_ALL)
 
-# add_library(steamworks_sdk SHARED IMPORTED)
-# target_include_directories(steamworks_sdk INTERFACE "lib/steamworks_sdk/public")
-# set(STEAM_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/steamworks_sdk/redistributable_bin")
-# if(WIN32)
-#     set_target_properties(steamworks_sdk PROPERTIES 
-#         IMPORTED_LOCATION "${STEAM_LIB_DIR}/win64/steam_api64.dll"
-#         IMPORTED_IMPLIB "${STEAM_LIB_DIR}/win64/steam_api64.lib"
-#     )
-# elseif(UNIX AND NOT APPLE)
-#     set_target_properties(steamworks_sdk PROPERTIES 
-#         IMPORTED_LOCATION "${STEAM_LIB_DIR}/linux64/libsteam_api.so"
-#     )
-# elseif(APPLE)
-#     set_target_properties(steamworks_sdk PROPERTIES 
-#         IMPORTED_LOCATION "${STEAM_LIB_DIR}/osx/libsteam_api.dylib"
-#     )
-# endif()
-
 set(IMGUI_PATH "lib/imgui")
 add_library(imgui STATIC EXCLUDE_FROM_ALL
     "${IMGUI_PATH}/imgui.cpp"
@@ -108,6 +90,7 @@ add_executable(${PROJECT_NAME} WIN32
     "src/interface.cpp"
     "src/render.cpp"
     "src/skills.cpp"
+    "src/ai_behaviors.cpp"
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -125,14 +108,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     "SDL3_mixer::SDL3_mixer-static"
     "EnTT::EnTT"
     "box2d"
-    # "steamworks_sdk"
     "imgui"
     "glaze::glaze"
 )
 
-# get_target_property(STEAM_LIB steamworks_sdk IMPORTED_LOCATION)
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    # COMMAND ${CMAKE_COMMAND} -E copy_if_different ${STEAM_LIB} ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${CMAKE_CURRENT_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/assets
 )
 

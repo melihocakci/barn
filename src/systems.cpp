@@ -114,36 +114,11 @@ void barn::skill_system(entt::registry& registry, barn::context& context) {
 	}
 }
 
-void barn::AI_system(entt::registry& registry, [[maybe_unused]] barn::context& context) {
-	for (auto [entity, AI_code] : registry.view<component::AI_code>().each()) {
-		switch (AI_code) {
-		case component::AI_code::CHASER:
-			auto [enemy_body, enemy_stats] = registry.get<component::body, component::properties>(entity);
-			b2Vec2 enemy_position = b2Body_GetPosition(enemy_body.id);
-
-			float shortest_distance = -1.f;
-			b2Vec2 closest_target{};
-
-			for (auto [player_entity, player, player_body] : registry.view<component::player, component::body>().each()) {
-				const b2Vec2 player_position = b2Body_GetPosition(player_body.id);
-
-				float distance = length(enemy_position - player_position);
-
-				if (distance < shortest_distance || shortest_distance < 0)
-				{
-					shortest_distance = distance;
-					closest_target = player_position;
-				}
-			}
-
-			if (shortest_distance < 0) {
-				b2Body_SetLinearVelocity(enemy_body.id, { 0, 0 });
-				continue;
-			}
-
-			b2Vec2 vel = normalize(closest_target - enemy_position) * static_cast<float>(enemy_stats.speed);
-			b2Body_SetLinearVelocity(enemy_body.id, vel);
-		}
+void barn::ai_behavior_system(entt::registry& registry, [[maybe_unused]] barn::context& context) {
+	for (auto [entity, ai_behavior] : registry.view<component::ai_behavior>().each()) {
+		std::visit([&](auto&& ai) {
+			ai.update(context, registry, entity);
+		}, ai_behavior);
 	}
 }
 

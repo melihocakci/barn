@@ -2,6 +2,7 @@
 
 #include "constants.hpp"
 #include "skills.hpp"
+#include "ai_behaviors.hpp"
 #include "assets.hpp"
 
 #include <SDL3/SDL.h>
@@ -14,7 +15,6 @@
 #include <future>
 #include <filesystem>
 #include <array>
-#include <chrono>
 
 namespace barn {
 	enum class skill_state {
@@ -114,10 +114,6 @@ namespace barn::component {
 		P3,
 		P4,
 		COUNT
-	};
-
-	enum class AI_code {
-		CHASER,
 	};
 
 	struct enemy {};

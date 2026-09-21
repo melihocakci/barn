@@ -133,8 +133,8 @@ entt::entity barn::create_entity(entt::registry& registry, barn::context& contex
 		}
 	}
 
-	if (def.AI_code) {
-		registry.emplace<component::AI_code>(entity, *def.AI_code);
+	if (def.ai_behavior) {
+		registry.emplace<component::ai_behavior>(entity, *def.ai_behavior);
 	}
 
 	if (def.player) {

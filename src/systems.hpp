@@ -18,7 +18,7 @@ namespace barn {
 
 	void skill_system(entt::registry& registry, barn::context& context);
 
-	void AI_system(entt::registry& registry, barn::context& context);
+	void ai_behavior_system(entt::registry& registry, barn::context& context);
 
 	void sprite_system(entt::registry& registry, barn::context& context, float alpha, float scale, int offset_x, int offset_y);
 
