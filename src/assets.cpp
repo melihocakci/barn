@@ -7,16 +7,13 @@
 #include <unordered_map>
 #include <filesystem>
 
-barn::texture barn::get_texture(SDL_Renderer* renderer, const std::filesystem::path& path) {
+barn::texture barn::get_texture(barn::context& context, const std::filesystem::path& path) {
 	using element_t = SDL_Texture*;
 	using future_t = std::shared_future<element_t>;
 	using shared_ptr_t = std::shared_ptr<future_t>;
-	using weak_ptr_t = shared_ptr_t::weak_type;
 
-	static std::unordered_map<std::filesystem::path, weak_ptr_t> textures{};
-
-	const auto it = textures.find(path);
-	if (it != textures.end()) {
+	const auto it = context.textures.find(path);
+	if (it != context.textures.end()) {
 		if (auto existing = it->second.lock()) {
 			return { existing };
 		}
@@ -40,31 +37,28 @@ barn::texture barn::get_texture(SDL_Renderer* renderer, const std::filesystem::p
 		});
 
 	*texture = std::async(std::launch::deferred,
-		[renderer, surf_ftr = std::move(surface_ftr)]() mutable -> SDL_Texture*
+		[&context, surf_ftr = std::move(surface_ftr)]() mutable -> SDL_Texture*
 		{
 			SDL_Surface* surface = surf_ftr.get();
-			if (!renderer || !surface) {
+			if (!context.renderer || !surface) {
 				return nullptr;
 			}
-			SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+			SDL_Texture* texture = SDL_CreateTextureFromSurface(context.renderer, surface);
 			SDL_DestroySurface(surface);
 			return texture;
 		});
 
-	textures[path] = texture;
+	context.textures[path] = texture;
 	return { texture };
 }
 
-barn::audio barn::get_audio(const std::filesystem::path& path) {
+barn::audio barn::get_audio(barn::context& context, const std::filesystem::path& path) {
 	using element_t = MIX_Audio*;
 	using future_t = std::shared_future<element_t>;
 	using shared_ptr_t = std::shared_ptr<future_t>;
-	using weak_ptr_t = shared_ptr_t::weak_type;
 
-	static std::unordered_map<std::filesystem::path, weak_ptr_t> audios{};
-
-	const auto it = audios.find(path);
-	if (it != audios.end()) {
+	const auto it = context.audios.find(path);
+	if (it != context.audios.end()) {
 		if (auto existing = it->second.lock()) {
 			return { existing };
 		}
@@ -87,6 +81,6 @@ barn::audio barn::get_audio(const std::filesystem::path& path) {
 			return MIX_LoadAudio(nullptr, path.generic_string().c_str(), false);
 		});
 
-	audios[path] = audio;
+	context.audios[path] = audio;
 	return { audio };
 }

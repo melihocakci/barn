@@ -19,8 +19,8 @@ static const b2ShapeDef bullet_shape_def = [] {
 	}();
 
 void barn::skills::green_onion::initialize(barn::context& context) {
-	this->onion = barn::get_texture(context.renderer, barn::textures::green_onion);
-	this->weii = barn::get_audio(barn::audios::weiii);
+	this->onion = barn::get_texture(context, barn::textures::green_onion);
+	this->weii = barn::get_audio(context, barn::audios::weiii);
 }
 
 void barn::skills::green_onion::holding(barn::context& context, entt::registry& registry, entt::entity entity) {

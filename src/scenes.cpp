@@ -66,7 +66,7 @@ barn::menu_action barn::home_scene(barn::context& context) {
 	barn::create_entity(registry, context, entity_def);
 
 	std::vector<barn::menu> menu_stack{ barn::menu::MAIN_MENU };
-	barn::texture background_texture = barn::get_texture(context.renderer, barn::textures::bliss);
+	barn::texture background_texture = barn::get_texture(context, barn::textures::bliss);
 
 	while (!context.exit) {
 		SDL_Event event;

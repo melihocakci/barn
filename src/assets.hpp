@@ -1,5 +1,7 @@
 #pragma once
 
+#include "context.hpp"
+
 #include <SDL3/SDL.h>
 #include <SDL3_mixer/SDL_mixer.h>
 
@@ -57,7 +59,7 @@ namespace barn {
 }
 
 namespace barn {
-	barn::texture get_texture(SDL_Renderer* renderer, const std::filesystem::path& path);
+	barn::texture get_texture(barn::context& context, const std::filesystem::path& path);
 
-	barn::audio get_audio(const std::filesystem::path& path);
+	barn::audio get_audio(barn::context& context, const std::filesystem::path& path);
 }

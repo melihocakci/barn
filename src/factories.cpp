@@ -24,42 +24,42 @@ static barn::component::body make_body(const barn::body_def& def, b2WorldId worl
 	return body;
 }
 
-static barn::component::animation make_animation(const barn::animation_def& def, SDL_Renderer* renderer) {
+static barn::component::animation make_animation(const barn::animation_def& def, barn::context& context) {
 	return barn::component::animation{
 		def.frames,
 		def.width,
 		def.height,
 		def.duration,
-		barn::get_texture(renderer, def.texture),
+		barn::get_texture(context, def.texture),
 		{}
 	};
 }
 
-static barn::component::animation_list make_animation_list(const barn::animation_list_def& def, SDL_Renderer* renderer) {
+static barn::component::animation_list make_animation_list(const barn::animation_list_def& def, barn::context& context) {
 	barn::component::animation_list list{};
 
 	if (def.idle_animation) {
-		list.idle = make_animation(*def.idle_animation, renderer);
+		list.idle = make_animation(*def.idle_animation, context);
 	}
 	if (def.attack_animation) {
-		list.attack = make_animation(*def.attack_animation, renderer);
+		list.attack = make_animation(*def.attack_animation, context);
 	}
 
 	return list;
 }
 
-static barn::component::sprite make_sprite(const barn::sprite_def& def, SDL_Renderer* renderer) {
+static barn::component::sprite make_sprite(const barn::sprite_def& def, barn::context& context) {
 	return barn::component::sprite{
 		def.src_rect,
 		def.width,
 		def.height,
-		barn::get_texture(renderer, def.texture)
+		barn::get_texture(context, def.texture)
 	};
 }
 
-static barn::component::track make_track(const barn::track_def& def, MIX_Mixer* mixer) {
-	barn::audio audio = barn::get_audio(def.audio);
-	MIX_Track* track = MIX_CreateTrack(mixer);
+static barn::component::track make_track(const barn::track_def& def, barn::context& context) {
+	barn::audio audio = barn::get_audio(context, def.audio);
+	MIX_Track* track = MIX_CreateTrack(context.mixer);
 	MIX_SetTrackAudio(track, audio.get());
 	MIX_PlayTrack(track, def.properties_id);
 
@@ -87,19 +87,19 @@ entt::entity barn::create_entity(entt::registry& registry, barn::context& contex
 	}
 
 	if (def.animation) {
-		registry.emplace<component::animation>(entity, make_animation(*def.animation, context.renderer));
+		registry.emplace<component::animation>(entity, make_animation(*def.animation, context));
 	}
 
 	if (def.animation_list) {
-		registry.emplace<component::animation_list>(entity, make_animation_list(*def.animation_list, context.renderer));
+		registry.emplace<component::animation_list>(entity, make_animation_list(*def.animation_list, context));
 	}
 
 	if (def.sprite) {
-		registry.emplace<component::sprite>(entity, make_sprite(*def.sprite, context.renderer));
+		registry.emplace<component::sprite>(entity, make_sprite(*def.sprite, context));
 	}
 
 	if (def.track) {
-		registry.emplace<component::track>(entity, make_track(*def.track, context.mixer));
+		registry.emplace<component::track>(entity, make_track(*def.track, context));
 	}
 
 	if (def.base_properties) {

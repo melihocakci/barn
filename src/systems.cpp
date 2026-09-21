@@ -138,7 +138,7 @@ void barn::AI_system(entt::registry& registry, [[maybe_unused]] barn::context& c
 
 			if (shortest_distance < 0) {
 				b2Body_SetLinearVelocity(enemy_body.id, { 0, 0 });
-				return;
+				continue;
 			}
 
 			b2Vec2 vel = normalize(closest_target - enemy_position) * static_cast<float>(enemy_stats.speed);
