@@ -17,120 +17,131 @@ void show_error_and_exit(const std::string& message) {
 	throw std::runtime_error(message);
 }
 
-struct context_guard {
-	barn::context context{};
+barn::context make_context() {
+	bool success = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD);
+	if (!success) {
+		show_error_and_exit("Failed to initialize SDL: " + std::string(SDL_GetError()));
+	};
 
-	context_guard() {
-		bool success = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD);
-		if (!success) {
-			show_error_and_exit("Failed to initialize SDL: " + std::string(SDL_GetError()));
-		};
+	success = MIX_Init();
+	if (!success) {
+		show_error_and_exit("Failed to initialize SDL_mixer: " + std::string(SDL_GetError()));
+	};
 
-		success = MIX_Init();
-		if (!success) {
-			show_error_and_exit("Failed to initialize SDL_mixer: " + std::string(SDL_GetError()));
-		};
+	SDL_Window* window = nullptr;
+	SDL_Renderer* renderer = nullptr;
+	success = SDL_CreateWindowAndRenderer(
+		barn::PROJECT_NAME,
+		barn::VIRTUAL_WIDTH_PIXELS, barn::VIRTUAL_HEIGHT_PIXELS,
+		SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS,
+		&window, &renderer);
+	if (!success) {
+		show_error_and_exit("Failed to create SDL window and renderer");
+	};
 
-		success = SDL_CreateWindowAndRenderer(
-			barn::PROJECT_NAME,
-			barn::VIRTUAL_WIDTH_PIXELS, barn::VIRTUAL_HEIGHT_PIXELS,
-			SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS,
-			&const_cast<SDL_Window*&>(context.window), &const_cast<SDL_Renderer*&>(context.renderer));
-		if (!success) {
-			show_error_and_exit("Failed to create SDL window and renderer");
-		};
+	success = SDL_SetRenderVSync(renderer, 1);
+	if (!success) {
+		show_error_and_exit("Failed to set VSync");
+	};
 
-		success = SDL_SetRenderVSync(context.renderer, 1);
-		if (!success) {
-			show_error_and_exit("Failed to set VSync");
-		};
+	MIX_Mixer* mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
+	if (!mixer) {
+		show_error_and_exit("Failed to create mixer device");
+	};
 
-		const_cast<MIX_Mixer*&>(context.mixer) = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
-		if (!context.mixer) {
-			show_error_and_exit("Failed to create mixer device");
-		};
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
 
-		IMGUI_CHECKVERSION();
-		ImGui::CreateContext();
-
-		ImGuiIO& io = ImGui::GetIO();
-		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-		io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
-		ImFont* main_font = io.Fonts->AddFontFromFileTTF("assets/font/Roboto-Medium.ttf", 24.0f);
-		if (!main_font) {
-			show_error_and_exit("Failed to load main font");
-		}
-
-		ImGuiStyle& style = ImGui::GetStyle();
-		style.WindowRounding = 8.0f;
-		style.FrameRounding = 6.0f;
-		style.GrabRounding = 6.0f;
-		style.WindowPadding = ImVec2(40.0f, 40.0f);
-		style.ItemSpacing = ImVec2(10.0f, 15.0f);
-		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.06f, 0.08f, 0.94f);
-		style.Colors[ImGuiCol_Button] = ImVec4(0.15f, 0.30f, 0.60f, 1.00f);
-		style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.20f, 0.40f, 0.80f, 1.00f);
-		style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.10f, 0.20f, 0.45f, 1.00f);
-		style.Colors[ImGuiCol_Text] = ImVec4(0.95f, 0.95f, 0.95f, 1.00f);
-
-		success = ImGui_ImplSDL3_InitForSDLRenderer(context.window, context.renderer);
-		if (!success) {
-			show_error_and_exit("Failed to initialize ImGui SDL3 implementation");
-		}
-		success = ImGui_ImplSDLRenderer3_Init(context.renderer);
-		if (!success) {
-			show_error_and_exit("Failed to initialize ImGui SDLRenderer3 implementation");
-		}
-
-		b2WorldDef world_def = b2DefaultWorldDef();
-		world_def.gravity = b2Vec2{ 0.0f, 0.0f };
-		world_def.workerCount = 4;
-		const_cast<b2WorldId&>(context.world_id) = b2CreateWorld(&world_def);
-
-		auto error = barn::load_settings(context.settings);
-		if (error) {
-			show_error_and_exit(std::string(error.custom_error_message));
-		}
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
+	ImFont* main_font = io.Fonts->AddFontFromFileTTF("assets/font/Roboto-Medium.ttf", 24.0f);
+	if (!main_font) {
+		show_error_and_exit("Failed to load main font");
 	}
 
-	~context_guard() {
-		auto error = barn::save_settings(context.settings);
-		if (error) {
-			show_error_and_exit(std::string(error.custom_error_message));
-		}
+	ImGuiStyle& style = ImGui::GetStyle();
+	style.WindowRounding = 8.0f;
+	style.FrameRounding = 6.0f;
+	style.GrabRounding = 6.0f;
+	style.WindowPadding = ImVec2(40.0f, 40.0f);
+	style.ItemSpacing = ImVec2(10.0f, 15.0f);
+	style.Colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.06f, 0.08f, 0.94f);
+	style.Colors[ImGuiCol_Button] = ImVec4(0.15f, 0.30f, 0.60f, 1.00f);
+	style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.20f, 0.40f, 0.80f, 1.00f);
+	style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.10f, 0.20f, 0.45f, 1.00f);
+	style.Colors[ImGuiCol_Text] = ImVec4(0.95f, 0.95f, 0.95f, 1.00f);
 
-		if (b2World_IsValid(context.world_id)) b2DestroyWorld(context.world_id);
-
-		ImGui_ImplSDLRenderer3_Shutdown();
-		ImGui_ImplSDL3_Shutdown();
-		ImGui::DestroyContext();
-
-		if (context.mixer) MIX_DestroyMixer(context.mixer);
-		if (context.renderer) SDL_DestroyRenderer(context.renderer);
-		if (context.window) SDL_DestroyWindow(context.window);
-		MIX_Quit();
-		SDL_Quit();
+	success = ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
+	if (!success) {
+		show_error_and_exit("Failed to initialize ImGui SDL3 implementation");
 	}
-};
+	success = ImGui_ImplSDLRenderer3_Init(renderer);
+	if (!success) {
+		show_error_and_exit("Failed to initialize ImGui SDLRenderer3 implementation");
+	}
+
+	b2WorldDef world_def = b2DefaultWorldDef();
+	world_def.gravity = b2Vec2{ 0.0f, 0.0f };
+	world_def.workerCount = 4;
+	b2WorldId world_id = b2CreateWorld(&world_def);
+
+	barn::settings settings{};
+	auto error = barn::load_settings(settings);
+	if (error) {
+		show_error_and_exit(std::string(error.custom_error_message));
+	}
+
+	return barn::context{
+		window,
+		renderer,
+		mixer,
+		world_id,
+		settings
+	};
+}
+
+void destroy_context(barn::context& context) {
+	auto error = barn::save_settings(context.settings);
+	if (error) {
+		show_error_and_exit(std::string(error.custom_error_message));
+	}
+	if (b2World_IsValid(context.world_id)) b2DestroyWorld(context.world_id);
+	ImGui_ImplSDLRenderer3_Shutdown();
+	ImGui_ImplSDL3_Shutdown();
+	ImGui::DestroyContext();
+	if (context.mixer) MIX_DestroyMixer(context.mixer);
+	if (context.renderer) SDL_DestroyRenderer(context.renderer);
+	if (context.window) SDL_DestroyWindow(context.window);
+	MIX_Quit();
+	SDL_Quit();
+}
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
-	context_guard guard{};
+	barn::context context = make_context();
 
-	barn::apply_settings(guard.context.settings, guard.context.renderer, guard.context.mixer);
+	try {
+		barn::apply_settings(context.settings, context.renderer, context.mixer);
 
-	while (!guard.context.exit) {
-		barn::menu_action result = barn::home_scene(guard.context);
-		if (result == barn::menu_action::EXIT) {
-			break;
+		while (!context.exit) {
+			barn::menu_action result = barn::home_scene(context);
+			if (result == barn::menu_action::EXIT) {
+				break;
+			}
+
+			std::optional<barn::session> session = barn::lobby_scene(context);
+			if (!session) {
+				continue;
+			}
+
+			barn::combat_scene(context, *session);
 		}
-
-		std::optional<barn::session> session = barn::lobby_scene(guard.context);
-		if (!session) {
-			continue;
-		}
-
-		barn::combat_scene(guard.context, *session);
 	}
+	catch (const std::exception& e) {
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", e.what(), nullptr);
+	}
+
+	destroy_context(context);
 
 	return 0;
 }
