@@ -24,14 +24,14 @@ void barn::skills::green_onion::initialize(barn::context& context) {
 }
 
 void barn::skills::green_onion::holding(barn::context& context, entt::registry& registry, entt::entity entity) {
+	if (on_cooldown()) return;
+
 	component::animation_list& animation_list = registry.get_or_emplace<barn::component::animation_list>(entity);
 	if (animation_list.current != barn::component::animation_list::type::ATTACK) {
 		animation_list.current = barn::component::animation_list::type::ATTACK;
 		animation_list.attack->elapsed = std::chrono::nanoseconds::zero();
 		animation_list.loops = 1;
 	}
-
-	if (on_cooldown()) return;
 
 	auto [player_body, player_prop] = registry.get<barn::component::body, barn::component::properties>(entity);
 

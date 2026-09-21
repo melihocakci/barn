@@ -39,7 +39,7 @@ namespace barn::skills {
 		std::string_view name() const override { return "Green Onion"; }
 		std::string_view description() const override { return "Shoots a green onion projectile."; }
 		std::chrono::nanoseconds static_cooldown() const override { return 0ms; }
-		std::chrono::nanoseconds base_cooldown() const override { return 300ms; }
+		std::chrono::nanoseconds base_cooldown() const override { return 1000ms; }
 
 		void initialize(barn::context& c) override;
 		void update(barn::context& c, entt::registry& r, entt::entity e) override {};

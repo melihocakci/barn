@@ -73,7 +73,7 @@ decltype(barn::character_presets) barn::character_presets
 					return rects;
 				}(),
 				.height = .8f * PIXELS_PER_METER,
-				.duration = 300ms,
+				.duration = 500ms,
 			}
 		},
 		.base_properties = component::base_properties{
