@@ -16,6 +16,7 @@ namespace barn::textures {
 	constexpr std::string_view pearto = "assets/texture/pearto.png";
 	constexpr std::string_view clovers = "assets/texture/clovers.jpg";
 	constexpr std::string_view clouds = "assets/texture/clouds.jpg";
+	constexpr std::string_view baguette = "assets/texture/la_baguette.png";
 }
 
 namespace barn::audios {

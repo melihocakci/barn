@@ -131,6 +131,7 @@ std::optional<barn::session> barn::lobby_scene(barn::context& context) {
 	}
 	session.players[0].keyboard = barn::component::keyboard{};
 	session.players[0].transform = barn::component::transform{ { barn::VIRTUAL_WIDTH_METERS / 2.f, barn::VIRTUAL_HEIGHT_METERS / 4.f }, b2Rot_identity };
+	session.level.enemies[0].transform = barn::component::transform{ { barn::VIRTUAL_WIDTH_METERS / 2.f, 3.f * barn::VIRTUAL_HEIGHT_METERS / 4.f }, b2Rot_identity };
 
 	return session;
 }

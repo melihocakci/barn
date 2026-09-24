@@ -279,11 +279,11 @@ void barn::body_system(entt::registry& registry, barn::context& context) {
 		propA.health -= propB.collide_damage;
 		propB.health -= propA.collide_damage;
 
-		if (propA.health <= 0) {
+		if (propA.health <= 0 || registry.all_of<component::bullet>(enttA)) {
 			registry.destroy(enttA);
 		}
 
-		if (propB.health <= 0) {
+		if (propB.health <= 0 || registry.all_of<component::bullet>(enttB)) {
 			registry.destroy(enttB);
 		}
 	}

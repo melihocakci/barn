@@ -37,8 +37,19 @@ namespace barn::ai_behaviors {
 		void initialize(barn::context& c) override {};
 		void update(barn::context& c, entt::registry& r, entt::entity e) override;
 	};
+
+	struct pearto : public ai_behavior_interface {
+		std::chrono::nanoseconds static_cooldown() const override { return 0ms; }
+		std::chrono::nanoseconds base_cooldown() const override { return 120ms; }
+
+		void initialize(barn::context& c) override;
+		void update(barn::context& c, entt::registry& r, entt::entity e) override;
+
+		barn::texture baguette{};
+		float rotation_offset = 0.f;
+	};
 }
 
 namespace barn::component {
-	using ai_behavior = std::variant<ai_behaviors::chaser>;
+	using ai_behavior = std::variant<ai_behaviors::chaser, ai_behaviors::pearto>;
 }

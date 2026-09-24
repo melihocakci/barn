@@ -111,9 +111,10 @@ decltype(barn::enemy_presets) barn::enemy_presets
 		},
 		.base_properties = component::base_properties{
 			.health = 100,
+			.attack = 200,
 			.collide_damage = 10,
 			.speed = 5,
 		},
-		.ai_behavior = barn::ai_behaviors::chaser{},
+		.ai_behavior = barn::ai_behaviors::pearto{},
 	},
 };
